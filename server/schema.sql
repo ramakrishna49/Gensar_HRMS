@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS employees (
     joining_date DATE NOT NULL,
     salary DECIMAL(10,2),
     profile_photo VARCHAR(500),
-    role VARCHAR(20) DEFAULT 'employee' CHECK (role IN ('admin', 'hr', 'manager', 'employee')),
+    role VARCHAR(20) DEFAULT 'employee' CHECK (role IN ('admin', 'hr', 'manager', 'team_lead', 'employee')),
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'paused', 'terminated')),
     address TEXT,
     date_of_birth DATE,
@@ -374,6 +374,7 @@ ALTER TABLE employees ADD COLUMN IF NOT EXISTS reporting_manager_id INT REFERENC
 ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
 ALTER TABLE wfh_requests ADD COLUMN IF NOT EXISTS reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
 ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE designations ADD COLUMN IF NOT EXISTS team_lead_id INT REFERENCES employees(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_employees_reporting_manager ON employees(reporting_manager_id);
 CREATE INDEX IF NOT EXISTS idx_leave_rm ON leave_applications(reporting_manager_id);
@@ -382,3 +383,7 @@ CREATE INDEX IF NOT EXISTS idx_tickets_rm ON support_tickets(reporting_manager_i
 
 -- Maternity Leave is a special leave: 0 days balance, no deduction, still approvable.
 UPDATE leave_types SET days_per_year = 0 WHERE name = 'Maternity Leave';
+
+-- Add team_lead role (idempotent: drop + recreate the role check constraint).
+ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_role_check;
+ALTER TABLE employees ADD CONSTRAINT employees_role_check CHECK (role IN ('admin', 'hr', 'manager', 'team_lead', 'employee'));

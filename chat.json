@@ -63,6 +63,45 @@
           "content": "Committed feature as 1594023 (16 files, +913/-33), created this chat.json, and will push both to master (auto-deploys to Vercel)."
         }
       ]
+    },
+    {
+      "topic": "Multi-level approval hierarchy with per-designation Team Leads (Employee -> Team Lead -> Manager -> HR -> Admin)",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Wants the approval chain to match a real office: employee requests go to their Team Lead (okko designation ki okkokaru - one TL per designation), TL leaves go to Manager, Manager leaves go to HR, HR to Admin, Admin is top. Confirm/refine the plan and implement 1 by 1."
+        },
+        {
+          "role": "assistant",
+          "content": "Locked the chain as Employee -> Team Lead -> Manager -> HR -> Admin. Routing stays on the single reporting_manager_id (immediate supervisor) introduced in the prior session, so requests already flow one level up. New team_lead role added; team leads become approvers via isManager; Designation -> TL auto-assign; chain-aware 'Reporting To' dropdown; approver names shown in history. User approved, then said 'do it 1 by 1'.",
+          "steps": [
+            "DB (server/schema.sql): role CHECK now includes 'team_lead'; idempotent migration block adds designations.team_lead_id FK (ON DELETE SET NULL) + index and drops/recreates employees_role_check. Applied directly to production Supabase (schema re-run still fails on legacy seed FKs).",
+            "Server middleware/auth.js: isManager allowedRoles -> ['admin','hr','manager','team_lead'].",
+            "Server leave.js + wfh.js: needsManager now includes 'team_lead' (TL's own leave/WFH routes to their manager).",
+            "Server routes/designations.js: GET joins employees tl for team_lead_id / team_lead_name / team_lead_employee_id; POST and PUT accept team_lead_id (PUT uses CASE $4::text to allow clearing).",
+            "Server routes/employees.js: PUT now walks the reporting chain from the candidate RM and rejects any assignment that would create a cycle (400 'reporting cycle'); self-RM already blocked. Also fixed a latent bug where the pagination COUNT query used a fragile .replace() that never matched (newline in the SELECT) -> 500 when 0 non-admin employees exist; replaced with /SELECT[\\s\\S]*?FROM employees/.",
+            "Frontend admin/designations.html: Team Lead column + 'Team Lead' select in add/edit modal (populated with active team_lead-role employees); hint that new employees in the designation auto-assign to this TL.",
+            "Frontend admin/employees.html: 'Team Lead' role option in Add + Edit modals; team_lead badge color; chain-aware Reporting Manager dropdown (Employee->team_lead, Team Lead->manager, Manager->hr, HR->admin, Admin->top/none, current admin self-injected as HR candidate); designation select auto-fills Reporting Manager with that designation's TL for employee role; existing RM preserved on edit ('- current' option); hint text under the RM field.",
+            "Frontend js/dashboard.js: loadManagerNav() injects 'My Team' for manager/team_lead/hr; role label map shows 'Team Lead' instead of 'Team_lead'.",
+            "Frontend pages/manager/my-team.html: auth guard allows manager/team_lead/hr (API already filters by reporting_manager_id = me).",
+            "Frontend employee/profile.html: role display maps team_lead -> 'Team Lead'.",
+            "Frontend employee/leave.html + wfh.html: needsRM includes team_lead; history tables add 'Approved By' column (approved_by_name). tickets.html already showed responded_by_name (no change needed)."
+          ],
+          "verification": [
+            "Targeted migration ran against production Supabase: designations.team_lead_id present, role CHECK includes team_lead.",
+            "End-to-end smoke test with temp users (manager -> team_lead -> employee chain), all 13 passed: GET /designations exposes team_lead fields; GET /employees?limit=1000 (count-query fix verified with 0 non-admin users); designation PUT team_lead_id reflected in GET; team_lead token passes /api/manager/team + /leaves and sees direct reports; /auth/me shows the TL as reporting_manager_name; cycle prevention + self-RM both reject 400; leave/apply with RM assigned proceeds (201). Temp users + designation permanently deleted afterwards (0 leftover confirmed).",
+            "Note: production roster is now down to a single Admin (id=1 EMP001) - the earlier id=7/id=8 employees were removed between sessions, so the smoke test could not rely on them."
+          ]
+        },
+        {
+          "role": "user",
+          "content": "ayyaka git lo push chesi chat antha git lone chat.json lo save chesy i session antha (push to git afterwards and save the whole chat to chat.json in the git repo)"
+        },
+        {
+          "role": "assistant",
+          "content": "Committed the Team Lead hierarchy (13 files) and updated this chat.json; will push both to master (auto-deploys to Vercel)."
+        }
+      ]
     }
   ]
 }

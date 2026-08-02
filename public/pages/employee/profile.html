@@ -248,7 +248,7 @@
                 }
                 headerHtml += '<div>';
                 headerHtml += '<h2 style="font-size:1.5rem;font-weight:700;">' + escapeHtml(u.first_name) + ' ' + escapeHtml(u.last_name) + '</h2>';
-                headerHtml += '<p style="color:var(--text-secondary);font-size:0.95rem;">' + escapeHtml((u.role || '').charAt(0).toUpperCase() + (u.role || '').slice(1)) + '</p>';
+                headerHtml += '<p style="color:var(--text-secondary);font-size:0.95rem;">' + escapeHtml({ employee: 'Employee', team_lead: 'Team Lead', manager: 'Manager', hr: 'HR', admin: 'Admin' }[u.role] || ((u.role || '').charAt(0).toUpperCase() + (u.role || '').slice(1))) + '</p>';
                 headerHtml += '<p style="color:var(--text-tertiary);font-size:0.9rem;margin-top:4px;">Employee ID: ' + escapeHtml(u.employee_id || '-') + '</p>';
                 headerHtml += '<p style="color:var(--text-tertiary);font-size:0.9rem;">' + escapeHtml(u.department_name || '') + (u.designation_name ? ' &middot; ' + escapeHtml(u.designation_name) + (u.designation_level ? ' (Level ' + escapeHtml(String(u.designation_level)) + ')' : '') : '') + '</p>';
                 headerHtml += u.reporting_manager_name ? '<p style="color:var(--text-tertiary);font-size:0.9rem;"><i class="fas fa-user-tie" style="margin-right:6px;color:var(--accent);"></i>Reporting Manager: ' + escapeHtml(u.reporting_manager_name) + (u.reporting_manager_employee_id ? ' (' + escapeHtml(u.reporting_manager_employee_id) + ')' : '') + '</p>' : '';

@@ -173,8 +173,9 @@ function loadUserInfo() {
     const profilePhotoEls = document.querySelectorAll('.profile-photo');
     
     const fullName = `${user.first_name} ${user.last_name}`;
+    const roleLabel = { employee: 'Employee', team_lead: 'Team Lead', manager: 'Manager', hr: 'HR', admin: 'Admin' }[user.role] || (user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : '');
     if (userNameEl) userNameEl.textContent = fullName;
-    if (userRoleEl) userRoleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    if (userRoleEl) userRoleEl.textContent = roleLabel;
     if (profileNameEl) profileNameEl.textContent = fullName;
     
     const initials = ((user.first_name || '')[0] || '') + ((user.last_name || '')[0] || '');
@@ -246,10 +247,11 @@ async function toggleAdminRequestsPanel(bell) {
     }
 }
 
-// Inject a "My Team" link into the sidebar for manager-role users
+// Inject a "My Team" link into the sidebar for approver-role users
 function loadManagerNav() {
     const user = getCurrentUser();
-    if (!user || user.role !== 'manager') return;
+    if (!user) return;
+    if (user.role !== 'manager' && user.role !== 'team_lead' && user.role !== 'hr') return;
     const nav = document.querySelector('.sidebar-nav');
     if (!nav || nav.querySelector('[data-manager-nav]')) return;
     const link = document.createElement('a');

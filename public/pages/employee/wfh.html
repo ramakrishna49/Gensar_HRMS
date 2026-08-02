@@ -128,7 +128,7 @@
             const data = await apiCall('/auth/me');
             if (data && data.success) {
                 const u = data.user;
-                needsRM = u.role === 'employee' || u.role === 'manager';
+                needsRM = u.role === 'employee' || u.role === 'manager' || u.role === 'team_lead';
                 reportingManagerName = u.reporting_manager_name || null;
                 if (needsRM && !u.reporting_manager_id) {
                     const warn = document.getElementById('rmWarning');
@@ -147,7 +147,7 @@
                     showEmptyState(container, 'fa-home', 'No WFH Requests', 'You haven\'t requested work from home yet');
                     return;
                 }
-                let html = '<div class="table-container"><table><thead><tr><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Applied</th></tr></thead><tbody>';
+                let html = '<div class="table-container"><table><thead><tr><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Approved By</th><th>Applied</th></tr></thead><tbody>';
                 data.wfhRequests.forEach(w => {
                     html += '<tr>';
                     html += '<td>' + formatDate(w.start_date) + '</td>';
@@ -155,6 +155,7 @@
                     html += '<td style="font-weight:600;">' + w.total_days + '</td>';
                     html += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(w.reason || '-') + '</td>';
                     html += '<td><span class="badge badge-' + getStatusBadge(w.status) + '">' + escapeHtml(w.status) + '</span></td>';
+                    html += '<td>' + (w.approved_by_name ? escapeHtml(w.approved_by_name) : '<span style="color:var(--text-secondary);">-</span>') + '</td>';
                     html += '<td>' + formatDate(w.created_at) + '</td>';
                     html += '</tr>';
                 });

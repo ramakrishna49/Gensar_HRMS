@@ -60,7 +60,7 @@ const isAdmin = (req, res, next) => {
 
 // Check if user is Manager or above
 const isManager = (req, res, next) => {
-    const allowedRoles = ['admin', 'hr', 'manager'];
+    const allowedRoles = ['admin', 'hr', 'manager', 'team_lead'];
     if (!allowedRoles.includes(req.user.role)) {
         return res.status(403).json({ 
             success: false, 

@@ -68,10 +68,10 @@
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr><th>Name</th><th>Level</th><th>Department</th><th>Employees</th><th>Actions</th></tr>
+                            <tr><th>Name</th><th>Level</th><th>Department</th><th>Team Lead</th><th>Employees</th><th>Actions</th></tr>
                         </thead>
                         <tbody id="tableBody">
-                            <tr><td colspan="5" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                            <tr><td colspan="6" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -91,6 +91,8 @@
                     <div class="form-group"><label>Name *</label><input type="text" class="form-control" id="name" required></div>
                     <div class="form-group"><label>Level</label><input type="number" class="form-control" id="level" value="1" min="1" max="10"></div>
                     <div class="form-group"><label>Department</label><select class="form-control" id="department_id"><option value="">Select Department</option></select></div>
+                    <div class="form-group"><label>Team Lead</label><select class="form-control" id="team_lead_id"><option value="">Select Team Lead</option></select>
+                        <small style="color:var(--text-secondary);">New employees in this designation auto-assign to this Team Lead.</small></div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save Designation</button>
@@ -106,7 +108,7 @@
         if (!checkAuth()) throw new Error('Not authenticated');
         let allDesignations = [];
 
-        document.addEventListener('DOMContentLoaded', () => { load(); loadDepts(); });
+        document.addEventListener('DOMContentLoaded', () => { load(); loadDepts(); loadTeamLeads(); });
 
         async function load() {
             const d = await apiCall('/designations');
@@ -114,7 +116,7 @@
             if (d && d.success) {
                 allDesignations = d.designations;
                 if (d.designations.length === 0) {
-                    t.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-id-badge"></i><h3>No Designations</h3><p>No designations configured yet.</p></div></td></tr>';
+                    t.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-id-badge"></i><h3>No Designations</h3><p>No designations configured yet.</p></div></td></tr>';
                     return;
                 }
                 const levelColors = {1:'info',2:'secondary',3:'success',4:'warning',5:'danger',6:'primary',7:'info',8:'secondary',9:'success',10:'warning'};
@@ -123,6 +125,7 @@
                         <td style="font-weight:500;">${escapeHtml(x.name)}</td>
                         <td><span class="badge badge-${levelColors[x.level] || 'secondary'}">Level ${escapeHtml(String(x.level))}</span></td>
                         <td>${escapeHtml(x.department_name || '-')}</td>
+                        <td>${x.team_lead_id ? `<span class="badge badge-primary">${escapeHtml(x.team_lead_name || '')}</span>` : '<span class="text-muted">Not set</span>'}</td>
                         <td>${escapeHtml(String(x.employee_count || 0))}</td>
                         <td>
                             <div style="display:flex;gap:4px;">
@@ -133,7 +136,7 @@
                     </tr>
                 `).join('');
             } else {
-                t.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load designations.</p></div></td></tr>';
+                t.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load designations.</p></div></td></tr>';
             }
         }
 
@@ -142,6 +145,15 @@
             const s = document.getElementById('department_id');
             if (d && d.success) {
                 s.innerHTML = '<option value="">Select Department</option>' + d.departments.map(x => `<option value="${x.id}">${escapeHtml(x.name)}</option>`).join('');
+            }
+        }
+
+        async function loadTeamLeads() {
+            const d = await apiCall('/employees?limit=1000');
+            const s = document.getElementById('team_lead_id');
+            if (d && d.success) {
+                const tls = (d.employees || []).filter(x => x.role === 'team_lead' && x.status !== 'terminated');
+                s.innerHTML = '<option value="">Select Team Lead</option>' + tls.map(x => `<option value="${x.id}">${escapeHtml(x.employee_id)} - ${escapeHtml(x.first_name + ' ' + x.last_name)}</option>`).join('');
             }
         }
 
@@ -160,6 +172,7 @@
             document.getElementById('name').value = x.name;
             document.getElementById('level').value = x.level;
             document.getElementById('department_id').value = x.department_id || '';
+            document.getElementById('team_lead_id').value = x.team_lead_id || '';
             document.getElementById('modalTitle').textContent = 'Edit Designation';
             openModal();
         }
@@ -170,7 +183,8 @@
             const data = {
                 name: document.getElementById('name').value,
                 level: document.getElementById('level').value,
-                department_id: document.getElementById('department_id').value || null
+                department_id: document.getElementById('department_id').value || null,
+                team_lead_id: document.getElementById('team_lead_id').value || null
             };
             const r = id ? await apiCall(`/designations/${id}`, 'PUT', data) : await apiCall('/designations', 'POST', data);
             if (r && r.success) {

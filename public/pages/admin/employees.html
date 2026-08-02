@@ -139,8 +139,9 @@
                         <div class="form-group"><label>Joining Date *</label><input type="date" class="form-control" name="joining_date" required></div>
                         <div class="form-group"><label>Department</label><select class="form-control" name="department_id" id="departmentSelect"><option value="">Select Department</option></select></div>
                         <div class="form-group"><label>Designation</label><select class="form-control" name="designation_id" id="designationSelect"><option value="">Select Designation</option></select></div>
-                        <div class="form-group"><label>Reporting Manager</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Manager</option></select></div>
-                        <div class="form-group"><label>Role</label><select class="form-control" name="role"><option value="employee">Employee</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label>Reporting Manager</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Manager</option></select>
+                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; HR &rarr; Admin. Set the immediate supervisor.</small></div>
+                        <div class="form-group"><label>Role</label><select class="form-control" name="role" id="addRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" name="salary"></div>
                         <div class="form-group"><label>Password (default: welcome123)</label><input type="password" class="form-control" name="password" value="welcome123"></div>
                     </div>
@@ -174,9 +175,10 @@
                         <div class="form-group"><label>Joining Date</label><input type="date" class="form-control" id="editJoiningDate"></div>
                         <div class="form-group"><label>Department</label><select class="form-control" id="editDepartment"><option value="">Select Department</option></select></div>
                         <div class="form-group"><label>Designation</label><select class="form-control" id="editDesignation"><option value="">Select Designation</option></select></div>
-                        <div class="form-group"><label>Reporting Manager</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Manager</option></select></div>
+                        <div class="form-group"><label>Reporting Manager</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Manager</option></select>
+                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; HR &rarr; Admin. Set the immediate supervisor.</small></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" id="editSalary"></div>
-                        <div class="form-group"><label>Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label>Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
                         <div class="form-group"><label>Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
                         <div class="form-group"><label>Gender</label><select class="form-control" id="editGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
                         <div class="form-group"><label>Blood Group</label><input type="text" class="form-control" id="editBloodGroup"></div>
@@ -288,6 +290,8 @@
         let pendingCounts = {};
         let currentViewEmployee = null;
         let currentViewRequests = [];
+        let allEmployeesForRM = [];
+        let designationsCache = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             loadEmployees();
@@ -386,7 +390,7 @@
                     <td>${escapeHtml(emp.department_name || '-')}</td>
                     <td>${escapeHtml(emp.designation_name || '-')}${emp.designation_level ? '<br><span class="badge badge-secondary" style="font-size:0.62rem;">Level ' + escapeHtml(String(emp.designation_level)) + '</span>' : ''}</td>
                     <td>${emp.reporting_manager_name ? '<span style="font-size:0.85rem;">' + escapeHtml(emp.reporting_manager_name) + '</span><br><span class="badge badge-secondary" style="font-size:0.62rem;">' + escapeHtml(emp.reporting_manager_employee_id || '') + '</span>' : '<span class="badge badge-secondary" style="font-size:0.7rem;">Not Assigned</span>'}</td>
-                    <td><span class="badge badge-${emp.role==='admin'?'danger':emp.role==='hr'?'warning':emp.role==='manager'?'info':'secondary'}">${escapeHtml(emp.role)}</span></td>
+                    <td><span class="badge badge-${emp.role==='admin'?'danger':emp.role==='hr'?'warning':emp.role==='manager'?'info':emp.role==='team_lead'?'primary':'secondary'}">${escapeHtml(emp.role)}</span></td>
                     <td><span class="badge badge-${getStatusBadge(emp.status)}">${escapeHtml(emp.status)}</span></td>
                     <td>
                         <div style="display:flex;gap:4px;">
@@ -461,23 +465,83 @@
         async function loadDesignations() {
             const data = await apiCall('/designations');
             if (data && data.success) {
+                designationsCache = data.designations;
                 const html = '<option value="">Select Designation</option>' + data.designations.map(d => `<option value="${d.id}">${escapeHtml(d.name)}${d.level ? ' (Level ' + escapeHtml(String(d.level)) + ')' : ''}</option>`).join('');
                 document.getElementById('designationSelect').innerHTML = html;
                 document.getElementById('editDesignation').innerHTML = html;
             }
         }
 
-        async function loadReportingManagers() {
-            const data = await apiCall('/employees?limit=1000&status=active');
-            if (data && data.success) {
-                const options = data.employees
-                    .filter(e => e.role !== 'admin')
-                    .map(e => `<option value="${e.id}">${escapeHtml(e.first_name)} ${escapeHtml(e.last_name)} (${escapeHtml(e.employee_id)})</option>`)
-                    .join('');
-                document.getElementById('reportingManagerSelect').innerHTML = '<option value="">Select Reporting Manager</option>' + options;
-                document.getElementById('editReportingManager').innerHTML = '<option value="">Select Reporting Manager</option>' + options;
+        const RM_ROLE_MAP = {
+            employee: ['team_lead'],
+            team_lead: ['manager'],
+            manager: ['hr'],
+            hr: ['admin'],
+            admin: []
+        };
+
+        const ROLE_LABEL = { employee: 'Employee', team_lead: 'Team Lead', manager: 'Manager', hr: 'HR', admin: 'Admin' };
+        function rmCandidatesFor(role) {
+            const wanted = RM_ROLE_MAP[role] || [];
+            const me = getCurrentUser();
+            let list = allEmployeesForRM.filter(e => wanted.includes(e.role) && e.status === 'active');
+            if (wanted.includes('admin')) {
+                const admins = list.filter(e => e.role === 'admin');
+                const isAdminSelf = me && me.role === 'admin' && me.id && !admins.some(a => String(a.id) === String(me.id));
+                if (isAdminSelf) {
+                    list = list.concat([{ id: me.id, employee_id: me.employee_id, first_name: me.first_name, last_name: me.last_name, role: 'admin' }]);
+                }
+            }
+            return list;
+        }
+
+        function renderRMOptions(role, selectEl, currentId) {
+            const candidates = rmCandidatesFor(role);
+            const opt = (e, labelOverride) => `<option value="${e.id}">${escapeHtml(labelOverride || (e.first_name + ' ' + e.last_name) + ' (' + (e.employee_id || '') + ')')}</option>`;
+            let html = '<option value="">' + (role === 'admin' ? 'Admin is top of chain' : 'Select Reporting Manager') + '</option>';
+            if (currentId && !candidates.some(c => String(c.id) === String(currentId))) {
+                const cur = allEmployeesForRM.find(e => String(e.id) === String(currentId));
+                if (cur) html += opt(cur, cur.first_name + ' ' + cur.last_name + ' (' + (cur.employee_id || '') + ') - current');
+            }
+            html += candidates.map(e => opt(e)).join('');
+            selectEl.innerHTML = html;
+            if (currentId) selectEl.value = currentId;
+        }
+
+        function onRoleChange(selectEl, rmEl, currentId) {
+            renderRMOptions(selectEl.value, rmEl, currentId);
+        }
+
+        function onDesignationChange(selectEl, rmEl, roleEl) {
+            const des = designationsCache.find(d => String(d.id) === String(selectEl.value));
+            if (des && des.team_lead_id && roleEl.value === 'employee') {
+                const tlInList = allEmployeesForRM.some(e => String(e.id) === String(des.team_lead_id) && e.role === 'team_lead' && e.status === 'active');
+                if (tlInList) rmEl.value = String(des.team_lead_id);
             }
         }
+
+        async function loadReportingManagers() {
+            const data = await apiCall('/employees?limit=1000');
+            if (data && data.success) {
+                allEmployeesForRM = data.employees || [];
+                const addRole = document.getElementById('addRole');
+                const editRole = document.getElementById('editRole');
+                renderRMOptions(addRole.value, document.getElementById('reportingManagerSelect'));
+                renderRMOptions(editRole.value, document.getElementById('editReportingManager'));
+            }
+        }
+
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'addRole') {
+                onRoleChange(e.target, document.getElementById('reportingManagerSelect'));
+            } else if (e.target && e.target.id === 'editRole') {
+                onRoleChange(e.target, document.getElementById('editReportingManager'), document.getElementById('editReportingManager').dataset.currentRm || '');
+            } else if (e.target && e.target.id === 'designationSelect') {
+                onDesignationChange(e.target, document.getElementById('reportingManagerSelect'), document.getElementById('addRole'));
+            } else if (e.target && e.target.id === 'editDesignation') {
+                onDesignationChange(e.target, document.getElementById('editReportingManager'), document.getElementById('editRole'));
+            }
+        });
 
         function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -492,6 +556,7 @@
                 showToast('Employee added! Temp password: ' + (result.temp_password || 'welcome123'), 'success');
                 closeModal('addEmployeeModal');
                 form.reset();
+                renderRMOptions(document.getElementById('addRole').value, document.getElementById('reportingManagerSelect'));
                 loadEmployees();
             } else {
                 showToast(result?.message || 'Failed to add employee', 'error');
@@ -511,9 +576,10 @@
                 document.getElementById('editJoiningDate').value = emp.joining_date ? emp.joining_date.split('T')[0] : '';
                 document.getElementById('editDepartment').value = emp.department_id || '';
                 document.getElementById('editDesignation').value = emp.designation_id || '';
-                document.getElementById('editReportingManager').value = emp.reporting_manager_id || '';
-                document.getElementById('editSalary').value = emp.salary || '';
                 document.getElementById('editRole').value = emp.role || 'employee';
+                renderRMOptions(emp.role || 'employee', document.getElementById('editReportingManager'), emp.reporting_manager_id || '');
+                document.getElementById('editReportingManager').dataset.currentRm = emp.reporting_manager_id || '';
+                document.getElementById('editSalary').value = emp.salary || '';
                 document.getElementById('editStatus').value = emp.status || 'active';
                 document.getElementById('editGender').value = emp.gender || '';
                 document.getElementById('editBloodGroup').value = emp.blood_group || '';
@@ -709,7 +775,7 @@
             header += '<div class="avatar" ' + (photoHtml ? 'style="display:none;"' : '') + '>' + escapeHtml(initials) + '</div>' + photoHtml;
             header += '<div class="hero-info">';
             header += '<h3 style="font-weight:700;font-size:1.2rem;margin-bottom:6px;">' + escapeHtml(emp.first_name) + ' ' + escapeHtml(emp.last_name) +
-                ' <span class="badge badge-' + (emp.role==='admin'?'danger':emp.role==='hr'?'warning':emp.role==='manager'?'info':'secondary') + '">' + escapeHtml(emp.role || 'employee') + '</span>' +
+                ' <span class="badge badge-' + (emp.role==='admin'?'danger':emp.role==='hr'?'warning':emp.role==='manager'?'info':emp.role==='team_lead'?'primary':'secondary') + '">' + escapeHtml(emp.role || 'employee') + '</span>' +
                 ' <span class="badge badge-' + getStatusBadge(emp.status) + '">' + escapeHtml(emp.status || 'active') + '</span></h3>';
             header += '<p style="color:var(--text-secondary);font-size:0.9rem;">' + escapeHtml(emp.employee_id || '') + ' &middot; ' + escapeHtml(emp.department_name || '-') + (emp.designation_name ? ' &middot; ' + escapeHtml(emp.designation_name) + (emp.designation_level ? ' (Level ' + escapeHtml(String(emp.designation_level)) + ')' : '') : '') + '</p>';
             header += '<p style="color:var(--text-secondary);font-size:0.85rem;margin-top:4px;"><i class="fas fa-envelope" style="margin-right:6px;"></i>' + escapeHtml(emp.email || '-') + (emp.phone ? '<span style="margin-left:14px;"><i class="fas fa-phone" style="margin-right:6px;"></i>' + escapeHtml(emp.phone) + '</span>' : '') + '</p>';

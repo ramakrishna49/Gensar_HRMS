@@ -44,7 +44,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         
         // Count total
         const countResult = await query(
-            sqlQuery.replace('SELECT e.*, d.name as department_name, des.name as designation_name, des.level as designation_level, rm.first_name || \' \' || rm.last_name as reporting_manager_name, rm.employee_id as reporting_manager_employee_id', 'SELECT COUNT(*) as count'),
+            sqlQuery.replace(/SELECT[\s\S]*?FROM employees/, 'SELECT COUNT(*) as count FROM employees'),
             params
         );
         const total = parseInt(countResult.rows[0].count);
@@ -191,6 +191,26 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
 
         if (reporting_manager_id && parseInt(reporting_manager_id) === parseInt(req.params.id)) {
             return res.status(400).json({ success: false, message: 'An employee cannot be their own reporting manager' });
+        }
+
+        // Cycle prevention: walk up the reporting chain from the candidate RM.
+        // If it ever reaches the employee being edited, a cycle would be created.
+        if (reporting_manager_id) {
+            let currentId = parseInt(reporting_manager_id);
+            const seen = new Set();
+            let isCycle = false;
+            while (currentId && !seen.has(currentId)) {
+                if (currentId === parseInt(req.params.id)) {
+                    isCycle = true;
+                    break;
+                }
+                seen.add(currentId);
+                const up = await query('SELECT reporting_manager_id FROM employees WHERE id = $1', [currentId]);
+                currentId = up.rows[0] ? up.rows[0].reporting_manager_id : null;
+            }
+            if (isCycle) {
+                return res.status(400).json({ success: false, message: 'Invalid reporting manager. This would create a reporting cycle.' });
+            }
         }
         
         const result = await query(
