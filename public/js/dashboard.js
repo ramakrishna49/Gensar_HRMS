@@ -231,30 +231,96 @@ async function toggleAdminRequestsPanel(bell, mode) {
     const existing = document.getElementById('adminNotifPanel');
     if (existing) { existing.remove(); return; }
 
+    const requestsUrl = isManagerMode ? '/pages/manager/my-team.html' : '/pages/admin/leave.html?status=pending';
+    const announcementsUrl = isManagerMode ? '/pages/employee/announcements.html' : '/pages/admin/announcements.html';
+
     const panel = document.createElement('div');
     panel.className = 'notification-panel';
     panel.id = 'adminNotifPanel';
     panel.innerHTML =
-        '<div class="notification-panel-header"><span><i class="fas fa-bell" style="margin-right:6px;"></i>' + (isManagerMode ? 'Team Requests' : 'Pending Requests') + '</span></div>' +
-        '<div class="notification-panel-list" id="adminNotifList" style="min-height:70px;"><div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>' +
-        '<div class="notification-panel-footer"><a href="' + (isManagerMode ? '/pages/manager/my-team.html' : '/pages/admin/leave.html?status=pending') + '">View all requests</a></div>';
+        '<div class="notification-panel-header"><span><i class="fas fa-bell" style="margin-right:6px;"></i>Notifications</span></div>' +
+        '<div style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;padding:8px 16px 2px;">' + (isManagerMode ? 'Team Requests' : 'Pending Requests') + '</div>' +
+        '<div class="notification-panel-list" id="adminNotifList" style="min-height:50px;"><div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>' +
+        '<div class="notification-panel-footer"><a href="' + requestsUrl + '">View all requests</a></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px 2px;border-top:1px solid var(--border-light);">' +
+        '<span style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;">Announcements</span>' +
+        '<button class="mark-all-btn" id="notifMarkAllBtn">Mark all as read</button></div>' +
+        '<div class="notification-panel-list" id="notifAnnounceList" style="min-height:40px;"><div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>' +
+        '<div class="notification-panel-footer"><a href="' + announcementsUrl + '">View all announcements</a></div>';
     bell.appendChild(panel);
 
-    const data = await apiCall('/notifications/requests');
-    const list = document.getElementById('adminNotifList');
-    if (data && data.success && data.feed && data.feed.length > 0) {
-        list.innerHTML = data.feed.map(r => {
-            const icon = r.type === 'leave' ? 'fa-calendar-times' : r.type === 'wfh' ? 'fa-home' : 'fa-ticket-alt';
-            const color = r.type === 'leave' ? 'var(--accent)' : r.type === 'wfh' ? 'var(--primary)' : 'var(--info)';
-            return '<a href="' + r.url + '" class="notification-item">' +
-                '<span style="width:34px;height:34px;border-radius:50%;background:var(--primary-50);color:' + color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;"><i class="fas ' + icon + '"></i></span>' +
-                '<span class="notif-body"><span class="notif-title">' + escapeHtml(r.title) + '</span>' +
-                '<span class="notif-meta">' + escapeHtml(r.subtitle) + '</span></span></a>';
-        }).join('');
-    } else {
-        list.innerHTML = '<div class="notification-panel-empty"><i class="fas fa-bell-slash"></i>No pending requests</div>';
+    await loadRequestsSection(document.getElementById('adminNotifList'), mode, 3);
+    await loadAnnouncementsSection(document.getElementById('notifAnnounceList'), announcementsUrl);
+
+    const markAllBtn = document.getElementById('notifMarkAllBtn');
+    if (markAllBtn) {
+        markAllBtn.onclick = async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            await apiCall('/announcements/read-all', 'POST');
+            loadNotifBadge();
+            loadAnnouncementsSection(document.getElementById('notifAnnounceList'), announcementsUrl);
+        };
     }
     loadNotifBadge();
+}
+
+async function loadRequestsSection(listEl, mode, limit) {
+    limit = limit || 3;
+    if (!listEl) return;
+    const data = await apiCall('/notifications/requests');
+    const feed = (data && data.success && data.feed) ? data.feed : [];
+    if (feed.length === 0) {
+        listEl.innerHTML = '<div class="notification-panel-empty"><i class="fas fa-bell-slash"></i>No pending requests</div>';
+        return;
+    }
+    const iconMap = { leave: 'fa-calendar-times', wfh: 'fa-home', ticket: 'fa-ticket-alt', profile: 'fa-user-edit' };
+    const colorMap = { leave: 'var(--accent)', wfh: 'var(--primary)', ticket: 'var(--info)', profile: 'var(--warning)' };
+    listEl.innerHTML = feed.slice(0, limit).map(r => {
+        const icon = iconMap[r.type] || 'fa-bell';
+        const color = colorMap[r.type] || 'var(--primary)';
+        return '<a href="' + r.url + '" class="notification-item">' +
+            '<span style="width:34px;height:34px;border-radius:50%;background:var(--primary-50);color:' + color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;"><i class="fas ' + icon + '"></i></span>' +
+            '<span class="notif-body"><span class="notif-title">' + escapeHtml(r.title) + '</span>' +
+            '<span class="notif-meta">' + escapeHtml(r.subtitle) + '</span></span></a>';
+    }).join('');
+}
+
+async function loadAnnouncementsSection(listEl, announcementsUrl) {
+    announcementsUrl = announcementsUrl || '/pages/employee/announcements.html';
+    if (!listEl) return;
+    try {
+        const data = await apiCall('/announcements');
+        const all = (data && data.success && data.announcements) ? data.announcements : [];
+        const items = all.slice().sort((a, b) => {
+            if (a.is_read !== b.is_read) return a.is_read ? 1 : -1;
+            return 0;
+        }).slice(0, 3);
+        if (items.length === 0) {
+            listEl.innerHTML = '<div class="notification-panel-empty"><i class="fas fa-bell-slash"></i>No announcements</div>';
+            return;
+        }
+        listEl.innerHTML = items.map(a => {
+            const unreadClass = a.is_read ? 'is-read' : '';
+            const time = formatTimeAgo(a.created_at);
+            return '<a href="javascript:void(0)" class="notification-item ' + unreadClass + '" data-id="' + a.id + '">' +
+                '<span class="notif-dot"></span>' +
+                '<span class="notif-body"><span class="notif-title">' + escapeHtml(a.title) + '</span>' +
+                '<span class="notif-meta">' + time + '</span></span></a>';
+        }).join('');
+        listEl.querySelectorAll('.notification-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const id = item.getAttribute('data-id');
+                if (!item.classList.contains('is-read')) {
+                    await apiCall('/announcements/' + id + '/read', 'POST');
+                    loadNotifBadge();
+                }
+                window.location.href = announcementsUrl;
+            });
+        });
+    } catch (e) {
+        listEl.innerHTML = '';
+    }
 }
 
 // Inject a "My Team" link into the sidebar for approver-role users,

@@ -50,7 +50,7 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
         const isAdminRole = req.user.role === 'admin' || req.user.role === 'hr';
 
         let leaveUrl, wfhUrl, ticketUrl;
-        let leavesQuery, wfhQuery, ticketsQuery;
+        let leavesQuery, wfhQuery, ticketsQuery, profilesQuery = null;
 
         if (isAdminRole) {
             leaveUrl = '/pages/admin/leave.html?status=pending';
@@ -83,6 +83,15 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
                 JOIN employees e ON st.employee_id = e.id
                 WHERE st.status IN ('open', 'in_progress')
                 ORDER BY st.created_at DESC LIMIT 8`,
+                values: []
+            };
+            profilesQuery = {
+                text: `SELECT r.id, r.status, r.field, r.created_at,
+                e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
+                FROM profile_update_requests r
+                JOIN employees e ON r.employee_id = e.id
+                WHERE r.status = 'pending'
+                ORDER BY r.created_at DESC LIMIT 8`,
                 values: []
             };
         } else {
@@ -120,10 +129,11 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
             };
         }
 
-        const [leaves, wfh, tickets] = await Promise.all([
+        const [leaves, wfh, tickets, profiles] = await Promise.all([
             query(leavesQuery.text, leavesQuery.values),
             query(wfhQuery.text, wfhQuery.values),
-            query(ticketsQuery.text, ticketsQuery.values)
+            query(ticketsQuery.text, ticketsQuery.values),
+            profilesQuery ? query(profilesQuery.text, profilesQuery.values) : Promise.resolve({ rows: [] })
         ]);
 
         const feed = [
@@ -153,6 +163,15 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
                 subtitle: `${r.emp_id} · ${r.subject}`,
                 created_at: r.created_at,
                 url: ticketUrl
+            })),
+            ...profiles.rows.map(r => ({
+                type: 'profile',
+                id: r.id,
+                status: r.status,
+                title: `${r.employee_name} requested profile update`,
+                subtitle: `${r.emp_id} · ${r.field}`,
+                created_at: r.created_at,
+                url: '/pages/admin/employees.html'
             }))
         ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 12);
 

@@ -27,7 +27,7 @@
             <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
             <a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
             <div class="nav-section-title">Finance</div>
-            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-money-bill-wave"></i><span class="nav-text">Payroll</span></a>
+            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
             <div class="nav-section-title">Support</div>
             <a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
             <div class="nav-section-title">Communication</div>
@@ -919,7 +919,7 @@
                     vRow('Role', emp.role) +
                     vRow('Joining Date', emp.joining_date ? formatDate(emp.joining_date) : null) +
                     vRow('Status', emp.status)) +
-                vSection('Compensation', 'fa-money-bill-wave',
+                vSection('Compensation', 'fa-indian-rupee-sign',
                     vRow('Salary', emp.salary ? formatCurrency(emp.salary) : null)) +
                 vSection('System Info', 'fa-clock',
                     vRow('Created', emp.created_at ? formatDate(emp.created_at) : null) +

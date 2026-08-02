@@ -26,7 +26,7 @@
             <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
             <a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
             <div class="nav-section-title">Finance</div>
-            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-money-bill-wave"></i><span class="nav-text">Payroll</span></a>
+            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
             <div class="nav-section-title">Support</div>
             <a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
             <div class="nav-section-title">Communication</div>
@@ -117,7 +117,7 @@
                             <span style="font-size:0.8rem;">Manage Leave</span>
                         </a>
                         <a href="/pages/admin/payroll.html" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
-                            <i class="fas fa-money-bill" style="font-size:1.25rem;"></i>
+                            <i class="fas fa-indian-rupee-sign" style="font-size:1.25rem;"></i>
                             <span style="font-size:0.8rem;">Payroll</span>
                         </a>
                         <a href="/pages/admin/announcements.html" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
@@ -275,7 +275,7 @@
                         <table>
                             <thead><tr><th>Employee</th><th>Field</th><th>Change</th><th>Action</th></tr></thead>
                             <tbody>
-                                ${pending.slice(0, 6).map(r => `
+                                ${pending.slice(0, 3).map(r => `
                                     <tr>
                                         <td><a href="/pages/admin/employees.html?emp=${r.employee_id}&tab=requests" style="color:var(--primary);font-weight:600;text-decoration:none;">${escapeHtml(r.employee_name || '')} <i class="fas fa-external-link-alt" style="font-size:0.7rem;margin-left:2px;"></i></a></td>
                                         <td>${escapeHtml(r.field_label || r.field)}</td>
@@ -291,7 +291,7 @@
                             </tbody>
                         </table>
                     </div>
-                    ${pending.length > 6 ? `<p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">+${pending.length - 6} more. <a href="/pages/admin/employees.html" style="color:var(--primary);">View all</a></p>` : ''}
+                    ${pending.length > 3 ? `<p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">+${pending.length - 3} more. <a href="/pages/admin/employees.html" style="color:var(--primary);">View all</a></p>` : ''}
                 `;
             } else {
                 showEmptyState(container, 'fa-user-edit', 'Error', 'Could not load profile updates');
