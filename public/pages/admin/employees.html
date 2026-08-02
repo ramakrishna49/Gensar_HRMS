@@ -140,7 +140,7 @@
                         <div class="form-group"><label>Designation</label><select class="form-control" name="designation_id" id="designationSelect"><option value="">Select Designation</option></select></div>
                         <div class="form-group"><label>Role</label><select class="form-control" name="role" id="addRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
                         <div class="form-group"><label>Reporting Person</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Person</option></select>
-                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; HR; HR also reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
+                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
                         <div class="form-group"><label>Joining Date *</label><input type="date" class="form-control" name="joining_date" required></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" name="salary"></div>
                         <div class="form-group"><label>Password (default: welcome123)</label><input type="password" class="form-control" name="password" value="welcome123"></div>
@@ -177,7 +177,7 @@
                         <div class="form-group"><label>Designation</label><select class="form-control" id="editDesignation"><option value="">Select Designation</option></select></div>
                         <div class="form-group"><label>Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
                         <div class="form-group"><label>Reporting Person</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Person</option></select>
-                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; HR; HR also reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
+                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" id="editSalary"></div>
                         <div class="form-group"><label>Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
                         <div class="form-group"><label>Gender</label><select class="form-control" id="editGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
@@ -475,7 +475,7 @@
         const RM_ROLE_MAP = {
             employee: ['team_lead'],
             team_lead: ['manager'],
-            manager: ['hr'],
+            manager: ['admin'],
             hr: ['manager'],
             admin: []
         };
@@ -483,7 +483,15 @@
         const ROLE_LABEL = { employee: 'Employee', team_lead: 'Team Lead', manager: 'Manager', hr: 'HR', admin: 'Admin' };
         function rmCandidatesFor(role) {
             const wanted = RM_ROLE_MAP[role] || [];
-            return allEmployeesForRM.filter(e => wanted.includes(e.role) && e.status === 'active');
+            let list = allEmployeesForRM.filter(e => wanted.includes(e.role) && e.status === 'active');
+            if (wanted.includes('admin')) {
+                const me = getCurrentUser();
+                const isAdminSelf = me && me.role === 'admin' && me.id && !list.some(a => String(a.id) === String(me.id));
+                if (isAdminSelf) {
+                    list = list.concat([{ id: me.id, employee_id: me.employee_id, first_name: me.first_name, last_name: me.last_name, role: 'admin' }]);
+                }
+            }
+            return list;
         }
 
         function renderRMOptions(role, selectEl, currentId) {
