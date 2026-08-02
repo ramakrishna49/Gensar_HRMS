@@ -6,6 +6,8 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateEmployee, collectFieldErrors } = require('../middleware/validation');
 const { deleteFile, deleteFileByUrl } = require('../services/storage');
 
+const MAIN_ADMIN_ID = 1;
+
 async function activeAdminCount() {
     const r = await query(`SELECT COUNT(*) AS count FROM employees WHERE role = 'admin' AND status = 'active'`);
     return parseInt(r.rows[0].count, 10);
@@ -33,7 +35,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
             LEFT JOIN departments d ON e.department_id = d.id 
             LEFT JOIN designations des ON e.designation_id = des.id 
             LEFT JOIN employees rm ON e.reporting_manager_id = rm.id
-            WHERE 1=1
+            WHERE 1=1 AND e.id != ${MAIN_ADMIN_ID}
         `;
         const params = [];
         let paramIndex = 1;
