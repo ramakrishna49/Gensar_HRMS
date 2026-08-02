@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const path = require('path');
-const fs = require('fs');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateEmployee, collectFieldErrors } = require('../middleware/validation');
+const { deleteFile, deleteFileByUrl } = require('../services/storage');
 
 // @route   GET /api/employees
 // @desc    Get all employees
@@ -361,20 +360,18 @@ router.delete('/:id/permanent', verifyToken, isAdmin, async (req, res) => {
         await query('DELETE FROM password_reset_otps WHERE email = $1', [employee.email]);
         await query('DELETE FROM employees WHERE id = $1', [req.params.id]);
 
-        // Remove associated files from uploads directory
+        // Remove associated files from Supabase Storage
         try {
             if (profilePhoto) {
-                const fp = path.join(__dirname, '../../uploads', path.basename(profilePhoto));
-                if (fs.existsSync(fp)) fs.unlinkSync(fp);
+                await deleteFileByUrl(profilePhoto);
             }
-            docRes.rows.forEach(d => {
+            for (const d of docRes.rows) {
                 if (d.file_name) {
-                    const fp = path.join(__dirname, '../../uploads', d.file_name);
-                    if (fs.existsSync(fp)) fs.unlinkSync(fp);
+                    await deleteFile('documents', d.file_name);
                 }
-            });
+            }
         } catch (e) {
-            console.error('Permanent delete file cleanup error:', e.message);
+            console.error('Permanent delete storage cleanup error:', e.message);
         }
 
         res.json({ success: true, message: 'Employee permanently deleted along with all their data' });

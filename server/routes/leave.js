@@ -204,7 +204,7 @@ router.get('/balance', verifyToken, async (req, res) => {
             FROM leave_types lt
             LEFT JOIN leave_applications la ON lt.id = la.leave_type_id 
             AND la.employee_id = $1 
-            AND strftime('%Y', la.start_date) = $2
+            AND to_char(la.start_date, 'YYYY') = $2
             AND la.status IN ('approved', 'pending')
             WHERE lt.is_active = 1 AND (lt.gender_eligibility = 'all' OR lt.gender_eligibility = $3)
             GROUP BY lt.id, lt.name, lt.days_per_year, lt.gender_eligibility

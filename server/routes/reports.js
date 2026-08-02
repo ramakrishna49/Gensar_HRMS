@@ -68,7 +68,7 @@ router.get('/attendance', verifyToken, isAdmin, async (req, res) => {
         const result = await query(
             `SELECT a.status, COUNT(*) as count 
             FROM attendance a 
-            WHERE strftime('%m', a.date) = $1 AND strftime('%Y', a.date) = $2 
+            WHERE to_char(a.date, 'MM') = $1 AND to_char(a.date, 'YYYY') = $2 
             GROUP BY a.status`,
             [m, y]
         );

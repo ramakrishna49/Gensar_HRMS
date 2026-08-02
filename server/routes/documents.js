@@ -2,19 +2,11 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { uploadBuffer, deleteFile, getStorageClient } = require('../services/storage');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const dir = path.join(__dirname, '../../uploads');
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
-    },
-    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
-});
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 router.get('/my', verifyToken, async (req, res) => {
     try {
@@ -47,16 +39,18 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
         if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
         
         const { title, document_type } = req.body;
-        const file_url = `/uploads/${req.file.filename}`;
+        const fileName = `doc-${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const file_url = await uploadBuffer('documents', fileName, req.file.buffer, req.file.mimetype);
         
         const result = await query(
             `INSERT INTO documents (employee_id, title, file_url, file_name, document_type, uploaded_by) 
             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [req.user.id, title || req.file.originalname, file_url, req.file.filename, document_type, req.user.id]
+            [req.user.id, title || req.file.originalname, file_url, fileName, document_type, req.user.id]
         );
         
         res.status(201).json({ success: true, document: result.rows[0] });
     } catch (error) {
+        console.error('Document upload error:', error.message);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
@@ -70,11 +64,16 @@ router.get('/:id/download', verifyToken, async (req, res) => {
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
         
         const doc = result.rows[0];
-        const filePath = path.join(__dirname, '../../uploads', doc.file_name);
+        if (!doc.file_name) return res.status(404).json({ success: false, message: 'File not found' });
         
-        if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: 'File not found on server' });
+        const { data, error } = await getStorageClient().storage.from('documents').download(doc.file_name);
+        if (error || !data) return res.status(404).json({ success: false, message: 'File not found on server' });
         
-        res.download(filePath, doc.title + path.extname(doc.file_name));
+        const buf = Buffer.from(await data.arrayBuffer());
+        const safeName = encodeURIComponent(doc.title + path.extname(doc.file_name));
+        res.setHeader('Content-Type', data.type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${safeName}`);
+        res.send(buf);
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }
@@ -82,11 +81,14 @@ router.get('/:id/download', verifyToken, async (req, res) => {
 
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
+        const doc = await query('SELECT * FROM documents WHERE id = $1 AND employee_id = $2', [req.params.id, req.user.id]);
+        if (doc.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
         const result = await query(
             'DELETE FROM documents WHERE id = $1 AND employee_id = $2 RETURNING id',
             [req.params.id, req.user.id]
         );
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
+        await deleteFile('documents', doc.rows[0].file_name);
         res.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
@@ -95,11 +97,14 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
 router.delete('/:id/admin', verifyToken, isAdmin, async (req, res) => {
     try {
+        const doc = await query('SELECT * FROM documents WHERE id = $1', [req.params.id]);
+        if (doc.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
         const result = await query(
             'DELETE FROM documents WHERE id = $1 RETURNING id',
             [req.params.id]
         );
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
+        await deleteFile('documents', doc.rows[0].file_name);
         res.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });

@@ -3,21 +3,6 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 
-// Ensure table exists (works for existing and fresh DBs)
-query(`CREATE TABLE IF NOT EXISTS wfh_requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER REFERENCES employees(id) ON DELETE CASCADE,
-    start_date TEXT NOT NULL,
-    end_date TEXT NOT NULL,
-    total_days INTEGER NOT NULL,
-    reason TEXT,
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
-    approved_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
-    approval_remarks TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-)`);
-
 function isWeekend(dateStr) {
     const d = new Date(dateStr);
     const day = d.getDay();

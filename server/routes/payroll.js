@@ -11,6 +11,12 @@ function formatINR(amount) {
     return 'Rs. ' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatDateOnly(value) {
+    if (!value) return '';
+    if (value instanceof Date) return value.toISOString().split('T')[0];
+    return String(value).substring(0, 10);
+}
+
 router.get('/my', verifyToken, async (req, res) => {
     try {
         const { month, year } = req.query;
@@ -167,7 +173,7 @@ router.get('/:id/pdf', verifyToken, async (req, res) => {
 
         if (p.payment_date) {
             doc.fill('#111827').font('Helvetica').fontSize(9).moveDown(1);
-            doc.text(`Payment Date: ${String(p.payment_date).substring(0, 10)}`, colLabelX, doc.y);
+            doc.text(`Payment Date: ${formatDateOnly(p.payment_date)}`, colLabelX, doc.y);
         }
 
         doc.fill('#6B7280').fontSize(8).moveDown(3);

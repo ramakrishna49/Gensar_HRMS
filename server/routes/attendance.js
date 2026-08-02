@@ -332,7 +332,7 @@ router.get('/my', verifyToken, async (req, res) => {
         const params = [req.user.id];
         
         if (month && year) {
-            sqlQuery += ' AND strftime(\'%m\', a.date) = $2 AND strftime(\'%Y\', a.date) = $3';
+            sqlQuery += ' AND to_char(a.date, \'MM\') = $2 AND to_char(a.date, \'YYYY\') = $3';
             params.push(String(month).padStart(2, '0'), String(year));
         }
         
@@ -364,7 +364,7 @@ router.get('/all', verifyToken, isAdmin, async (req, res) => {
         }
         
         if (month && year) {
-            sqlQuery += ` AND strftime('%m', a.date) = $${paramIndex} AND strftime('%Y', a.date) = $${paramIndex + 1}`;
+            sqlQuery += ` AND to_char(a.date, 'MM') = $${paramIndex} AND to_char(a.date, 'YYYY') = $${paramIndex + 1}`;
             params.push(String(month).padStart(2, '0'), String(year));
             paramIndex += 2;
         }
@@ -397,8 +397,8 @@ router.get('/late-count', verifyToken, isAdmin, async (req, res) => {
             FROM employees e
             LEFT JOIN attendance a ON a.employee_id = e.id 
                 AND a.status = 'late'
-                AND strftime('%m', a.date) = $1
-                AND strftime('%Y', a.date) = $2
+                AND to_char(a.date, 'MM') = $1
+                AND to_char(a.date, 'YYYY') = $2
             WHERE e.status = 'active' AND e.role != 'admin'
             GROUP BY e.id
             HAVING late_count > 0
@@ -428,7 +428,7 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
         const attendance = await query(
             `SELECT employee_id, date, check_in, check_out, status, check_in_location
              FROM attendance 
-             WHERE strftime('%m', date) = $1 AND strftime('%Y', date) = $2`,
+             WHERE to_char(date, 'MM') = $1 AND to_char(date, 'YYYY') = $2`,
             [String(month).padStart(2, '0'), String(year)]
         );
 
@@ -503,7 +503,7 @@ router.get('/photo/:token', verifyToken, isAdmin, async (req, res) => {
         const buf = Buffer.isBuffer(photo.photo) ? photo.photo : Buffer.from(photo.photo);
 
         await query(
-            "UPDATE attendance_photos SET viewed = 1, viewed_at = datetime('now') WHERE id = $1",
+            "UPDATE attendance_photos SET viewed = 1, viewed_at = NOW() WHERE id = $1",
             [photo.id]
         );
         await query('DELETE FROM attendance_photos WHERE id = $1', [photo.id]);

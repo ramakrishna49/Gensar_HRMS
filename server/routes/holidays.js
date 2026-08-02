@@ -10,7 +10,7 @@ router.get('/', verifyToken, async (req, res) => {
         const params = [];
         
         if (year) {
-            sqlQuery += " AND strftime('%Y', date) = $1";
+            sqlQuery += " AND to_char(date, 'YYYY') = $1";
             params.push(year);
         }
         

@@ -3,23 +3,15 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
 const { query } = require('../config/database');
 const { verifyToken, generateToken } = require('../middleware/auth');
 const { validateRegistration, validateLogin, collectFieldErrors } = require('../middleware/validation');
 const { sendOTPEmail } = require('../services/email');
+const { uploadBuffer } = require('../services/storage');
 const { EDITABLE_FIELDS } = require('./profileUpdates');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const dir = path.join(__dirname, '../../uploads');
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
-    },
-    filename: (req, file, cb) => cb(null, `profile-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`)
-});
-const uploadProfile = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const allowed = /jpeg|jpg|png|gif/; const ext = allowed.test(path.extname(file.originalname).toLowerCase()); const mime = allowed.test(file.mimetype); cb(null, ext && mime); } });
+const uploadProfile = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const allowed = /jpeg|jpg|png|gif/; const ext = allowed.test(path.extname(file.originalname).toLowerCase()); const mime = allowed.test(file.mimetype); cb(null, ext && mime); } });
 
 // @route   POST /api/auth/login
 // @desc    Login user (Admin/Employee)
@@ -357,7 +349,9 @@ router.post('/profile-photo', verifyToken, uploadProfile.single('photo'), async 
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
         
-        const photoUrl = `/uploads/profile-${req.user.id}-${Date.now()}${path.extname(req.file.originalname)}`;
+        const ext = path.extname(req.file.originalname).toLowerCase();
+        const fileName = `profile-${req.user.id}-${Date.now()}${ext}`;
+        const photoUrl = await uploadBuffer('profile-photos', fileName, req.file.buffer, req.file.mimetype);
         
         await query(
             'UPDATE employees SET profile_photo = $1, updated_at = NOW() WHERE id = $2',
@@ -366,6 +360,7 @@ router.post('/profile-photo', verifyToken, uploadProfile.single('photo'), async 
         
         res.json({ success: true, photo_url: photoUrl });
     } catch (error) {
+        console.error('Profile photo upload error:', error.message);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

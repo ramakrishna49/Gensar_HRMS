@@ -3,22 +3,6 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 
-// Ensure table exists (works for existing and fresh DBs)
-query(`CREATE TABLE IF NOT EXISTS support_tickets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER REFERENCES employees(id) ON DELETE CASCADE,
-    category TEXT NOT NULL,
-    subject TEXT NOT NULL,
-    description TEXT,
-    priority TEXT DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
-    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
-    admin_response TEXT,
-    responded_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
-    responded_at TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-)`);
-
 router.post('/', verifyToken, async (req, res) => {
     try {
         const { category, subject, description, priority } = req.body;
@@ -136,7 +120,7 @@ router.put('/respond/:id', verifyToken, isAdmin, async (req, res) => {
         const result = await query(
             `UPDATE support_tickets
             SET status = $1, admin_response = $2, responded_by = $3,
-                responded_at = datetime('now'), updated_at = datetime('now')
+                responded_at = NOW(), updated_at = NOW()
             WHERE id = $4 RETURNING *`,
             [status, response || '', req.user.id, req.params.id]
         );

@@ -16,8 +16,8 @@ function isPastCutoff(now) {
 
 // Mark absent for a single date. Skips holidays, approved leave, approved WFH,
 // and any employee who already has an attendance row for that date.
-function markAbsentForDate(dateStr) {
-    const result = query(
+async function markAbsentForDate(dateStr) {
+    const result = await query(
         `INSERT INTO attendance (employee_id, date, status, remarks)
         SELECT e.id, $1, 'absent', 'Auto-marked absent (no check-in)'
         FROM employees e
@@ -42,7 +42,7 @@ function markAbsentForDate(dateStr) {
 
 // Process weekdays from (inclusive) startDate through (inclusive) endDate.
 // For today, only mark absent once the office end time has passed.
-function runAutoMark() {
+async function runAutoMark() {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const today = new Date(todayStr + 'T00:00:00');
@@ -62,7 +62,7 @@ function runAutoMark() {
         // Current day only counts once office hours are over.
         if (dateStr === todayStr && !isPastCutoff(now)) continue;
 
-        const marked = markAbsentForDate(dateStr);
+        const marked = await markAbsentForDate(dateStr);
         total += marked;
         processedDates.push(dateStr + (marked ? ' (+' + marked + ')' : ''));
     }
@@ -73,18 +73,11 @@ function runAutoMark() {
     return total;
 }
 
+// Legacy entry point kept for compatibility. Vercel Cron triggers runAutoMark directly.
 function startAutoMarkScheduler() {
-    try {
-        runAutoMark();
-    } catch (e) {
-        console.error('[Attendance] Auto-absent startup run error:', e.message);
-    }
+    runAutoMark().catch(e => console.error('[Attendance] Auto-absent startup run error:', e.message));
     setInterval(() => {
-        try {
-            runAutoMark();
-        } catch (e) {
-            console.error('[Attendance] Auto-absent run error:', e.message);
-        }
+        runAutoMark().catch(e => console.error('[Attendance] Auto-absent run error:', e.message));
     }, CHECK_INTERVAL_MS);
 }
 

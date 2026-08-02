@@ -1,16 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const { query } = require('./config/database');
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 // Middleware
 app.use(cors());
@@ -19,7 +14,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -38,6 +32,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/profile-updates', require('./routes/profileUpdates'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/tickets', require('./routes/tickets'));
+app.use('/api/cron', require('./routes/cron'));
 
 // Serve pages
 app.get('/', (req, res) => {
@@ -64,9 +59,10 @@ app.use((req, res) => {
 });
 
 // Purge expired / already-viewed check-in photos periodically
-function purgeExpiredPhotos() {
+async function purgeExpiredPhotos() {
     try {
-        query("DELETE FROM attendance_photos WHERE expires_at < datetime('now') OR viewed = 1");
+        const result = await query("DELETE FROM attendance_photos WHERE expires_at < NOW() OR viewed = 1");
+        if (result.changes > 0) console.log(`[Photos] Purged ${result.changes} expired/viewed photo(s).`);
     } catch (e) {
         console.error('Photo purge error:', e.message);
     }
@@ -74,17 +70,17 @@ function purgeExpiredPhotos() {
 
 // One-time repair: recompute payroll net_salary where it does not match basic + allowances - deductions.
 // Fixes rows corrupted by the old string-concatenation bug (e.g. "30000" + "400" = "30000400").
-function repairPayrollNetSalaries() {
+async function repairPayrollNetSalaries() {
     try {
-        const rows = query(
+        const rows = await query(
             `SELECT id, basic_salary, allowances, deductions, net_salary FROM payroll
-             WHERE net_salary != COALESCE(CAST(basic_salary AS REAL), 0) + COALESCE(CAST(allowances AS REAL), 0) - COALESCE(CAST(deductions AS REAL), 0)`
-        ).rows;
+             WHERE net_salary != COALESCE(CAST(basic_salary AS DOUBLE PRECISION), 0) + COALESCE(CAST(allowances AS DOUBLE PRECISION), 0) - COALESCE(CAST(deductions AS DOUBLE PRECISION), 0)`
+        );
         let fixed = 0;
-        for (const r of rows) {
+        for (const r of rows.rows) {
             const net = Number(r.basic_salary || 0) + Number(r.allowances || 0) - Number(r.deductions || 0);
             if (Number(r.net_salary) === net) continue;
-            query('UPDATE payroll SET net_salary = $1 WHERE id = $2', [net, r.id]);
+            await query('UPDATE payroll SET net_salary = $1 WHERE id = $2', [net, r.id]);
             fixed++;
         }
         if (fixed > 0) console.log(`[Payroll] Recomputed net_salary for ${fixed} corrupted payslip row(s).`);
@@ -93,14 +89,12 @@ function repairPayrollNetSalaries() {
     }
 }
 
-// Start server
-app.listen(PORT, () => {
-    repairPayrollNetSalaries();
-    purgeExpiredPhotos();
-    setInterval(purgeExpiredPhotos, 60 * 60 * 1000);
-    const { startAutoMarkScheduler } = require('./services/attendanceAutoMark');
-    startAutoMarkScheduler();
-    console.log(`
+// Start server (only when run directly, not when imported by the Vercel function)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        repairPayrollNetSalaries();
+        purgeExpiredPhotos();
+        console.log(`
     ╔══════════════════════════════════════════╗
     ║       GENSAR HRMS Server Started         ║
     ║──────────────────────────────────────────║
@@ -109,6 +103,7 @@ app.listen(PORT, () => {
     ║  URL:  http://localhost:${PORT}             ║
     ╚══════════════════════════════════════════╝
     `);
-});
+    });
+}
 
 module.exports = app;
