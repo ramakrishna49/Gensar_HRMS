@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Queries - Gensar HRMS</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .ticket-desc-cell { max-width: 260px; }
+        .ticket-desc-cell .subject { font-weight: 600; color: var(--text-primary); }
+        .ticket-desc-cell .desc { color: var(--text-secondary); font-size: 0.85rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ticket-reply { font-size: 0.85rem; color: var(--primary-dark); }
+        .ticket-reply .label { font-weight: 600; }
+        .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+        .filter-tab { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); cursor: pointer; font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+        .filter-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/employee/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">My Info</div>
+            <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
+            <a href="/pages/employee/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
+            <a href="/pages/employee/payslips.html" class="nav-item"><i class="fas fa-money-bill-wave"></i><span class="nav-text">Payslips</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/employee/tickets.html" class="nav-item active"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
+            <div class="nav-section-title">Resources</div>
+            <a href="/pages/employee/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/employee/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">My Queries</h2>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="openTicketModal()"><i class="fas fa-plus"></i> Raise Query</button>
+                <a href="/pages/employee/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/employee/profile.html" class="profile-menu-item"><i class="fas fa-user"></i> My Profile</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div style="padding:30px;">
+            <div class="card slide-up stagger-1">
+                <div class="card-header">
+                    <h3 style="font-weight:600;"><i class="fas fa-ticket-alt" style="color:var(--primary);margin-right:8px;"></i>My Raised Queries</h3>
+                </div>
+                <div style="padding:20px;">
+                    <div class="filter-tabs">
+                        <div class="filter-tab active" data-filter="all" onclick="setFilter(this)">All</div>
+                        <div class="filter-tab" data-filter="open" onclick="setFilter(this)">Open</div>
+                        <div class="filter-tab" data-filter="in_progress" onclick="setFilter(this)">In Progress</div>
+                        <div class="filter-tab" data-filter="resolved" onclick="setFilter(this)">Resolved</div>
+                        <div class="filter-tab" data-filter="closed" onclick="setFilter(this)">Closed</div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr><th>Query</th><th>Category</th><th>Priority</th><th>Status</th><th>Submitted</th><th>Response</th></tr>
+                            </thead>
+                            <tbody id="ticketsContainer">
+                                <tr><td colspan="6" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/tickets.js"></script>
+    <script>
+        let allTickets = [];
+        let currentFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) throw new Error('Not authenticated');
+            loadTickets();
+        });
+
+        async function loadTickets() {
+            const data = await apiCall('/tickets/my');
+            const container = document.getElementById('ticketsContainer');
+            if (data && data.success) {
+                allTickets = data.tickets || [];
+                renderTickets();
+                if (allTickets.length === 0) {
+                    container.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-ticket-alt"></i><h3>No Queries Yet</h3><p>Click "Raise Query" to submit your first query</p></div></td></tr>';
+                }
+            } else {
+                container.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load queries</p></div></td></tr>';
+            }
+        }
+
+        function setFilter(el) {
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            currentFilter = el.getAttribute('data-filter');
+            renderTickets();
+        }
+
+        function renderTickets() {
+            const container = document.getElementById('ticketsContainer');
+            const filtered = currentFilter === 'all' ? allTickets : allTickets.filter(t => t.status === currentFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-inbox"></i><h3>No Queries</h3><p>No queries found for this filter.</p></div></td></tr>';
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(t => {
+                html += '<tr>';
+                html += '<td class="ticket-desc-cell"><div class="subject" title="' + escapeHtml(t.subject) + '">' + escapeHtml(t.subject) + '</div>';
+                if (t.description) {
+                    html += '<span class="desc" title="' + escapeHtml(t.description) + '">' + escapeHtml(t.description) + '</span>';
+                }
+                html += '</td>';
+                html += '<td>' + escapeHtml(t.category) + '</td>';
+                html += '<td><span class="badge badge-' + getStatusBadge(t.priority) + '">' + getStatusText(t.priority) + '</span></td>';
+                html += '<td><span class="badge badge-' + getStatusBadge(t.status) + '">' + getStatusText(t.status) + '</span></td>';
+                html += '<td>' + formatDate(t.created_at) + '</td>';
+                html += '<td class="ticket-reply">' + (t.admin_response ? '<span class="label">' + escapeHtml(t.responded_by_name || '') + '</span> ' + escapeHtml(t.admin_response) : '-') + '</td>';
+                html += '</tr>';
+            });
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance - Gensar HRMS</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        .matrix-container { overflow-x: auto; }
+        .matrix-table { border-collapse: collapse; font-size: 0.75rem; min-width: 100%; }
+        .matrix-table th, .matrix-table td { padding: 4px 6px; text-align: center; border: 1px solid var(--border-light); white-space: nowrap; }
+        .matrix-table th { position: sticky; top: 0; background: var(--bg-light); z-index: 2; font-size: 0.65rem; }
+        .matrix-table th.emp-header { position: sticky; left: 0; z-index: 3; text-align: left; min-width: 160px; background: var(--bg-light); }
+        .matrix-table td.emp-name { position: sticky; left: 0; z-index: 1; background: var(--bg-card); text-align: left; font-weight: 500; font-size: 0.75rem; }
+        .matrix-table th.corner { position: sticky; left: 0; top: 0; z-index: 4; background: var(--bg-light); min-width: 160px; }
+        .cell-present { background: #D1FAE5; color: #065F46; cursor: pointer; }
+        .cell-late { background: #FEF3C7; color: #92400E; cursor: pointer; }
+        .cell-half-day { background: #FED7AA; color: #9A3412; cursor: pointer; }
+        .cell-absent { background: #FEE2E2; color: #991B1B; cursor: pointer; }
+        .cell-weekoff { background: #F3F4F6; color: #9CA3AF; }
+        .cell-upcoming { background: transparent; color: var(--text-tertiary); }
+        .dark-mode .cell-present { background: #064E3B; color: #34D399; }
+        .dark-mode .cell-late { background: #78350F; color: #FBBF24; }
+        .dark-mode .cell-half-day { background: #7C2D12; color: #FDBA74; }
+        .dark-mode .cell-absent { background: #7F1D1D; color: #F87171; }
+        .dark-mode .cell-weekoff { background: #374151; color: #6B7280; }
+        .dark-mode .cell-upcoming { background: transparent; color: #4B5563; }
+        .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.8rem; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); }
+        .cell-tooltip { display: none; position: fixed; background: #1F2937; color: #F9FAFB; padding: 8px 12px; border-radius: var(--radius); font-size: 0.75rem; z-index: 999; pointer-events: none; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .stat-row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat-item { text-align: center; padding: 8px 16px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); min-width: 80px; }
+        .stat-item .num { font-size: 1.3rem; font-weight: 700; }
+        .stat-item .lbl { font-size: 0.7rem; color: var(--text-secondary); }
+        @media (max-width: 768px) {
+            .matrix-table td, .matrix-table th { padding: 2px 4px; font-size: 0.65rem; }
+            .matrix-table th.emp-header, .matrix-table td.emp-name { min-width: 100px; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/admin/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">Employee Management</div>
+            <a href="/pages/admin/employees.html" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
+            <a href="/pages/admin/departments.html" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
+            <a href="/pages/admin/designations.html" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
+            <div class="nav-section-title">Time & Leave</div>
+            <a href="/pages/admin/attendance.html" class="nav-item active"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/admin/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
+            <a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <div class="nav-section-title">Finance</div>
+            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-money-bill-wave"></i><span class="nav-text">Payroll</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
+            <div class="nav-section-title">Communication</div>
+            <a href="/pages/admin/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <div class="nav-section-title">Analytics</div>
+            <a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">Attendance Matrix</h2>
+            </div>
+            <div class="header-right">
+                <a href="/pages/admin/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/admin/settings.html" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div style="padding:24px;">
+            <div class="card" style="margin-bottom:16px;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                        <select id="filterMonth" class="form-control" style="width:120px;" onchange="loadMatrix()"></select>
+                        <select id="filterYear" class="form-control" style="width:110px;" onchange="loadMatrix()"></select>
+                        <button class="btn btn-success" onclick="openMarkPresentModal()"><i class="fas fa-user-check"></i> Mark Present</button>
+                        <button class="btn btn-danger" onclick="openMarkAbsentModal()"><i class="fas fa-user-times"></i> Mark Absent</button>
+                    </div>
+                    <button class="btn btn-success" onclick="downloadExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
+                </div>
+            </div>
+
+            <div class="stat-row" style="margin-bottom:12px;" id="statsRow">
+                <div class="stat-item"><div class="num" id="statPresent" style="color:var(--success);">0</div><div class="lbl">Present</div></div>
+                <div class="stat-item"><div class="num" id="statLate" style="color:var(--warning);">0</div><div class="lbl">Late</div></div>
+                <div class="stat-item"><div class="num" id="statHalfDay" style="color:var(--accent);">0</div><div class="lbl">Half Day</div></div>
+                <div class="stat-item"><div class="num" id="statAbsent" style="color:var(--danger);">0</div><div class="lbl">Absent</div></div>
+                <div class="stat-item"><div class="num" id="statWeekoff" style="color:var(--text-tertiary);">0</div><div class="lbl">Weekoff</div></div>
+            </div>
+
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin:-4px 0 8px;"><i class="fas fa-info-circle"></i> Present count includes late logins.</p>
+
+            <div id="lateWarningCard" style="display:none;margin-bottom:12px;padding:12px 16px;border-radius:var(--radius);background:#FEF3C7;border:1px solid #F59E0B;color:#92400E;font-size:0.85rem;">
+                <i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>
+                <span id="lateWarningText"></span>
+            </div>
+
+            <div class="legend" style="margin-bottom:12px;">
+                <span class="legend-item"><span class="legend-dot cell-present"></span> Present</span>
+                <span class="legend-item"><span class="legend-dot cell-late"></span> Late Login</span>
+                <span class="legend-item"><span class="legend-dot cell-half-day"></span> Half Day</span>
+                <span class="legend-item"><span class="legend-dot cell-absent"></span> Absent</span>
+                <span class="legend-item"><span class="legend-dot cell-weekoff"></span> Week Off</span>
+            </div>
+
+            <div class="card" style="padding:12px;">
+                <div class="matrix-container" id="matrixContainer">
+                    <div style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></div>
+                </div>
+            </div>
+
+            <div class="card slide-up stagger-3" style="margin-top:24px;">
+                <div class="card-header">
+                    <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-history" style="color:var(--info);margin-right:8px;"></i>Recent Logs</h3>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <button class="btn btn-sm btn-secondary" onclick="loadRecentLogs()"><i class="fas fa-sync"></i> Refresh</button>
+                    </div>
+                </div>
+                <div id="recentLogsContainer">
+                    <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="cell-tooltip" id="cellTooltip"></div>
+
+    <!-- Mark Present Modal -->
+    <div class="modal" id="markPresentModal" onclick="if(event.target===this)closeMarkPresentModal()">
+        <div class="modal-content" style="max-width:450px;">
+            <div class="modal-header">
+                <h2>Mark Employee Present</h2>
+                <button class="modal-close" onclick="closeMarkPresentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Employee</label>
+                    <select id="presentEmployee" class="form-control">
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="presentDate" class="form-control">
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;"><i class="fas fa-info-circle"></i> Check-in time will be set to office start time.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeMarkPresentModal()">Cancel</button>
+                <button class="btn btn-success" id="markPresentBtn" onclick="handleMarkPresent()"><i class="fas fa-check"></i> Mark Present</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mark Absent Modal -->
+    <div class="modal" id="markAbsentModal" onclick="if(event.target===this)closeMarkAbsentModal()">
+        <div class="modal-content" style="max-width:450px;">
+            <div class="modal-header">
+                <h2>Mark Employee Absent</h2>
+                <button class="modal-close" onclick="closeMarkAbsentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Employee</label>
+                    <select id="absentEmployee" class="form-control">
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="absentDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Remarks (optional)</label>
+                    <textarea id="absentRemarks" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeMarkAbsentModal()">Cancel</button>
+                <button class="btn btn-danger" id="markAbsentBtn" onclick="handleMarkAbsent()"><i class="fas fa-user-times"></i> Mark Absent</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Photo Lightbox -->
+    <div class="modal" id="photoModal" onclick="if(event.target===this)closePhotoModal()">
+        <div class="modal-content" style="max-width:420px;text-align:center;">
+            <div class="modal-header">
+                <h2><i class="fas fa-camera" style="color:var(--primary);margin-right:8px;"></i>Attendance Photo</h2>
+                <button class="modal-close" onclick="closePhotoModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="photoViewerContainer" style="min-height:200px;display:flex;align-items:center;justify-content:center;">
+                    <div class="spinner" style="margin:0 auto;"></div>
+                </div>
+                <p id="photoNotice" style="font-size:0.78rem;color:var(--danger);margin-top:10px;display:none;"><i class="fas fa-trash-alt"></i> This photo was deleted after this one-time view.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script>
+        if (!checkAuth()) throw new Error('Not authenticated');
+
+        let matrixData = null;
+        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const statusLabels = { present:'Present', late:'Late Login', 'half-day':'Half Day', absent:'Absent', weekoff:'Week Off', upcoming:'--' };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            const mSel = document.getElementById('filterMonth');
+            for (let i = 1; i <= 12; i++) {
+                const o = document.createElement('option');
+                o.value = i; o.textContent = monthNames[i-1];
+                if (i === now.getMonth()+1) o.selected = true;
+                mSel.appendChild(o);
+            }
+            const ySel = document.getElementById('filterYear');
+            for (let y = now.getFullYear()-2; y <= now.getFullYear()+1; y++) {
+                const o = document.createElement('option');
+                o.value = y; o.textContent = y;
+                if (y === now.getFullYear()) o.selected = true;
+                ySel.appendChild(o);
+            }
+            loadMatrix();
+            loadRecentLogs();
+            loadLateWarning();
+        });
+
+        async function loadMatrix() {
+            const month = document.getElementById('filterMonth').value;
+            const year = document.getElementById('filterYear').value;
+            const container = document.getElementById('matrixContainer');
+            container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></div>';
+
+            loadLateWarning();
+
+            const data = await apiCall('/attendance/monthly?month=' + month + '&year=' + year);
+            if (!data || !data.success) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load attendance data</p></div>';
+                return;
+            }
+
+            matrixData = data;
+            renderMatrix(data);
+        }
+
+        function getStatusForDisplay(status) {
+            const map = { present: 'P', late: 'L', 'half-day': 'HD', absent: 'A', weekoff: '-', upcoming: '' };
+            return map[status] || '?';
+        }
+
+        function formatHalfDays(total) {
+            const t = Math.round(total * 2) / 2;
+            if (Number.isInteger(t)) return String(t);
+            if (t % 1 === 0.5) return Math.floor(t) + '\u00BD';
+            return String(t);
+        }
+
+        function getCellClass(status) {
+            return 'cell-' + status;
+        }
+
+        function getCellTooltip(empName, day, status, checkIn, checkOut) {
+            let text = empName + ' - Day ' + day + '\nStatus: ' + (statusLabels[status] || status);
+            if (checkIn) text += '\nCheck In: ' + checkIn;
+            if (checkOut) text += '\nCheck Out: ' + checkOut;
+            return text;
+        }
+
+        function renderMatrix(data) {
+            const { employees, days, matrix } = data;
+            const month = parseInt(data.month);
+            const year = parseInt(data.year);
+            const container = document.getElementById('matrixContainer');
+
+            if (!employees || employees.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><h3>No Employees</h3><p>No active employees found</p></div>';
+                return;
+            }
+
+            let html = '<table class="matrix-table"><thead><tr>';
+            html += '<th class="corner">Employee</th>';
+            const today = new Date();
+            for (let d = 1; d <= days; d++) {
+                const date = new Date(year, month - 1, d);
+                const dayName = date.toLocaleDateString('en', { weekday: 'short' });
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isFuture = date > today;
+                html += '<th style="' + (isWeekend || isFuture ? 'color:var(--text-tertiary);' : '') + '" title="' + dayName + ' ' + d + '">' + d + '<br><span style="font-size:0.55rem;font-weight:400;">' + dayName + '</span></th>';
+            }
+            html += '<th style="font-size:0.65rem;">P* / L / HD / A</th><th style="font-size:0.65rem;">Total Days</th></tr></thead><tbody>';
+
+            let totals = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, upcoming: 0 };
+            let grandPresent = 0, grandLate = 0, grandHalf = 0, grandAbsent = 0, grandWeekoff = 0, grandUpcoming = 0;
+
+            employees.forEach(emp => {
+                html += '<tr>';
+                html += '<td class="emp-name">' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '</td>';
+                let p = 0, l = 0, h = 0, a = 0, w = 0, u = 0;
+                for (let d = 1; d <= days; d++) {
+                    const cell = matrix[emp.id] && matrix[emp.id][d] ? matrix[emp.id][d] : { status: 'absent', check_in: null, check_out: null };
+                    const cls = getCellClass(cell.status);
+                    if (cell.status === 'present') p++;
+                    else if (cell.status === 'late') l++;
+                    else if (cell.status === 'half-day') h++;
+                    else if (cell.status === 'absent') a++;
+                    else if (cell.status === 'weekoff') w++;
+                    else if (cell.status === 'upcoming') u++;
+                    const label = cell.check_in ? cell.check_in : getStatusForDisplay(cell.status);
+                    html += '<td class="' + cls + '" onmouseenter="showTooltip(event, \'' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '\', ' + d + ', \'' + cell.status + '\', \'' + (cell.check_in || '') + '\', \'' + (cell.check_out || '') + '\', \'' + (cell.check_in_location || '') + '\')" onmouseleave="hideTooltip()" onclick="handleCellClick(' + emp.id + ', ' + d + ', \'' + cell.status + '\')">' + escapeHtml(label) + '</td>';
+                }
+                grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandUpcoming += u;
+                const totalDays = p + l + (h * 0.5);
+                html += '<td style="font-weight:600;font-size:0.7rem;text-align:center;white-space:nowrap;">' + (p + l) + ' / ' + l + ' / ' + h + ' / ' + a + '</td>';
+                html += '<td style="font-weight:700;font-size:0.75rem;text-align:center;white-space:nowrap;color:var(--primary);">' + formatHalfDays(totalDays) + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+
+            document.getElementById('statPresent').textContent = grandPresent + grandLate;
+            document.getElementById('statLate').textContent = grandLate;
+            document.getElementById('statHalfDay').textContent = grandHalf;
+            document.getElementById('statAbsent').textContent = grandAbsent;
+            document.getElementById('statWeekoff').textContent = grandWeekoff;
+        }
+
+        function showTooltip(e, name, day, status, checkIn, checkOut, location) {
+            const tip = document.getElementById('cellTooltip');
+            let locHtml = '';
+            if (location && location.includes(',')) {
+                const [lat, lon] = location.split(',');
+                locHtml = '<br>Location: <a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:#60A5FA;text-decoration:none;">View on Map</a>';
+            } else if (location) {
+                locHtml = '<br>Location: ' + escapeHtml(location);
+            }
+            tip.innerHTML = '<strong>' + escapeHtml(name) + '</strong> - Day ' + day + '<br>Status: <strong>' + (statusLabels[status] || status) + '</strong>' + (checkIn ? '<br>Check In: ' + escapeHtml(checkIn) : '') + (checkOut ? '<br>Check Out: ' + escapeHtml(checkOut) : '') + locHtml;
+            tip.style.display = 'block';
+            tip.style.left = (e.clientX + 12) + 'px';
+            tip.style.top = (e.clientY + 12) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('cellTooltip').style.display = 'none';
+        }
+
+        function handleCellClick(empId, day, status) {
+            const month = document.getElementById('filterMonth').value;
+            const year = document.getElementById('filterYear').value;
+            const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            if (status === 'upcoming') {
+                showToast('Cannot modify future dates', 'warning');
+                return;
+            }
+            if (status === 'absent') {
+                showConfirmDialog('Mark Present', 'Remove absent mark for ' + dateStr + '?', 'Mark Present', 'btn-success', function() {
+                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr, status: 'present' }).then(() => loadMatrix());
+                });
+                return;
+            }
+            if (status === 'present' || status === 'late' || status === 'half-day') {
+                showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' as absent?', 'Mark Absent', 'btn-danger', function() {
+                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
+                });
+                return;
+            }
+            document.getElementById('absentEmployee').value = empId;
+            document.getElementById('absentDate').value = dateStr;
+            openMarkAbsentModal();
+        }
+
+        async function loadLateWarning() {
+            const month = document.getElementById('filterMonth').value;
+            const year = document.getElementById('filterYear').value;
+            const data = await apiCall('/attendance/late-count?month=' + month + '&year=' + year);
+            const card = document.getElementById('lateWarningCard');
+            const text = document.getElementById('lateWarningText');
+            if (data && data.success && data.employees) {
+                const flagged = data.employees.filter(e => parseInt(e.late_count) >= 3);
+                if (flagged.length > 0) {
+                    card.style.display = 'block';
+                    text.innerHTML = '<strong>' + flagged.length + ' employee(s)</strong> with 3+ late logins this month: ' +
+                        flagged.map(e => '<strong>' + escapeHtml(e.first_name + ' ' + (e.last_name || '')) + '</strong> (' + e.late_count + 'x)').join(', ') +
+                        '. Further lates will be auto-marked as Half Day.';
+                } else {
+                    card.style.display = 'none';
+                }
+            } else {
+                card.style.display = 'none';
+            }
+        }
+
+        async function loadRecentLogs() {
+            const container = document.getElementById('recentLogsContainer');
+            const data = await apiCall('/attendance/all?limit=20');
+            if (data && data.success && data.attendance.length > 0) {
+                const records = data.attendance.slice(0, 20);
+                let html = '<div class="table-container"><table><thead><tr><th>Employee</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Check In Location</th><th>Check Out Location</th><th>Photo</th><th>Status</th></tr></thead><tbody>';
+                records.forEach(a => {
+                    const empName = escapeHtml(a.first_name + ' ' + (a.last_name || ''));
+                    let ciLocHtml = '-';
+                    const ciLoc = a.check_in_location || '';
+                    if (ciLoc && ciLoc.includes(',')) {
+                        const [lat, lon] = ciLoc.split(',');
+                        ciLocHtml = '<a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(ciLoc) + '"><i class="fas fa-map-marker-alt"></i></a>';
+                    } else if (ciLoc) {
+                        ciLocHtml = '<span style="font-size:0.75rem;">' + escapeHtml(ciLoc) + '</span>';
+                    }
+                    let coLocHtml = '-';
+                    const coLoc = a.check_out_location || '';
+                    if (coLoc && coLoc.includes(',')) {
+                        const [lat, lon] = coLoc.split(',');
+                        coLocHtml = '<a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(coLoc) + '"><i class="fas fa-map-marker-alt"></i></a>';
+                    } else if (coLoc) {
+                        coLocHtml = '<span style="font-size:0.75rem;">' + escapeHtml(coLoc) + '</span>';
+                    }
+                    let photoHtml = '-';
+                    const photoBtns = [];
+                    if (a.photo_token) {
+                        photoBtns.push('<button class="btn btn-sm btn-info" onclick="viewCheckInPhoto(\'' + a.photo_token + '\')" title="View check-in photo (one-time)"><i class="fas fa-camera"></i> In</button>');
+                    }
+                    if (a.photo_token_checkout) {
+                        photoBtns.push('<button class="btn btn-sm btn-warning" onclick="viewCheckInPhoto(\'' + a.photo_token_checkout + '\')" title="View check-out photo (one-time)"><i class="fas fa-sign-out-alt"></i> Out</button>');
+                    }
+                    if (photoBtns.length > 0) {
+                        photoHtml = '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">' + photoBtns.join('') + '</div>';
+                    }
+                    html += '<tr>';
+                    html += '<td><strong>' + empName + '</strong></td>';
+                    html += '<td>' + formatDate(a.date) + '</td>';
+                    html += '<td>' + escapeHtml(a.check_in || '-') + '</td>';
+                    html += '<td>' + escapeHtml(a.check_out || '-') + '</td>';
+                    html += '<td style="text-align:center;">' + ciLocHtml + '</td>';
+                    html += '<td style="text-align:center;">' + coLocHtml + '</td>';
+                    html += '<td style="text-align:center;">' + photoHtml + '</td>';
+                    html += '<td><span class="badge badge-' + getStatusBadge(a.status) + '">' + escapeHtml(getStatusText(a.status)) + '</span></td>';
+                    html += '</tr>';
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            } else {
+                showEmptyState(container, 'fa-clock', 'No Records', 'No recent attendance logs');
+            }
+        }
+
+        async function viewCheckInPhoto(token) {
+            const container = document.getElementById('photoViewerContainer');
+            const notice = document.getElementById('photoNotice');
+            container.innerHTML = '<div class="spinner" style="margin:0 auto;"></div>';
+            notice.style.display = 'none';
+            document.getElementById('photoModal').classList.add('active');
+
+            const tokenStr = localStorage.getItem('token');
+            try {
+                const res = await fetch('/api/attendance/photo/' + encodeURIComponent(token), {
+                    headers: { 'Authorization': 'Bearer ' + tokenStr }
+                });
+                if (!res.ok) {
+                    const msg = res.status === 404 ? 'Photo expired or already viewed' : 'Failed to load photo';
+                    container.innerHTML = '<p style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> ' + msg + '</p>';
+                } else {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    container.innerHTML = '<img src="' + url + '" alt="Attendance photo" style="max-width:100%;max-height:320px;border-radius:var(--radius-md);">';
+                    notice.style.display = 'block';
+                }
+            } catch (e) {
+                container.innerHTML = '<p style="color:var(--danger);">Network error loading photo</p>';
+            }
+        }
+
+        function closePhotoModal() {
+            document.getElementById('photoModal').classList.remove('active');
+        }
+
+        function downloadExcel() {
+            if (!matrixData) { showToast('Load attendance data first', 'warning'); return; }
+            const { employees, days, matrix } = matrixData;
+            const month = parseInt(matrixData.month);
+            const year = parseInt(matrixData.year);
+            const monthLabel = monthNames[month - 1] + ' ' + year;
+
+            const weekdayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            const dayStatus = { present: 'P', late: 'L', 'half-day': 'HD', absent: 'A', weekoff: 'WO', upcoming: '' };
+
+            const totalCols = 3 + days + 2;
+            const statusCounts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, upcoming: 0 };
+
+            const rows = [];
+            const titleRow = new Array(totalCols).fill('');
+            titleRow[0] = 'Attendance Report - ' + monthLabel;
+            rows.push(titleRow);
+
+            const dayHeader = ['Employee', 'Employee ID', 'Department'];
+            for (let d = 1; d <= days; d++) dayHeader.push(String(d));
+            dayHeader.push('P / L / HD / A / WO');
+            dayHeader.push('Total Days');
+            rows.push(dayHeader);
+
+            const weekdayHeader = ['', '', ''];
+            for (let d = 1; d <= days; d++) {
+                const date = new Date(year, month - 1, d);
+                weekdayHeader.push(weekdayNames[date.getDay()]);
+            }
+            weekdayHeader.push('');
+            weekdayHeader.push('');
+            rows.push(weekdayHeader);
+
+            employees.forEach(emp => {
+                const row = [emp.first_name + ' ' + (emp.last_name || ''), emp.employee_id || '', emp.department_name || ''];
+                let p = 0, l = 0, h = 0, a = 0, w = 0, u = 0;
+                for (let d = 1; d <= days; d++) {
+                    const cell = matrix[emp.id] && matrix[emp.id][d] ? matrix[emp.id][d] : { status: 'absent', check_in: null, check_out: null };
+                    const st = cell.status;
+                    if (st === 'present') p++;
+                    else if (st === 'late') l++;
+                    else if (st === 'half-day') h++;
+                    else if (st === 'absent') a++;
+                    else if (st === 'weekoff') w++;
+                    else if (st === 'upcoming') u++;
+                    let label = dayStatus[st] || '';
+                    if (cell.check_in) label = (dayStatus[st] || '') + ' ' + cell.check_in;
+                    if (cell.check_out) label += ' - ' + cell.check_out;
+                    row.push(label);
+                }
+                statusCounts.present += p; statusCounts.late += l; statusCounts['half-day'] += h;
+                statusCounts.absent += a; statusCounts.weekoff += w; statusCounts.upcoming += u;
+                row.push((p + l) + ' / ' + l + ' / ' + h + ' / ' + a + ' / ' + w);
+                row.push(formatHalfDays(p + l + (h * 0.5)));
+                rows.push(row);
+            });
+
+            const totalRow = ['TOTAL', '', ''];
+            for (let d = 1; d <= days; d++) totalRow.push('');
+            totalRow.push(statusCounts.present + ' / ' + statusCounts.late + ' / ' + statusCounts['half-day'] + ' / ' + statusCounts.absent + ' / ' + statusCounts.weekoff);
+            totalRow.push(formatHalfDays(statusCounts.present + statusCounts.late + (statusCounts['half-day'] * 0.5)));
+            rows.push(totalRow);
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 16 }].concat(Array(days).fill({ wch: 9 })).concat([{ wch: 18 }, { wch: 10 }]);
+            ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } }];
+            XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+            XLSX.writeFile(wb, 'Attendance_' + monthNames[month-1] + '_' + year + '.xlsx');
+            showToast('Excel downloaded!', 'success');
+        }
+
+        async function loadAllEmployees() {
+            const d = await apiCall('/employees?limit=1000');
+            const absentSel = document.getElementById('absentEmployee');
+            const presentSel = document.getElementById('presentEmployee');
+            const opts = '<option value="">Select Employee</option>' + (d && d.success ? d.employees.map(x => `<option value="${x.id}">${escapeHtml(x.first_name+' '+x.last_name)} (${escapeHtml(x.employee_id)})</option>`).join('') : '');
+            if (absentSel) absentSel.innerHTML = opts;
+            if (presentSel) presentSel.innerHTML = opts;
+        }
+
+        function openMarkPresentModal() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('presentDate').value = today;
+            loadAllEmployees();
+            document.getElementById('markPresentModal').classList.add('active');
+        }
+
+        function closeMarkPresentModal() {
+            document.getElementById('markPresentModal').classList.remove('active');
+        }
+
+        async function handleMarkPresent() {
+            const employee_id = document.getElementById('presentEmployee').value;
+            const date = document.getElementById('presentDate').value;
+            if (!employee_id || !date) {
+                showToast('Please select employee and date', 'error');
+                return;
+            }
+            const btn = document.getElementById('markPresentBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+            const data = await apiCall('/attendance/mark-present', 'POST', { employee_id: parseInt(employee_id), date });
+            if (data && data.success) {
+                showToast(data.message || 'Marked as present', 'success');
+                closeMarkPresentModal();
+                loadMatrix();
+            } else {
+                showToast(data?.message || 'Failed to mark present', 'error');
+            }
+            btn.innerHTML = '<i class="fas fa-check"></i> Mark Present';
+            btn.disabled = false;
+        }
+
+        function openMarkAbsentModal() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('absentDate').value = today;
+            loadAllEmployees();
+            document.getElementById('markAbsentModal').classList.add('active');
+        }
+
+        function closeMarkAbsentModal() {
+            document.getElementById('markAbsentModal').classList.remove('active');
+        }
+
+        async function handleMarkAbsent() {
+            const employee_id = document.getElementById('absentEmployee').value;
+            const date = document.getElementById('absentDate').value;
+            const remarks = document.getElementById('absentRemarks').value;
+            if (!employee_id || !date) {
+                showToast('Please select employee and date', 'error');
+                return;
+            }
+            const btn = document.getElementById('markAbsentBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+            const data = await apiCall('/attendance/mark-absent', 'POST', { employee_id: parseInt(employee_id), date, remarks });
+            if (data && data.success) {
+                showToast(data.message || 'Marked as absent', 'success');
+                closeMarkAbsentModal();
+                document.getElementById('absentRemarks').value = '';
+                loadMatrix();
+            } else {
+                showToast(data?.message || 'Failed to mark absent', 'error');
+            }
+            btn.innerHTML = '<i class="fas fa-user-times"></i> Mark Absent';
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

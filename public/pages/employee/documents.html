@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Documents - Gensar HRMS</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .doc-card { padding: 24px; text-align: center; transition: var(--transition); }
+        .doc-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .doc-icon { font-size: 2.8rem; margin-bottom: 14px; }
+        .doc-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; word-break: break-word; }
+        .doc-type { font-size: 0.8rem; margin-bottom: 4px; }
+        .doc-date { font-size: 0.78rem; color: var(--text-tertiary); }
+        .doc-actions { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+        .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/employee/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">My Info</div>
+            <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
+            <a href="/pages/employee/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
+            <a href="/pages/employee/payslips.html" class="nav-item"><i class="fas fa-money-bill-wave"></i><span class="nav-text">Payslips</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/employee/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
+            <div class="nav-section-title">Resources</div>
+            <a href="/pages/employee/documents.html" class="nav-item active"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/employee/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">My Documents</h2>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="openUploadModal()"><i class="fas fa-upload"></i> Upload</button>
+                <a href="/pages/employee/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/employee/profile.html" class="profile-menu-item"><i class="fas fa-user"></i> My Profile</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div style="padding:30px;">
+            <div class="card slide-up stagger-1 mb-3">
+                <div class="filter-bar">
+                    <label style="font-weight:500;font-size:0.9rem;">Filter by type:</label>
+                    <select id="typeFilter" class="form-control" style="width:auto;" onchange="renderDocs()">
+                        <option value="all">All Types</option>
+                        <option value="id_proof">ID Proof</option>
+                        <option value="address_proof">Address Proof</option>
+                        <option value="education">Education Certificate</option>
+                        <option value="experience">Experience Letter</option>
+                        <option value="offer_letter">Offer Letter</option>
+                        <option value="salary_slip">Salary Slip</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <span id="docCount" style="color:var(--text-secondary);font-size:0.85rem;"></span>
+                </div>
+            </div>
+
+            <div id="docContainer">
+                <div style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Upload Document</h2>
+                <button onclick="closeUploadModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" onsubmit="uploadDocument(event)">
+                    <div class="form-group">
+                        <label>Title *</label>
+                        <input type="text" class="form-control" id="docTitle" required placeholder="Enter document title">
+                    </div>
+                    <div class="form-group">
+                        <label>Document Type</label>
+                        <select class="form-control" id="docType">
+                            <option value="id_proof">ID Proof</option>
+                            <option value="address_proof">Address Proof</option>
+                            <option value="education">Education Certificate</option>
+                            <option value="experience">Experience Letter</option>
+                            <option value="offer_letter">Offer Letter</option>
+                            <option value="salary_slip">Salary Slip</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>File *</label>
+                        <input type="file" class="form-control" id="docFile" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                        <p style="font-size:0.8rem;color:var(--text-tertiary);margin-top:4px;">Accepted: PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)</p>
+                    </div>
+                    <div class="modal-footer" style="padding:0;border:none;margin-top:8px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="uploadBtn"><i class="fas fa-upload"></i> Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/tickets.js"></script>
+    <script>
+        const docIcons = { pdf: 'fa-file-pdf', doc: 'fa-file-word', docx: 'fa-file-word', xls: 'fa-file-excel', xlsx: 'fa-file-excel', jpg: 'fa-file-image', jpeg: 'fa-file-image', png: 'fa-file-image' };
+        const docColors = { pdf: '#EF4444', doc: '#3B82F6', docx: '#3B82F6', xls: '#10B981', xlsx: '#10B981', jpg: '#F59E0B', jpeg: '#F59E0B', png: '#F59E0B' };
+        const typeLabels = { id_proof: 'ID Proof', address_proof: 'Address Proof', education: 'Education Certificate', experience: 'Experience Letter', offer_letter: 'Offer Letter', salary_slip: 'Salary Slip', other: 'Other' };
+
+        let allDocs = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) throw new Error('Not authenticated');
+            loadDocs();
+        });
+
+        async function loadDocs() {
+            const data = await apiCall('/documents/my');
+            if (data && data.success) {
+                allDocs = data.documents || [];
+                renderDocs();
+            } else {
+                showEmptyState(document.getElementById('docContainer'), 'fa-exclamation-triangle', 'Error', 'Failed to load documents');
+            }
+        }
+
+        function renderDocs() {
+            const filter = document.getElementById('typeFilter').value;
+            const filtered = filter === 'all' ? allDocs : allDocs.filter(d => d.document_type === filter);
+            const container = document.getElementById('docContainer');
+            document.getElementById('docCount').textContent = filtered.length + ' document' + (filtered.length !== 1 ? 's' : '');
+
+            if (filtered.length === 0) {
+                showEmptyState(container, 'fa-folder-open', 'No Documents', allDocs.length === 0 ? 'Upload your first document to get started' : 'No documents match this filter');
+                return;
+            }
+
+            let html = '<div class="grid grid-3">';
+            filtered.forEach(doc => {
+                const ext = doc.file_name ? doc.file_name.split('.').pop().toLowerCase() : '';
+                const icon = docIcons[ext] || 'fa-file';
+                const color = docColors[ext] || '#6B7280';
+                const typeLabel = typeLabels[doc.document_type] || doc.document_type || 'Other';
+
+                html += '<div class="card doc-card">';
+                html += '<div class="doc-icon" style="color:' + color + ';"><i class="fas ' + icon + '"></i></div>';
+                html += '<div class="doc-title">' + escapeHtml(doc.title) + '</div>';
+                html += '<div class="doc-type"><span class="badge badge-secondary">' + escapeHtml(typeLabel) + '</span></div>';
+                html += '<div class="doc-date">' + formatDate(doc.created_at) + '</div>';
+                html += '<div class="doc-actions">';
+                html += '<a href="/api/documents/' + doc.id + '/download" class="btn btn-sm btn-secondary" target="_blank" title="Download"><i class="fas fa-download"></i></a>';
+                html += '<button class="btn btn-sm btn-danger" onclick="deleteDoc(' + doc.id + ')" title="Delete"><i class="fas fa-trash"></i></button>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function openUploadModal() {
+            document.getElementById('uploadModal').classList.add('active');
+            document.getElementById('uploadForm').reset();
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.remove('active');
+        }
+
+        async function uploadDocument(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('docFile');
+            if (fileInput.files[0] && fileInput.files[0].size > 10 * 1024 * 1024) {
+                showToast('File size must be under 10MB', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('uploadBtn');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('title', document.getElementById('docTitle').value);
+            formData.append('document_type', document.getElementById('docType').value);
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/documents/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Document uploaded successfully!', 'success');
+                    closeUploadModal();
+                    loadDocs();
+                } else {
+                    showToast(data.message || 'Upload failed', 'error');
+                }
+            } catch (err) {
+                showToast('Upload failed. Please try again.', 'error');
+            }
+
+            btn.innerHTML = original;
+            btn.disabled = false;
+        }
+
+        function deleteDoc(id) {
+            showConfirmDialog('Delete Document', 'Are you sure you want to delete this document?', 'Delete', 'btn-danger', function() {
+                apiCall('/documents/' + id, 'DELETE').then(data => {
+                    if (data && data.success) {
+                        showToast('Document deleted', 'success');
+                        loadDocs();
+                    } else {
+                        showToast(data?.message || 'Failed to delete document', 'error');
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>

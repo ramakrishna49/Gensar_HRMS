@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Management - Gensar HRMS</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/admin/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">Employee Management</div>
+            <a href="/pages/admin/employees.html" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
+            <a href="/pages/admin/departments.html" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
+            <a href="/pages/admin/designations.html" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
+            <div class="nav-section-title">Time & Leave</div>
+            <a href="/pages/admin/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/admin/leave.html" class="nav-item active"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
+            <a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <div class="nav-section-title">Finance</div>
+            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-money-bill-wave"></i><span class="nav-text">Payroll</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
+            <div class="nav-section-title">Communication</div>
+            <a href="/pages/admin/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <div class="nav-section-title">Analytics</div>
+            <a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">Leave Management</h2>
+            </div>
+            <div class="header-right">
+                <a href="/pages/admin/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/admin/settings.html" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div style="padding:30px;">
+            <div class="grid grid-4" style="margin-bottom:24px;">
+                <div class="stat-card slide-up stagger-1">
+                    <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info"><h3 id="pendingCount">--</h3><p>Pending</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-2">
+                    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info"><h3 id="approvedCount">--</h3><p>Approved</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-3">
+                    <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
+                    <div class="stat-info"><h3 id="rejectedCount">--</h3><p>Rejected</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-4">
+                    <div class="stat-icon blue"><i class="fas fa-list"></i></div>
+                    <div class="stat-info"><h3 id="totalCount">--</h3><p>Total Requests</p></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:24px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" onclick="filterLeaves('all')" id="filterAll"><i class="fas fa-list"></i> All</button>
+                    <button class="btn btn-secondary" onclick="filterLeaves('pending')" id="filterPending"><i class="fas fa-clock"></i> Pending</button>
+                    <button class="btn btn-secondary" onclick="filterLeaves('approved')" id="filterApproved"><i class="fas fa-check"></i> Approved</button>
+                    <button class="btn btn-secondary" onclick="filterLeaves('rejected')" id="filterRejected"><i class="fas fa-times"></i> Rejected</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Employee</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="leavesTable">
+                            <tr><td colspan="8" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal" id="remarkModal">
+        <div class="modal-content" style="max-width:450px;">
+            <div class="modal-header">
+                <h2 id="remarkModalTitle">Leave Remarks</h2>
+                <button onclick="closeRemarkModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Remarks</label>
+                    <textarea class="form-control" id="remarkInput" rows="3" placeholder="Enter your remarks (optional)..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeRemarkModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="remarkSubmitBtn" onclick="submitRemark()">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script>
+        if (!checkAuth()) throw new Error('Not authenticated');
+        let allLeaves = [];
+        let currentFilter = 'all';
+        let pendingRemarkLeaveId = null;
+        let pendingRemarkStatus = null;
+
+        document.addEventListener('DOMContentLoaded', () => { filterLeaves('all'); });
+
+        function setActiveFilter(filter) {
+            currentFilter = filter;
+            ['All', 'Pending', 'Approved', 'Rejected'].forEach(f => {
+                const btn = document.getElementById('filter' + f);
+                if (btn) btn.className = (f.toLowerCase() === filter) ? 'btn btn-primary' : 'btn btn-secondary';
+            });
+        }
+
+        async function filterLeaves(filter) {
+            setActiveFilter(filter);
+            const url = filter === 'all' ? '/leave/all' : `/leave/${filter}`;
+            const data = await apiCall(url);
+            const tbody = document.getElementById('leavesTable');
+
+            if (data && data.success) {
+                allLeaves = data.leaves;
+                const pending = data.leaves.filter(l => l.status === 'pending').length;
+                const approved = data.leaves.filter(l => l.status === 'approved').length;
+                const rejected = data.leaves.filter(l => l.status === 'rejected').length;
+
+                document.getElementById('pendingCount').textContent = pending;
+                document.getElementById('approvedCount').textContent = approved;
+                document.getElementById('rejectedCount').textContent = rejected;
+                document.getElementById('totalCount').textContent = data.leaves.length;
+
+                if (data.leaves.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-calendar-times"></i><h3>No Leave Requests</h3><p>No leave requests found for this filter.</p></div></td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.leaves.map(leave => `
+                    <tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;flex-shrink:0;">${escapeHtml((leave.employee_name || '').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase())}</div>
+                                <div>
+                                    <div style="font-weight:500;">${escapeHtml(leave.employee_name)}</div>
+                                    <small style="color:var(--text-secondary);">${escapeHtml(leave.emp_id)}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${escapeHtml(leave.leave_type_name)}</td>
+                        <td>${formatDate(leave.start_date)}</td>
+                        <td>${formatDate(leave.end_date)}</td>
+                        <td>${escapeHtml(String(leave.total_days))}</td>
+                        <td><span class="truncate" style="max-width:150px;display:inline-block;" title="${escapeHtml(leave.reason || '')}">${escapeHtml(leave.reason || '-')}</span></td>
+                        <td><span class="badge badge-${getStatusBadge(leave.status)}">${escapeHtml(leave.status)}</span></td>
+                        <td>
+                            ${leave.status === 'pending' ? `
+                                <div style="display:flex;gap:4px;">
+                                    <button class="btn btn-sm btn-success" onclick="openRemarkModal(${leave.id}, 'approved')" title="Approve"><i class="fas fa-check"></i> Approve</button>
+                                    <button class="btn btn-sm btn-danger" onclick="openRemarkModal(${leave.id}, 'rejected')" title="Reject"><i class="fas fa-times"></i> Reject</button>
+                                </div>
+                            ` : (leave.remarks ? `<small style="color:var(--text-secondary);" title="${escapeHtml(leave.remarks)}">${escapeHtml(leave.remarks.substring(0, 30))}${leave.remarks.length > 30 ? '...' : ''}</small>` : '-')}
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load leave data.</p></div></td></tr>';
+            }
+        }
+
+        function openRemarkModal(leaveId, status) {
+            pendingRemarkLeaveId = leaveId;
+            pendingRemarkStatus = status;
+            document.getElementById('remarkModalTitle').textContent = status === 'approved' ? 'Approve Leave' : 'Reject Leave';
+            document.getElementById('remarkInput').value = '';
+            document.getElementById('remarkSubmitBtn').className = status === 'approved' ? 'btn btn-success' : 'btn btn-danger';
+            document.getElementById('remarkSubmitBtn').innerHTML = status === 'approved' ? '<i class="fas fa-check"></i> Approve' : '<i class="fas fa-times"></i> Reject';
+            document.getElementById('remarkModal').classList.add('active');
+        }
+
+        function closeRemarkModal() {
+            document.getElementById('remarkModal').classList.remove('active');
+            pendingRemarkLeaveId = null;
+            pendingRemarkStatus = null;
+        }
+
+        async function submitRemark() {
+            if (!pendingRemarkLeaveId || !pendingRemarkStatus) return;
+            const remarks = document.getElementById('remarkInput').value;
+            const result = await apiCall(`/leave/approve/${pendingRemarkLeaveId}`, 'PUT', { status: pendingRemarkStatus, remarks });
+            if (result && result.success) {
+                showToast(`Leave ${pendingRemarkStatus} successfully!`, 'success');
+                closeRemarkModal();
+                filterLeaves(currentFilter);
+            } else {
+                showToast('Failed to update leave status', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
