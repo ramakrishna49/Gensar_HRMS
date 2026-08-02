@@ -54,7 +54,7 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
         if (!emp) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
-        const needsManager = emp.role === 'employee' || emp.role === 'manager' || emp.role === 'team_lead';
+        const needsManager = emp.role === 'employee' || emp.role === 'manager' || emp.role === 'team_lead' || emp.role === 'hr';
         if (needsManager && !emp.reporting_manager_id) {
             return res.status(400).json({ success: false, message: 'No reporting manager assigned. Contact your administrator.' });
         }

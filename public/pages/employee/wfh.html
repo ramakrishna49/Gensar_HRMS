@@ -128,7 +128,7 @@
             const data = await apiCall('/auth/me');
             if (data && data.success) {
                 const u = data.user;
-                needsRM = u.role === 'employee' || u.role === 'manager' || u.role === 'team_lead';
+                needsRM = u.role === 'employee' || u.role === 'manager' || u.role === 'team_lead' || u.role === 'hr';
                 reportingManagerName = u.reporting_manager_name || null;
                 if (needsRM && !u.reporting_manager_id) {
                     const warn = document.getElementById('rmWarning');
