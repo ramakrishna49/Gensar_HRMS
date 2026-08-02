@@ -188,7 +188,7 @@
         });
 
         async function loadEmployees() {
-            const d = await apiCall('/employees');
+            const d = await apiCall('/employees?limit=1000');
             const s = document.getElementById('empSelect');
             if (d && d.success) {
                 s.innerHTML = '<option value="">Select Employee</option>' + d.employees.filter(e => e.status === 'active').map(x => `<option value="${x.id}" data-salary="${x.salary || 0}">${escapeHtml(x.first_name)} ${escapeHtml(x.last_name)} (${escapeHtml(x.employee_id)})</option>`).join('');

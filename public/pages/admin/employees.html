@@ -316,7 +316,7 @@
         });
 
         async function loadEmployees() {
-            const data = await apiCall('/employees');
+            const data = await apiCall('/employees?limit=1000');
             if (data && data.success) {
                 allEmployees = data.employees;
                 updateStats(data.employees);
