@@ -1,0 +1,68 @@
+{
+  "app": "Gensar HRMS",
+  "repository": "https://github.com/ramakrishna49/Gensar_HRMS.git",
+  "branch": "master",
+  "local_path": "C:\\Users\\user\\Desktop\\Gensar_HRMS_main - Vercel\\gensar-hrms",
+  "recorded_on": "2026-08-02",
+  "context": {
+    "domain": "gensarhrms.in (GoDaddy, ICANN verified ACTIVE, DNS pending propagation; A @ -> 76.76.21.21, CNAME www -> cname.vercel-dns.com)",
+    "hosting": "Vercel project gensar-hrms (prj_iN4TidyZS5NHAzEYHAiRs6VdAtgH), deploy on push to master",
+    "stack": "Plain HTML/CSS/JS (public/), Express server (server/), Supabase PostgreSQL via server/config/database.js, JWT auth (verifyToken/isAdmin/isManager)"
+  },
+  "prior_session_summary": "Connected GoDaddy domain gensarhrms.in to Vercel (ICANN verification resolved, domain ACTIVE, DNS still NXDOMAIN pending propagation). Changed login label/placeholder to 'Employee ID'. Made the whole site responsive for mobile/tablet (commits 3b25d97, b5c1db2). Exposed GoDaddy and Vercel API tokens were advised to be revoked.",
+  "sessions": [
+    {
+      "topic": "Reporting Manager feature + Maternity leave + Admin request notifications",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Feature request (Telugu): Add Reporting Manager dropdown when admin adds employee; employee profile should show reporting manager name + ID; when an employee raises a leave/WFH/query request it should go to their reporting manager (not admin) by default; add Maternity Leave with 0 days; admin sidebar should show a notification when an employee raises a request."
+        },
+        {
+          "role": "assistant",
+          "content": "Analyzed the codebase: employees table (server/schema.sql) had no reporting_manager_id column; roles include manager; leave_types already had Maternity Leave (180 days, female only); manager role existed but no manager approval UI; /api/notifications/counts bell already counted pending leaves/tickets for admin."
+        },
+        {
+          "role": "assistant",
+          "content": "Asked clarifying questions. User chose: (1) New dedicated 'My Team' page for managers to approve leave/WFH and respond to queries; (2) Manager decision is final (admin/hr can still view/cancel/override); (3) Employees/managers without a reporting manager cannot apply for leave/WFH (error); (4) Maternity Leave = 0 days balance, shown as 0, no deduction, still approvable, never negative."
+        },
+        {
+          "role": "user",
+          "content": "do it 1 by1"
+        },
+        {
+          "role": "assistant",
+          "content": "Implemented step by step (commit 1594023):",
+          "steps": [
+            "DB (server/schema.sql): added reporting_manager_id to employees, leave_applications, wfh_requests, support_tickets (CREATE + idempotent ALTER TABLE IF NOT EXISTS + indexes); Maternity Leave days_per_year -> 0; leave balance clamps remaining with Math.max(0, days_per_year - used).",
+            "Server employees.js: LEFT JOIN self for reporting_manager_name/reporting_manager_employee_id on list/get; POST/PUT accept reporting_manager_id; PUT uses CASE to allow clearing RM without breaking other callers; self-RM blocked.",
+            "Server auth.js /me: returns reporting_manager_name + reporting_manager_employee_id.",
+            "Server leave.js + wfh.js POST /apply: employee/manager must have reporting_manager_id else 400 'No reporting manager assigned'; snapshots RM id into the request. Admin/hr exempt.",
+            "Server tickets.js POST /: snapshots reporting_manager_id (no block).",
+            "New server/routes/manager.js (mounted /api/manager, isManager): GET /team, GET /leaves, GET /wfh, GET /tickets (only direct reports, pending/open); PUT /leaves/:id and /wfh/:id approve/reject (final, marks attendance on leave approval); PUT /tickets/:id respond/resolve.",
+            "Server notifications.js: new GET /api/notifications/requests (admin) returning latest pending leave/WFH/ticket feed with employee name, type, dates, and links.",
+            "Frontend admin/employees.html: 'Reporting Manager' select in Add + Edit modals (populated from /api/employees?limit=1000&status=active, excludes admins), RM column in table, RM row in detail modal Employment section.",
+            "Frontend employee/profile.html: Reporting Manager shown in profile header and Job Details.",
+            "Frontend employee/leave.html + wfh.html: RM-not-assigned warning banner hides Apply button; approver name shown in apply modal; 0-day leave types shown as 'Special leave / no deduction'; apply blocked client-side without RM.",
+            "Frontend employee/dashboard.html: 0-day leave balance shown in neutral color.",
+            "New public/pages/manager/my-team.html: manager portal with team member chips, stat cards, tabs (Leave / WFH / Queries), approve/reject with remarks modal, ticket respond modal. Sidebar 'My Team' link injected for role=manager via dashboard.js loadManagerNav().",
+            "Frontend admin bell: dashboard.js initAdminNotificationPanel() turns the admin bell into a dropdown showing the pending-requests feed (leave/WFH/queries) linking to admin pages; badge count now includes pendingTickets."
+          ],
+          "verification": [
+            "Ran idempotent DB migration directly against production Supabase (full schema re-run failed on pre-existing seed FK conflict). Columns added on all 4 tables; Maternity Leave days_per_year = 0 confirmed.",
+            "Production roster: only 3 employees (Admin id=1, terminated employee id=7, manager G0003 id=8). No RMs assigned - left to admin via new UI.",
+            "Smoke test (node + signed JWT): /api/auth/me 200, /api/notifications/requests 200 (empty feed), /api/employees 200 with RM join, /api/leave/types 200, /api/manager/team 200, /api/manager/leaves 200, /api/leave/balance 200 (clamp ok), POST /api/leave/apply without RM -> 400 'No reporting manager assigned. Contact your administrator.'"
+          ]
+        },
+        {
+          "role": "user",
+          "content": "ayyaka git lo push chesi chat antha git lone chat.json lo save chesy e session antha (push to git afterwards and save the whole chat to chat.json in the git repo)"
+        },
+        {
+          "role": "assistant",
+          "content": "Committed feature as 1594023 (16 files, +913/-33), created this chat.json, and will push both to master (auto-deploys to Vercel)."
+        }
+      ]
+    }
+  ]
+}
