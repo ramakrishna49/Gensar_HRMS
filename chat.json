@@ -102,6 +102,34 @@
           "content": "Committed the Team Lead hierarchy (13 files) and updated this chat.json; will push both to master (auto-deploys to Vercel)."
         }
       ]
+    },
+    {
+      "topic": "Fresh DB + admin-visible list, WFH bell counts, last-admin lockout, and main-admin-only admin management",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Work on live site: wipe the production DB to a clean slate, seed a fresh main admin account, make admin-role members visible in the employee list so both admins can log into the admin portal, add pending WFH to the notification bell, prevent removing the last active admin, and restrict creating/managing admin accounts to the main admin only ('new admin kuda main admin nunchi a create avvali')."
+        },
+        {
+          "role": "assistant",
+          "content": "Implemented and verified, then committed/pushed (commits 6164c4c, fe74b10).",
+          "steps": [
+            "DB: truncated all employee-dependent tables (TRUNCATE employees RESTART IDENTITY CASCADE) and seeded id=1 EMP001 admin@gensar.com as the main Admin (temp password Gensar@123, must_change_password=1). Login now accepts employee ID or email (login.html label updated, commit 6164c4c).",
+            "Server routes/employees.js GET: removed 'AND e.role != admin' so admin-role members appear in the employee list.",
+            "Server routes/notifications.js /counts: added pendingWfh count; dashboard.js bell badge now sums it.",
+            "employees.js last-admin lockout: activeAdminCount() + lastActiveAdminGuard(targetId) called on PUT /:id (role demotion or status deactivation), POST /:id/pause, DELETE /:id, DELETE /:id/permanent. Root-caused a bug where COUNT(*) AS c was read as rows[0].count -> NaN silently disabled the guard; fixed to AS count. Deleting/inactivating/demoting the last active admin now returns 400 'Cannot remove the last active admin...'.",
+            "employees.js main-admin-only admin management: POST / reject role=admin when req.user.role !== 'admin' (403 'Only the main Admin can create admin accounts.'); PUT /:id rejects promoting to admin or changing an admin's role/status by non-admin (403 'Only the main Admin can manage admin accounts.').",
+            "Frontend admin/employees.html: hides the 'Admin' role option in Add/Edit modals for HR users (getCurrentUser().role check on DOMContentLoaded).",
+            "Deploy: commits 6164c4c (login label) and fe74b10 (list/guard/restriction/badge) pushed to master; Vercel auto-deploys."
+          ],
+          "verification": [
+            "Restarted local server and ran 11/11 smoke checks: admin login (email field), GET /employees includes admin accounts, 2 temp admin members + requester created, list shows 3 admins, notification counts include pendingWFH (wfh=1 total=2), feed has leave+wfh, terminating temp admins allowed, terminating last active admin blocked, demoting last admin blocked, inactivating last admin blocked, 0 leftover temp users.",
+            "Ran 5/5 HR-restriction checks: HR login, HR cannot create admin (403), HR cannot promote to admin (403), HR cannot change an admin's role (403), HR can still edit a regular employee (200).",
+            "Note: an earlier guard test failed because the smoke script used single-char first/last names that validateEmployee rejects with 400 (not the guard) - test data fixed; guard itself verified returning 403/400.",
+            "DB final state: only id=1 EMP001 admin active; all temp users cleaned up."
+          ]
+        }
+      ]
     }
   ]
 }
