@@ -234,6 +234,13 @@ async function toggleAdminRequestsPanel(bell, mode) {
     const requestsUrl = isManagerMode ? '/pages/manager/my-team.html' : '/pages/admin/leave.html?status=pending';
     const announcementsUrl = isManagerMode ? '/pages/employee/announcements.html' : '/pages/admin/announcements.html';
 
+    const announcementsSection = isManagerMode ?
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px 2px;border-top:1px solid var(--border-light);">' +
+        '<span style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;">Announcements</span>' +
+        '<button class="mark-all-btn" id="notifMarkAllBtn">Mark all as read</button></div>' +
+        '<div class="notification-panel-list" id="notifAnnounceList" style="min-height:40px;"><div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>' +
+        '<div class="notification-panel-footer"><a href="' + announcementsUrl + '">View all announcements</a></div>' : '';
+
     const panel = document.createElement('div');
     panel.className = 'notification-panel';
     panel.id = 'adminNotifPanel';
@@ -242,25 +249,23 @@ async function toggleAdminRequestsPanel(bell, mode) {
         '<div style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;padding:8px 16px 2px;">' + (isManagerMode ? 'Team Requests' : 'Pending Requests') + '</div>' +
         '<div class="notification-panel-list" id="adminNotifList" style="min-height:50px;"><div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>' +
         '<div class="notification-panel-footer"><a href="' + requestsUrl + '">View all requests</a></div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px 2px;border-top:1px solid var(--border-light);">' +
-        '<span style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;">Announcements</span>' +
-        '<button class="mark-all-btn" id="notifMarkAllBtn">Mark all as read</button></div>' +
-        '<div class="notification-panel-list" id="notifAnnounceList" style="min-height:40px;"><div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>' +
-        '<div class="notification-panel-footer"><a href="' + announcementsUrl + '">View all announcements</a></div>';
+        announcementsSection;
     bell.appendChild(panel);
 
     await loadRequestsSection(document.getElementById('adminNotifList'), mode, 3);
-    await loadAnnouncementsSection(document.getElementById('notifAnnounceList'), announcementsUrl);
 
-    const markAllBtn = document.getElementById('notifMarkAllBtn');
-    if (markAllBtn) {
-        markAllBtn.onclick = async function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            await apiCall('/announcements/read-all', 'POST');
-            loadNotifBadge();
-            loadAnnouncementsSection(document.getElementById('notifAnnounceList'), announcementsUrl);
-        };
+    if (isManagerMode) {
+        await loadAnnouncementsSection(document.getElementById('notifAnnounceList'), announcementsUrl);
+        const markAllBtn = document.getElementById('notifMarkAllBtn');
+        if (markAllBtn) {
+            markAllBtn.onclick = async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                await apiCall('/announcements/read-all', 'POST');
+                loadNotifBadge();
+                loadAnnouncementsSection(document.getElementById('notifAnnounceList'), announcementsUrl);
+            };
+        }
     }
     loadNotifBadge();
 }

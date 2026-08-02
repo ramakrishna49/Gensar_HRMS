@@ -275,7 +275,7 @@
                         <table>
                             <thead><tr><th>Employee</th><th>Field</th><th>Change</th><th>Action</th></tr></thead>
                             <tbody>
-                                ${pending.slice(0, 3).map(r => `
+                                ${pending.slice(0, 2).map(r => `
                                     <tr>
                                         <td><a href="/pages/admin/employees.html?emp=${r.employee_id}&tab=requests" style="color:var(--primary);font-weight:600;text-decoration:none;">${escapeHtml(r.employee_name || '')} <i class="fas fa-external-link-alt" style="font-size:0.7rem;margin-left:2px;"></i></a></td>
                                         <td>${escapeHtml(r.field_label || r.field)}</td>
@@ -291,7 +291,7 @@
                             </tbody>
                         </table>
                     </div>
-                    ${pending.length > 3 ? `<p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">+${pending.length - 3} more. <a href="/pages/admin/employees.html" style="color:var(--primary);">View all</a></p>` : ''}
+                    ${pending.length > 2 ? `<p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">+${pending.length - 2} more. <a href="/pages/admin/employees.html" style="color:var(--primary);">View all</a></p>` : ''}
                 `;
             } else {
                 showEmptyState(container, 'fa-user-edit', 'Error', 'Could not load profile updates');
