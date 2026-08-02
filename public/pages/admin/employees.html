@@ -136,12 +136,12 @@
                         <div class="form-group"><label>Personal Email</label><input type="email" class="form-control" name="personal_email"></div>
                     </div>
                     <div class="grid grid-2">
-                        <div class="form-group"><label>Joining Date *</label><input type="date" class="form-control" name="joining_date" required></div>
+                        <div class="form-group"><label>Role</label><select class="form-control" name="role" id="addRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label>Reporting Person</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Person</option></select>
+                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; HR &rarr; Admin. Set the immediate supervisor.</small></div>
                         <div class="form-group"><label>Department</label><select class="form-control" name="department_id" id="departmentSelect"><option value="">Select Department</option></select></div>
                         <div class="form-group"><label>Designation</label><select class="form-control" name="designation_id" id="designationSelect"><option value="">Select Designation</option></select></div>
-                        <div class="form-group"><label>Reporting Manager</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Manager</option></select>
-                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; HR &rarr; Admin. Set the immediate supervisor.</small></div>
-                        <div class="form-group"><label>Role</label><select class="form-control" name="role" id="addRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label>Joining Date *</label><input type="date" class="form-control" name="joining_date" required></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" name="salary"></div>
                         <div class="form-group"><label>Password (default: welcome123)</label><input type="password" class="form-control" name="password" value="welcome123"></div>
                     </div>
@@ -175,10 +175,10 @@
                         <div class="form-group"><label>Joining Date</label><input type="date" class="form-control" id="editJoiningDate"></div>
                         <div class="form-group"><label>Department</label><select class="form-control" id="editDepartment"><option value="">Select Department</option></select></div>
                         <div class="form-group"><label>Designation</label><select class="form-control" id="editDesignation"><option value="">Select Designation</option></select></div>
-                        <div class="form-group"><label>Reporting Manager</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Manager</option></select>
+                        <div class="form-group"><label>Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label>Reporting Person</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Person</option></select>
                             <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; HR &rarr; Admin. Set the immediate supervisor.</small></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" id="editSalary"></div>
-                        <div class="form-group"><label>Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
                         <div class="form-group"><label>Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
                         <div class="form-group"><label>Gender</label><select class="form-control" id="editGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
                         <div class="form-group"><label>Blood Group</label><input type="text" class="form-control" id="editBloodGroup"></div>
@@ -498,7 +498,7 @@
         function renderRMOptions(role, selectEl, currentId) {
             const candidates = rmCandidatesFor(role);
             const opt = (e, labelOverride) => `<option value="${e.id}">${escapeHtml(labelOverride || (e.first_name + ' ' + e.last_name) + ' (' + (e.employee_id || '') + ')')}</option>`;
-            let html = '<option value="">' + (role === 'admin' ? 'Admin is top of chain' : 'Select Reporting Manager') + '</option>';
+            let html = '<option value="">' + (role === 'admin' ? 'Admin is top of chain' : 'Select Reporting Person') + '</option>';
             if (currentId && !candidates.some(c => String(c.id) === String(currentId))) {
                 const cur = allEmployeesForRM.find(e => String(e.id) === String(currentId));
                 if (cur) html += opt(cur, cur.first_name + ' ' + cur.last_name + ' (' + (cur.employee_id || '') + ') - current');
