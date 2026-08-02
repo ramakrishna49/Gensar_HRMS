@@ -12,8 +12,11 @@
         .clock-date { font-size: 0.95rem; color: var(--text-secondary); margin-top: 4px; }
         .checkin-widget { text-align: center; padding: 10px 0; }
         .checkin-widget .clock-section { margin-bottom: 16px; }
-        .checkin-buttons { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+        .checkin-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
         .checkin-buttons .btn { min-width: 160px; padding: 14px 28px; font-size: 1rem; font-weight: 600; border-radius: var(--radius-md); display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+        @media (max-width: 768px) {
+            .checkin-buttons .btn, .btn-break { min-width: 0; width: 100%; max-width: 200px; padding: 14px 20px; }
+        }
         .today-status-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
         .today-status-row:last-child { border-bottom: none; }
         .today-status-label { color: var(--text-secondary); font-size: 0.85rem; }

@@ -196,6 +196,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    row-gap: 10px;
     box-shadow: var(--shadow-sm);
     position: sticky;
     top: 0;
@@ -257,6 +259,8 @@ body {
 .header-right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 12px;
 }
 
@@ -1244,6 +1248,12 @@ textarea.form-control {
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 .grid-5 { grid-template-columns: repeat(5, 1fr); }
 
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+}
+
 /* ============================================
    DIVIDER
    ============================================ */
@@ -1540,36 +1550,6 @@ textarea.form-control {
    ============================================ */
 @media (max-width: 1024px) {
     .sidebar {
-        width: 80px;
-    }
-    
-    .sidebar .nav-text,
-    .sidebar-logo span,
-    .sidebar .nav-section-title {
-        opacity: 0;
-        width: 0;
-        overflow: hidden;
-    }
-    
-    .main-content {
-        margin-left: 80px;
-    }
-    
-    .grid-4 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .grid-5 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .grid-3 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .sidebar {
         transform: translateX(-100%);
         width: 260px;
     }
@@ -1593,8 +1573,26 @@ textarea.form-control {
         display: block;
     }
     
+    .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .grid-5 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
     .header {
         padding: 12px 16px;
+    }
+    
+    .header h2 {
+        font-size: 1.05rem !important;
     }
     
     .search-box {
@@ -1642,8 +1640,29 @@ textarea.form-control {
         border-radius: 12px;
     }
     
+    .header {
+        padding: 10px 12px;
+    }
+    
+    .header h2 {
+        font-size: 0.95rem !important;
+    }
+    
     .header-right {
         gap: 8px;
+    }
+    
+    #profileName {
+        display: none !important;
+    }
+    
+    .profile-btn .fa-chevron-down {
+        display: none !important;
+    }
+    
+    .header-right .btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
     }
     
     .btn {

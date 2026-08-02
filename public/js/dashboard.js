@@ -5,7 +5,7 @@ function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.getElementById('mainContent');
     
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= 1024) {
         sidebar.classList.toggle('active');
     } else {
         sidebar.classList.toggle('collapsed');
@@ -384,7 +384,7 @@ document.addEventListener('click', (e) => {
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.querySelector('.menu-toggle');
     
-    if (window.innerWidth <= 768 && sidebar && menuToggle) {
+    if (window.innerWidth <= 1024 && sidebar && menuToggle) {
         if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
             sidebar.classList.remove('active');
         }
@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle responsive sidebar
     const handleResize = () => {
         const sidebar = document.getElementById('sidebar');
-        if (window.innerWidth <= 768) {
+        if (window.innerWidth <= 1024) {
             sidebar.classList.remove('collapsed');
         }
     };
