@@ -29,3 +29,6 @@ backups/
 
 # Session history
 session-history.json
+
+.vercel
+.env*
