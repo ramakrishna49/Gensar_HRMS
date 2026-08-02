@@ -41,7 +41,7 @@
                 <h2 style="font-size:1.25rem;font-weight:600;">Work From Home</h2>
             </div>
             <div class="header-right">
-                <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Request WFH</button>
+                <button class="btn btn-primary" onclick="openModal()" id="applyBtn"><i class="fas fa-plus"></i> Request WFH</button>
                 <a href="/pages/employee/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
                 <div style="position:relative">
@@ -60,6 +60,9 @@
         </header>
 
         <div style="padding:30px;">
+            <div id="rmWarning" style="display:none;border:1px solid var(--warning);background:var(--warning-light,#FEF3C7);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:0.9rem;line-height:1.5;color:#92400E;">
+                <i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i><strong>Reporting Manager not assigned.</strong> You cannot request WFH until an admin assigns your reporting manager. Please contact your administrator.
+            </div>
             <div class="card slide-up stagger-1">
                 <div class="card-header">
                     <h3 style="font-weight:600;"><i class="fas fa-history" style="color:var(--primary);margin-right:8px;"></i>WFH Request History</h3>
@@ -95,6 +98,10 @@
                         <label>Reason</label>
                         <textarea class="form-control" id="reason" rows="3" placeholder="Optional: provide a reason for your WFH request"></textarea>
                     </div>
+                    <div id="approverInfo" class="date-info" style="display:none;margin-top:12px;">
+                        <i class="fas fa-user-tie"></i>
+                        <span id="approverInfoText"></span>
+                    </div>
                     <div class="modal-footer" style="padding:0;border:none;margin-top:8px;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                         <button type="submit" class="btn btn-primary" id="submitBtn"><i class="fas fa-paper-plane"></i> Submit Request</button>
@@ -110,8 +117,27 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (!checkAuth()) throw new Error('Not authenticated');
+            checkReportingManager();
             loadHistory();
         });
+
+        let reportingManagerName = null;
+        let needsRM = false;
+
+        async function checkReportingManager() {
+            const data = await apiCall('/auth/me');
+            if (data && data.success) {
+                const u = data.user;
+                needsRM = u.role === 'employee' || u.role === 'manager';
+                reportingManagerName = u.reporting_manager_name || null;
+                if (needsRM && !u.reporting_manager_id) {
+                    const warn = document.getElementById('rmWarning');
+                    if (warn) warn.style.display = 'block';
+                    const btn = document.getElementById('applyBtn');
+                    if (btn) btn.style.display = 'none';
+                }
+            }
+        }
 
         async function loadHistory() {
             const data = await apiCall('/wfh/my');
@@ -183,6 +209,16 @@
             document.getElementById('modal').classList.add('active');
             document.getElementById('wfhForm').reset();
             document.getElementById('dateInfoBox').style.display = 'none';
+            const info = document.getElementById('approverInfo');
+            const text = document.getElementById('approverInfoText');
+            if (info && text) {
+                if (reportingManagerName) {
+                    text.textContent = 'Your request will go to your reporting manager: ' + reportingManagerName;
+                    info.style.display = 'flex';
+                } else {
+                    info.style.display = 'none';
+                }
+            }
         }
 
         function closeModal() {
@@ -191,6 +227,10 @@
 
         async function applyWfh(e) {
             e.preventDefault();
+            if (needsRM && !reportingManagerName) {
+                showToast('No reporting manager assigned. Contact your administrator.', 'error');
+                return;
+            }
             const submitBtn = document.getElementById('submitBtn');
             const original = submitBtn.innerHTML;
 

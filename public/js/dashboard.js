@@ -188,6 +188,83 @@ function loadUserInfo() {
 
     loadNotifBadge();
     loadSidebarLogo();
+    loadManagerNav();
+    initAdminNotificationPanel();
+}
+
+// Admin notification bell: show pending employee requests (leave / WFH / queries)
+function initAdminNotificationPanel() {
+    const user = getCurrentUser();
+    if (!user) return;
+    if (user.role !== 'admin' && user.role !== 'hr') return;
+    const bells = document.querySelectorAll('.notification-btn[title="Notifications"]');
+    bells.forEach(bell => {
+        if (bell.getAttribute('data-requests-init')) return;
+        bell.setAttribute('data-requests-init', 'true');
+        bell.style.position = 'relative';
+        bell.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleAdminRequestsPanel(bell);
+        };
+    });
+    document.addEventListener('click', function(e) {
+        document.querySelectorAll('.notification-panel').forEach(p => {
+            if (p.id === 'adminNotifPanel' && !p.contains(e.target) && !e.target.closest('.notification-btn[data-requests-init]')) {
+                p.remove();
+            }
+        });
+    });
+}
+
+async function toggleAdminRequestsPanel(bell) {
+    const existing = document.getElementById('adminNotifPanel');
+    if (existing) { existing.remove(); return; }
+
+    const panel = document.createElement('div');
+    panel.className = 'notification-panel';
+    panel.id = 'adminNotifPanel';
+    panel.innerHTML =
+        '<div class="notification-panel-header"><span><i class="fas fa-bell" style="margin-right:6px;"></i>Pending Requests</span></div>' +
+        '<div class="notification-panel-list" id="adminNotifList" style="min-height:70px;"><div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>' +
+        '<div class="notification-panel-footer"><a href="/pages/admin/leave.html?status=pending">View all requests</a></div>';
+    bell.appendChild(panel);
+
+    const data = await apiCall('/notifications/requests');
+    const list = document.getElementById('adminNotifList');
+    if (data && data.success && data.feed && data.feed.length > 0) {
+        list.innerHTML = data.feed.map(r => {
+            const icon = r.type === 'leave' ? 'fa-calendar-times' : r.type === 'wfh' ? 'fa-home' : 'fa-ticket-alt';
+            const color = r.type === 'leave' ? 'var(--accent)' : r.type === 'wfh' ? 'var(--primary)' : 'var(--info)';
+            return '<a href="' + r.url + '" class="notification-item">' +
+                '<span style="width:34px;height:34px;border-radius:50%;background:var(--primary-50);color:' + color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;"><i class="fas ' + icon + '"></i></span>' +
+                '<span class="notif-body"><span class="notif-title">' + escapeHtml(r.title) + '</span>' +
+                '<span class="notif-meta">' + escapeHtml(r.subtitle) + '</span></span></a>';
+        }).join('');
+    } else {
+        list.innerHTML = '<div class="notification-panel-empty"><i class="fas fa-bell-slash"></i>No pending requests</div>';
+    }
+}
+
+// Inject a "My Team" link into the sidebar for manager-role users
+function loadManagerNav() {
+    const user = getCurrentUser();
+    if (!user || user.role !== 'manager') return;
+    const nav = document.querySelector('.sidebar-nav');
+    if (!nav || nav.querySelector('[data-manager-nav]')) return;
+    const link = document.createElement('a');
+    link.href = '/pages/manager/my-team.html';
+    link.className = 'nav-item';
+    link.setAttribute('data-manager-nav', 'true');
+    link.innerHTML = '<i class="fas fa-users"></i><span class="nav-text">My Team</span>';
+    let inserted = false;
+    nav.querySelectorAll('.nav-section-title').forEach(s => {
+        if (!inserted && s.textContent.trim() === 'Resources') {
+            nav.insertBefore(link, s);
+            inserted = true;
+        }
+    });
+    if (!inserted) nav.appendChild(link);
 }
 
 async function loadNotifBadge() {
@@ -197,10 +274,10 @@ async function loadNotifBadge() {
     if (!user) return;
     try {
         let count = 0;
-        if (user.role === 'admin') {
+        if (user.role === 'admin' || user.role === 'hr') {
             const data = await apiCall('/notifications/counts');
             if (data && data.success) {
-                count = data.counts.pendingLeaves + data.counts.pendingProfileUpdates + data.counts.announcementsUnread;
+                count = data.counts.pendingLeaves + data.counts.pendingProfileUpdates + data.counts.announcementsUnread + data.counts.pendingTickets;
             }
         } else {
             const data = await apiCall('/announcements/unread-count');

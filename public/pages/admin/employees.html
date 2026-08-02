@@ -106,10 +106,10 @@
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr><th>Employee</th><th>ID</th><th>Email</th><th>Phone</th><th>Department</th><th>Designation</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                            <tr><th>Employee</th><th>ID</th><th>Email</th><th>Phone</th><th>Department</th><th>Designation</th><th>Reporting Manager</th><th>Role</th><th>Status</th><th>Actions</th></tr>
                         </thead>
                         <tbody id="employeesTable">
-                            <tr><td colspan="9" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                            <tr><td colspan="10" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -139,6 +139,7 @@
                         <div class="form-group"><label>Joining Date *</label><input type="date" class="form-control" name="joining_date" required></div>
                         <div class="form-group"><label>Department</label><select class="form-control" name="department_id" id="departmentSelect"><option value="">Select Department</option></select></div>
                         <div class="form-group"><label>Designation</label><select class="form-control" name="designation_id" id="designationSelect"><option value="">Select Designation</option></select></div>
+                        <div class="form-group"><label>Reporting Manager</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Manager</option></select></div>
                         <div class="form-group"><label>Role</label><select class="form-control" name="role"><option value="employee">Employee</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" name="salary"></div>
                         <div class="form-group"><label>Password (default: welcome123)</label><input type="password" class="form-control" name="password" value="welcome123"></div>
@@ -173,6 +174,7 @@
                         <div class="form-group"><label>Joining Date</label><input type="date" class="form-control" id="editJoiningDate"></div>
                         <div class="form-group"><label>Department</label><select class="form-control" id="editDepartment"><option value="">Select Department</option></select></div>
                         <div class="form-group"><label>Designation</label><select class="form-control" id="editDesignation"><option value="">Select Designation</option></select></div>
+                        <div class="form-group"><label>Reporting Manager</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Manager</option></select></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" id="editSalary"></div>
                         <div class="form-group"><label>Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
                         <div class="form-group"><label>Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
@@ -291,6 +293,7 @@
             loadEmployees();
             loadDepartments();
             loadDesignations();
+            loadReportingManagers();
             loadPendingCounts().then(() => {
                 renderEmployees(allEmployees);
                 const params = new URLSearchParams(window.location.search);
@@ -348,7 +351,7 @@
         function renderEmployees(employees) {
             const tbody = document.getElementById('employeesTable');
             if (employees.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-users"></i><h3>No Employees Found</h3><p>Try adjusting your filters or add a new employee.</p></div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-users"></i><h3>No Employees Found</h3><p>Try adjusting your filters or add a new employee.</p></div></td></tr>';
                 return;
             }
             const sorted = [...employees].sort((a, b) => {
@@ -382,6 +385,7 @@
                     <td>${escapeHtml(emp.phone || '-')}</td>
                     <td>${escapeHtml(emp.department_name || '-')}</td>
                     <td>${escapeHtml(emp.designation_name || '-')}${emp.designation_level ? '<br><span class="badge badge-secondary" style="font-size:0.62rem;">Level ' + escapeHtml(String(emp.designation_level)) + '</span>' : ''}</td>
+                    <td>${emp.reporting_manager_name ? '<span style="font-size:0.85rem;">' + escapeHtml(emp.reporting_manager_name) + '</span><br><span class="badge badge-secondary" style="font-size:0.62rem;">' + escapeHtml(emp.reporting_manager_employee_id || '') + '</span>' : '<span class="badge badge-secondary" style="font-size:0.7rem;">Not Assigned</span>'}</td>
                     <td><span class="badge badge-${emp.role==='admin'?'danger':emp.role==='hr'?'warning':emp.role==='manager'?'info':'secondary'}">${escapeHtml(emp.role)}</span></td>
                     <td><span class="badge badge-${getStatusBadge(emp.status)}">${escapeHtml(emp.status)}</span></td>
                     <td>
@@ -463,6 +467,18 @@
             }
         }
 
+        async function loadReportingManagers() {
+            const data = await apiCall('/employees?limit=1000&status=active');
+            if (data && data.success) {
+                const options = data.employees
+                    .filter(e => e.role !== 'admin')
+                    .map(e => `<option value="${e.id}">${escapeHtml(e.first_name)} ${escapeHtml(e.last_name)} (${escapeHtml(e.employee_id)})</option>`)
+                    .join('');
+                document.getElementById('reportingManagerSelect').innerHTML = '<option value="">Select Reporting Manager</option>' + options;
+                document.getElementById('editReportingManager').innerHTML = '<option value="">Select Reporting Manager</option>' + options;
+            }
+        }
+
         function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
@@ -495,6 +511,7 @@
                 document.getElementById('editJoiningDate').value = emp.joining_date ? emp.joining_date.split('T')[0] : '';
                 document.getElementById('editDepartment').value = emp.department_id || '';
                 document.getElementById('editDesignation').value = emp.designation_id || '';
+                document.getElementById('editReportingManager').value = emp.reporting_manager_id || '';
                 document.getElementById('editSalary').value = emp.salary || '';
                 document.getElementById('editRole').value = emp.role || 'employee';
                 document.getElementById('editStatus').value = emp.status || 'active';
@@ -532,6 +549,7 @@
                 joining_date: document.getElementById('editJoiningDate').value || undefined,
                 department_id: document.getElementById('editDepartment').value || undefined,
                 designation_id: document.getElementById('editDesignation').value || undefined,
+                reporting_manager_id: document.getElementById('editReportingManager').value || '',
                 salary: document.getElementById('editSalary').value || undefined,
                 role: document.getElementById('editRole').value,
                 status: document.getElementById('editStatus').value,
@@ -797,7 +815,8 @@
                 vSection('Employment', 'fa-briefcase',
                     vRow('Joining Date', emp.joining_date ? formatDate(emp.joining_date) : null) +
                     vRow('Department', emp.department_name) +
-                    vRow('Designation', emp.designation_name ? emp.designation_name + (emp.designation_level ? ' (Level ' + emp.designation_level + ')' : '') : null));
+                    vRow('Designation', emp.designation_name ? emp.designation_name + (emp.designation_level ? ' (Level ' + emp.designation_level + ')' : '') : null) +
+                    vRow('Reporting Manager', emp.reporting_manager_name ? emp.reporting_manager_name + (emp.reporting_manager_employee_id ? ' (' + emp.reporting_manager_employee_id + ')' : '') : null));
 
             document.getElementById('viewTabPersonal').innerHTML =
                 vSection('Addresses', 'fa-home',

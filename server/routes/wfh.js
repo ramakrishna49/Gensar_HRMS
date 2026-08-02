@@ -35,12 +35,25 @@ router.post('/apply', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Start date cannot be a weekend' });
         }
 
+        const empRes = await query(
+            'SELECT role, reporting_manager_id FROM employees WHERE id = $1', [req.user.id]
+        );
+        const emp = empRes.rows[0];
+        if (!emp) {
+            return res.status(404).json({ success: false, message: 'Employee not found' });
+        }
+        const needsManager = emp.role === 'employee' || emp.role === 'manager';
+        if (needsManager && !emp.reporting_manager_id) {
+            return res.status(400).json({ success: false, message: 'No reporting manager assigned. Contact your administrator.' });
+        }
+        const reporting_manager_id = needsManager ? emp.reporting_manager_id : null;
+
         const totalDays = calcBusinessDays(start_date, end_date);
 
         const result = await query(
-            `INSERT INTO wfh_requests (employee_id, start_date, end_date, total_days, reason)
-            VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [req.user.id, start_date, end_date, totalDays, reason]
+            `INSERT INTO wfh_requests (employee_id, reporting_manager_id, start_date, end_date, total_days, reason)
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [req.user.id, reporting_manager_id, start_date, end_date, totalDays, reason]
         );
 
         res.status(201).json({ success: true, wfh: result.rows[0] });

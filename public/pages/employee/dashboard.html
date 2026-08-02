@@ -645,7 +645,7 @@
                     const pct = b.days_per_year > 0 ? (used / b.days_per_year * 100) : 0;
                     const barColor = pct > 80 ? 'var(--danger)' : pct > 50 ? 'var(--accent)' : 'var(--secondary)';
                     html += '<div style="margin-bottom:16px;">';
-                    html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:0.9rem;font-weight:500;">' + escapeHtml(b.name) + '</span><span style="font-size:0.85rem;font-weight:600;color:' + (b.remaining_days > 0 ? 'var(--secondary)' : 'var(--danger)') + ';">' + b.remaining_days + ' / ' + b.days_per_year + '</span></div>';
+                    html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:0.9rem;font-weight:500;">' + escapeHtml(b.name) + '</span><span style="font-size:0.85rem;font-weight:600;color:' + (b.days_per_year === 0 ? 'var(--text-secondary)' : (b.remaining_days > 0 ? 'var(--secondary)' : 'var(--danger)')) + ';">' + b.remaining_days + ' / ' + b.days_per_year + '</span></div>';
                     html += '<div class="leave-bar-track"><div class="leave-bar-fill" style="width:' + Math.min(pct, 100) + '%;background:' + barColor + ';"></div></div>';
                     html += '</div>';
                 });

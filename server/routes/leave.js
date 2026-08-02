@@ -47,6 +47,19 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Start date cannot be a weekend' });
         }
 
+        const empRes = await query(
+            'SELECT role, reporting_manager_id FROM employees WHERE id = $1', [req.user.id]
+        );
+        const emp = empRes.rows[0];
+        if (!emp) {
+            return res.status(404).json({ success: false, message: 'Employee not found' });
+        }
+        const needsManager = emp.role === 'employee' || emp.role === 'manager';
+        if (needsManager && !emp.reporting_manager_id) {
+            return res.status(400).json({ success: false, message: 'No reporting manager assigned. Contact your administrator.' });
+        }
+        const reporting_manager_id = needsManager ? emp.reporting_manager_id : null;
+
         const genderCheck = await query(
             `SELECT lt.gender_eligibility, e.gender FROM leave_types lt
             JOIN employees e ON e.id = $2 WHERE lt.id = $1`,
@@ -62,9 +75,9 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
         const totalDays = calcBusinessDays(start_date, end_date);
 
         const result = await query(
-            `INSERT INTO leave_applications (employee_id, leave_type_id, start_date, end_date, total_days, reason) 
-            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [req.user.id, leave_type_id, start_date, end_date, totalDays, reason]
+            `INSERT INTO leave_applications (employee_id, leave_type_id, reporting_manager_id, start_date, end_date, total_days, reason) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [req.user.id, leave_type_id, reporting_manager_id, start_date, end_date, totalDays, reason]
         );
 
         res.status(201).json({ success: true, leave: result.rows[0] });
@@ -214,7 +227,7 @@ router.get('/balance', verifyToken, async (req, res) => {
         
         const balances = result.rows.map(row => ({
             ...row,
-            remaining_days: row.days_per_year - row.used_days,
+            remaining_days: Math.max(0, row.days_per_year - row.used_days),
             percentage: row.days_per_year > 0 ? Math.round((row.used_days / row.days_per_year) * 100) : 0
         }));
         

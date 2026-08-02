@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS employees (
     password_hash VARCHAR(255) NOT NULL,
     department_id INT REFERENCES departments(id) ON DELETE SET NULL,
     designation_id INT REFERENCES designations(id) ON DELETE SET NULL,
+    reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL,
     joining_date DATE NOT NULL,
     salary DECIMAL(10,2),
     profile_photo VARCHAR(500),
@@ -114,6 +115,7 @@ CREATE TABLE IF NOT EXISTS leave_applications (
     id SERIAL PRIMARY KEY,
     employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
     leave_type_id INT REFERENCES leave_types(id) ON DELETE SET NULL,
+    reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     total_days INT NOT NULL,
@@ -129,6 +131,7 @@ CREATE TABLE IF NOT EXISTS leave_applications (
 CREATE TABLE IF NOT EXISTS wfh_requests (
     id SERIAL PRIMARY KEY,
     employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+    reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     total_days INT NOT NULL,
@@ -156,6 +159,7 @@ CREATE TABLE IF NOT EXISTS holidays (
 CREATE TABLE IF NOT EXISTS support_tickets (
     id SERIAL PRIMARY KEY,
     employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+    reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL,
     category VARCHAR(100) NOT NULL,
     subject VARCHAR(255) NOT NULL,
     description TEXT,
@@ -299,7 +303,7 @@ INSERT INTO leave_types (name, days_per_year, description, gender_eligibility) V
 ('Casual Leave', 12, 'For personal work or casual reasons', 'all'),
 ('Sick Leave', 12, 'For medical reasons or health issues', 'all'),
 ('Earned Leave', 15, 'Earned leave for vacation or personal time', 'all'),
-('Maternity Leave', 180, 'For female employees during pregnancy', 'female'),
+('Maternity Leave', 0, 'Special leave for female employees during pregnancy (no balance deduction)', 'female'),
 ('Paternity Leave', 15, 'For male employees after childbirth', 'male'),
 ('Unpaid Leave', 0, 'Leave without pay', 'all')
 ON CONFLICT (name) DO NOTHING;
@@ -361,3 +365,20 @@ SELECT * FROM (VALUES
     ('Team Building Event', 'Join us for a team building event this Friday at 4:00 PM in the conference room.', 'low', 1, 'all')
 ) AS v(title, content, priority, posted_by, target_audience)
 WHERE NOT EXISTS (SELECT 1 FROM announcements);
+
+-- ============================================
+-- MIGRATIONS (idempotent - safe to re-run)
+-- ============================================
+
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE wfh_requests ADD COLUMN IF NOT EXISTS reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS reporting_manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_employees_reporting_manager ON employees(reporting_manager_id);
+CREATE INDEX IF NOT EXISTS idx_leave_rm ON leave_applications(reporting_manager_id);
+CREATE INDEX IF NOT EXISTS idx_wfh_rm ON wfh_requests(reporting_manager_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_rm ON support_tickets(reporting_manager_id);
+
+-- Maternity Leave is a special leave: 0 days balance, no deduction, still approvable.
+UPDATE leave_types SET days_per_year = 0 WHERE name = 'Maternity Leave';

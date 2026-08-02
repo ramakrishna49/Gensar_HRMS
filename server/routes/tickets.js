@@ -18,10 +18,15 @@ router.post('/', verifyToken, async (req, res) => {
         const validPriorities = ['low', 'medium', 'high'];
         const prio = validPriorities.includes(priority) ? priority : 'medium';
 
+        const empRes = await query(
+            'SELECT reporting_manager_id FROM employees WHERE id = $1', [req.user.id]
+        );
+        const reporting_manager_id = empRes.rows[0]?.reporting_manager_id || null;
+
         const result = await query(
-            `INSERT INTO support_tickets (employee_id, category, subject, description, priority)
-            VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [req.user.id, category, subject.trim(), description || '', prio]
+            `INSERT INTO support_tickets (employee_id, reporting_manager_id, category, subject, description, priority)
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [req.user.id, reporting_manager_id, category, subject.trim(), description || '', prio]
         );
 
         res.status(201).json({ success: true, ticket: result.rows[0] });

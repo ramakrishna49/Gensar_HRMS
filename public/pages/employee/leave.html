@@ -49,7 +49,7 @@
                 <h2 style="font-size:1.25rem;font-weight:600;">Leave Management</h2>
             </div>
             <div class="header-right">
-                <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Apply Leave</button>
+                <button class="btn btn-primary" onclick="openModal()" id="applyBtn"><i class="fas fa-plus"></i> Apply Leave</button>
                 <a href="/pages/employee/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
                 <div style="position:relative">
@@ -68,6 +68,9 @@
         </header>
 
         <div style="padding:30px;">
+            <div id="rmWarning" style="display:none;border:1px solid var(--warning);background:var(--warning-light,#FEF3C7);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:0.9rem;line-height:1.5;color:#92400E;">
+                <i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i><strong>Reporting Manager not assigned.</strong> You cannot apply for leave until an admin assigns your reporting manager. Please contact your administrator.
+            </div>
             <div class="card mb-3 slide-up stagger-1">
                 <div class="card-header">
                     <h3 style="font-weight:600;"><i class="fas fa-calendar-check" style="color:var(--secondary);margin-right:8px;"></i>Leave Balance</h3>
@@ -118,6 +121,10 @@
                         <label>Reason</label>
                         <textarea class="form-control" id="reason" rows="3" placeholder="Optional: provide a reason for your leave request"></textarea>
                     </div>
+                    <div id="approverInfo" class="date-info" style="display:none;margin-top:12px;">
+                        <i class="fas fa-user-tie"></i>
+                        <span id="approverInfoText"></span>
+                    </div>
                     <div class="modal-footer" style="padding:0;border:none;margin-top:8px;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                         <button type="submit" class="btn btn-primary" id="submitBtn"><i class="fas fa-paper-plane"></i> Submit Request</button>
@@ -135,10 +142,29 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             if (!checkAuth()) throw new Error('Not authenticated');
+            checkReportingManager();
             loadBalance();
             loadTypes();
             loadHistory();
         });
+
+        let reportingManagerName = null;
+        let needsRM = false;
+
+        async function checkReportingManager() {
+            const data = await apiCall('/auth/me');
+            if (data && data.success) {
+                const u = data.user;
+                needsRM = u.role === 'employee' || u.role === 'manager';
+                reportingManagerName = u.reporting_manager_name || null;
+                if (needsRM && !u.reporting_manager_id) {
+                    const warn = document.getElementById('rmWarning');
+                    if (warn) warn.style.display = 'block';
+                    const btn = document.getElementById('applyBtn');
+                    if (btn) btn.style.display = 'none';
+                }
+            }
+        }
 
         async function loadBalance() {
             const data = await apiCall('/leave/balance');
@@ -148,11 +174,13 @@
                     const used = b.days_per_year - b.remaining_days;
                     const pct = b.days_per_year > 0 ? (used / b.days_per_year * 100) : 0;
                     const barColor = pct >= 90 ? 'var(--danger)' : pct >= 60 ? 'var(--accent)' : 'var(--secondary)';
-                    const remainingColor = b.remaining_days > 0 ? 'var(--secondary)' : 'var(--danger)';
+                    const remainingColor = b.days_per_year === 0 ? 'var(--text-secondary)' : (b.remaining_days > 0 ? 'var(--secondary)' : 'var(--danger)');
                     return '<div class="leave-balance-card">' +
                         '<div class="leave-balance-header">' +
                             '<div><div class="leave-balance-name">' + escapeHtml(b.name) + '</div>' +
-                            '<div class="leave-balance-sub">' + used + ' of ' + b.days_per_year + ' days used</div></div>' +
+                            '<div class="leave-balance-sub">' + (b.days_per_year === 0
+                                ? (used > 0 ? used + ' day' + (used > 1 ? 's' : '') + ' used · special' : 'Special leave · no deduction')
+                                : used + ' of ' + b.days_per_year + ' days used') + '</div></div>' +
                             '<div class="leave-balance-count" style="color:' + remainingColor + ';">' + b.remaining_days + '<span style="font-size:0.7rem;font-weight:400;color:var(--text-secondary);"> left</span></div>' +
                         '</div>' +
                         '<div class="progress-track"><div class="progress-fill" style="width:' + Math.min(pct, 100) + '%;background:' + barColor + ';"></div></div>' +
@@ -244,6 +272,16 @@
             document.getElementById('modal').classList.add('active');
             document.getElementById('leaveForm').reset();
             document.getElementById('dateInfoBox').style.display = 'none';
+            const info = document.getElementById('approverInfo');
+            const text = document.getElementById('approverInfoText');
+            if (info && text) {
+                if (reportingManagerName) {
+                    text.textContent = 'Your request will go to your reporting manager: ' + reportingManagerName;
+                    info.style.display = 'flex';
+                } else {
+                    info.style.display = 'none';
+                }
+            }
         }
 
         function closeModal() {
@@ -252,6 +290,10 @@
 
         async function applyLeave(e) {
             e.preventDefault();
+            if (needsRM && !reportingManagerName) {
+                showToast('No reporting manager assigned. Contact your administrator.', 'error');
+                return;
+            }
             const submitBtn = document.getElementById('submitBtn');
             const original = submitBtn.innerHTML;
 

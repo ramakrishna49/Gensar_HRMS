@@ -190,10 +190,12 @@ router.post('/register', validateRegistration, async (req, res) => {
 router.get('/me', verifyToken, async (req, res) => {
     try {
         const result = await query(
-            `SELECT e.*, d.name as department_name, des.name as designation_name, des.level as designation_level 
+            `SELECT e.*, d.name as department_name, des.name as designation_name, des.level as designation_level,
+            rm.first_name || ' ' || rm.last_name as reporting_manager_name, rm.employee_id as reporting_manager_employee_id
             FROM employees e 
             LEFT JOIN departments d ON e.department_id = d.id 
             LEFT JOIN designations des ON e.designation_id = des.id 
+            LEFT JOIN employees rm ON e.reporting_manager_id = rm.id
             WHERE e.id = $1`,
             [req.user.id]
         );

@@ -251,6 +251,7 @@
                 headerHtml += '<p style="color:var(--text-secondary);font-size:0.95rem;">' + escapeHtml((u.role || '').charAt(0).toUpperCase() + (u.role || '').slice(1)) + '</p>';
                 headerHtml += '<p style="color:var(--text-tertiary);font-size:0.9rem;margin-top:4px;">Employee ID: ' + escapeHtml(u.employee_id || '-') + '</p>';
                 headerHtml += '<p style="color:var(--text-tertiary);font-size:0.9rem;">' + escapeHtml(u.department_name || '') + (u.designation_name ? ' &middot; ' + escapeHtml(u.designation_name) + (u.designation_level ? ' (Level ' + escapeHtml(String(u.designation_level)) + ')' : '') : '') + '</p>';
+                headerHtml += u.reporting_manager_name ? '<p style="color:var(--text-tertiary);font-size:0.9rem;"><i class="fas fa-user-tie" style="margin-right:6px;color:var(--accent);"></i>Reporting Manager: ' + escapeHtml(u.reporting_manager_name) + (u.reporting_manager_employee_id ? ' (' + escapeHtml(u.reporting_manager_employee_id) + ')' : '') + '</p>' : '';
                 headerHtml += '</div></div>';
                 document.getElementById('profileHeader').innerHTML = headerHtml;
 
@@ -272,6 +273,7 @@
                 let jobHtml = '<div>';
                 jobHtml += detailRow('Department', u.department_name);
                 jobHtml += detailRow('Designation', u.designation_name ? u.designation_name + (u.designation_level ? ' (Level ' + u.designation_level + ')' : '') : null);
+                jobHtml += detailRow('Reporting Manager', u.reporting_manager_name ? u.reporting_manager_name + (u.reporting_manager_employee_id ? ' (' + u.reporting_manager_employee_id + ')' : '') : null);
                 jobHtml += detailRow('Joining Date', u.joining_date ? formatDate(u.joining_date) : null);
                 jobHtml += detailRow('Employee ID', u.employee_id);
                 jobHtml += '<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-' + getStatusBadge(u.status) + '">' + escapeHtml(u.status || '-') + '</span></span></div>';
