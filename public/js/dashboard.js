@@ -279,7 +279,7 @@ async function loadNotifBadge() {
         if (user.role === 'admin' || user.role === 'hr') {
             const data = await apiCall('/notifications/counts');
             if (data && data.success) {
-                count = data.counts.pendingLeaves + data.counts.pendingProfileUpdates + data.counts.announcementsUnread + data.counts.pendingTickets;
+                count = data.counts.pendingLeaves + data.counts.pendingWfh + data.counts.pendingProfileUpdates + data.counts.announcementsUnread + data.counts.pendingTickets;
             }
         } else {
             const data = await apiCall('/announcements/unread-count');

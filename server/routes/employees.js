@@ -6,6 +6,20 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateEmployee, collectFieldErrors } = require('../middleware/validation');
 const { deleteFile, deleteFileByUrl } = require('../services/storage');
 
+async function activeAdminCount() {
+    const r = await query(`SELECT COUNT(*) AS count FROM employees WHERE role = 'admin' AND status = 'active'`);
+    return parseInt(r.rows[0].count, 10);
+}
+
+async function lastActiveAdminGuard(targetId) {
+    const r = await query('SELECT role, status FROM employees WHERE id = $1', [targetId]);
+    const target = r.rows[0];
+    if (target && target.role === 'admin' && target.status === 'active' && await activeAdminCount() <= 1) {
+        return 'Cannot remove the last active admin. You would lose all admin access.';
+    }
+    return null;
+}
+
 // @route   GET /api/employees
 // @desc    Get all employees
 // @access  Private (Admin/HR)
@@ -19,7 +33,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
             LEFT JOIN departments d ON e.department_id = d.id 
             LEFT JOIN designations des ON e.designation_id = des.id 
             LEFT JOIN employees rm ON e.reporting_manager_id = rm.id
-            WHERE 1=1 AND e.role != 'admin'
+            WHERE 1=1
         `;
         const params = [];
         let paramIndex = 1;
@@ -127,6 +141,11 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
             qualification, specialization, pan_number, aadhaar_number, passport_number,
             bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id
         } = req.body;
+
+        // Only the main Admin can create admin accounts.
+        if (role === 'admin' && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Only the main Admin can create admin accounts.' });
+        }
         
         // Check if email exists
         const emailCheck = await query('SELECT id FROM employees WHERE email = $1', [email]);
@@ -191,6 +210,23 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
 
         if (reporting_manager_id && parseInt(reporting_manager_id) === parseInt(req.params.id)) {
             return res.status(400).json({ success: false, message: 'An employee cannot be their own reporting manager' });
+        }
+
+        // Only the main Admin can manage admin accounts (promote to admin, or change an admin's role/status).
+        if (req.user.role !== 'admin') {
+            const cur = await query('SELECT role FROM employees WHERE id = $1', [req.params.id]);
+            const curIsAdmin = cur.rows[0] && cur.rows[0].role === 'admin';
+            if (role === 'admin' || (curIsAdmin && (role !== undefined || status !== undefined))) {
+                return res.status(403).json({ success: false, message: 'Only the main Admin can manage admin accounts.' });
+            }
+        }
+
+        // Last-active-admin guard: don't allow demoting/deactivating the final active admin.
+        if ((role && role !== 'admin') || (status && status !== 'active')) {
+            const guardError = await lastActiveAdminGuard(req.params.id);
+            if (guardError) {
+                return res.status(400).json({ success: false, message: guardError });
+            }
         }
 
         // Cycle prevention: walk up the reporting chain from the candidate RM.
@@ -302,6 +338,10 @@ router.post('/:id/pause', verifyToken, isAdmin, async (req, res) => {
         if (parseInt(req.params.id) === parseInt(req.user.id)) {
             return res.status(400).json({ success: false, message: 'You cannot pause your own account' });
         }
+        const guardError = await lastActiveAdminGuard(req.params.id);
+        if (guardError) {
+            return res.status(400).json({ success: false, message: guardError });
+        }
         const result = await query(
             `UPDATE employees SET status = 'paused', updated_at = NOW() 
             WHERE id = $1 RETURNING id`,
@@ -342,6 +382,10 @@ router.post('/:id/resume', verifyToken, isAdmin, async (req, res) => {
 // @access  Private (Admin)
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
+        const guardError = await lastActiveAdminGuard(req.params.id);
+        if (guardError) {
+            return res.status(400).json({ success: false, message: guardError });
+        }
         const result = await query(
             `UPDATE employees SET status = 'terminated', updated_at = NOW() 
             WHERE id = $1 RETURNING id`,
@@ -367,6 +411,11 @@ router.delete('/:id/permanent', verifyToken, isAdmin, async (req, res) => {
     try {
         if (parseInt(req.params.id) === parseInt(req.user.id)) {
             return res.status(400).json({ success: false, message: 'You cannot permanently delete your own account' });
+        }
+
+        const guardError = await lastActiveAdminGuard(req.params.id);
+        if (guardError) {
+            return res.status(400).json({ success: false, message: guardError });
         }
 
         const empRes = await query('SELECT * FROM employees WHERE id = $1', [req.params.id]);

@@ -8,8 +8,9 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
 // @access  Private (Admin)
 router.get('/counts', verifyToken, isAdmin, async (req, res) => {
     try {
-        const [pendingLeaves, pendingProfileUpdates, announcementsUnread, pendingTickets] = await Promise.all([
+        const [pendingLeaves, pendingWfh, pendingProfileUpdates, announcementsUnread, pendingTickets] = await Promise.all([
             query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'"),
+            query("SELECT COUNT(*) as count FROM wfh_requests WHERE status = 'pending'"),
             query("SELECT COUNT(*) as count FROM profile_update_requests WHERE status = 'pending'"),
             query(
                 `SELECT COUNT(*) as count FROM announcements a
@@ -23,10 +24,11 @@ router.get('/counts', verifyToken, isAdmin, async (req, res) => {
             success: true,
             counts: {
                 pendingLeaves: parseInt(pendingLeaves.rows[0].count),
+                pendingWfh: parseInt(pendingWfh.rows[0].count),
                 pendingProfileUpdates: parseInt(pendingProfileUpdates.rows[0].count),
                 announcementsUnread: parseInt(announcementsUnread.rows[0].count),
                 pendingTickets: parseInt(pendingTickets.rows[0].count),
-                total: parseInt(pendingLeaves.rows[0].count) + parseInt(pendingProfileUpdates.rows[0].count) + parseInt(announcementsUnread.rows[0].count) + parseInt(pendingTickets.rows[0].count)
+                total: parseInt(pendingLeaves.rows[0].count) + parseInt(pendingWfh.rows[0].count) + parseInt(pendingProfileUpdates.rows[0].count) + parseInt(announcementsUnread.rows[0].count) + parseInt(pendingTickets.rows[0].count)
             }
         });
     } catch (error) {

@@ -294,6 +294,10 @@
         let designationsCache = [];
 
         document.addEventListener('DOMContentLoaded', () => {
+            const me = getCurrentUser();
+            if (me && me.role !== 'admin') {
+                document.querySelectorAll('#addRole option[value="admin"], #editRole option[value="admin"]').forEach(o => o.remove());
+            }
             loadEmployees();
             loadDepartments();
             loadDesignations();
@@ -483,15 +487,7 @@
         const ROLE_LABEL = { employee: 'Employee', team_lead: 'Team Lead', manager: 'Manager', hr: 'HR', admin: 'Admin' };
         function rmCandidatesFor(role) {
             const wanted = RM_ROLE_MAP[role] || [];
-            let list = allEmployeesForRM.filter(e => wanted.includes(e.role) && e.status === 'active');
-            if (wanted.includes('admin')) {
-                const me = getCurrentUser();
-                const isAdminSelf = me && me.role === 'admin' && me.id && !list.some(a => String(a.id) === String(me.id));
-                if (isAdminSelf) {
-                    list = list.concat([{ id: me.id, employee_id: me.employee_id, first_name: me.first_name, last_name: me.last_name, role: 'admin' }]);
-                }
-            }
-            return list;
+            return allEmployeesForRM.filter(e => wanted.includes(e.role) && e.status === 'active');
         }
 
         function renderRMOptions(role, selectEl, currentId) {
