@@ -302,9 +302,8 @@ ON CONFLICT (email) DO NOTHING;
 INSERT INTO leave_types (name, days_per_year, description, gender_eligibility) VALUES
 ('Casual Leave', 12, 'For personal work or casual reasons', 'all'),
 ('Sick Leave', 12, 'For medical reasons or health issues', 'all'),
-('Earned Leave', 15, 'Earned leave for vacation or personal time', 'all'),
 ('Maternity Leave', 0, 'Special leave for female employees during pregnancy (no balance deduction)', 'female'),
-('Paternity Leave', 15, 'For male employees after childbirth', 'male'),
+('Paternity Leave', 0, 'For male employees after childbirth', 'male'),
 ('Unpaid Leave', 0, 'Leave without pay', 'all')
 ON CONFLICT (name) DO NOTHING;
 
@@ -383,6 +382,12 @@ CREATE INDEX IF NOT EXISTS idx_tickets_rm ON support_tickets(reporting_manager_i
 
 -- Maternity Leave is a special leave: 0 days balance, no deduction, still approvable.
 UPDATE leave_types SET days_per_year = 0 WHERE name = 'Maternity Leave';
+
+-- Paternity Leave: 0 days balance, no deduction, still approvable (like Maternity).
+UPDATE leave_types SET days_per_year = 0 WHERE name = 'Paternity Leave';
+
+-- Earned Leave removed from new requests (soft-disable) - history is preserved.
+UPDATE leave_types SET is_active = 0 WHERE name = 'Earned Leave';
 
 -- Add team_lead role (idempotent: drop + recreate the role check constraint).
 ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_role_check;

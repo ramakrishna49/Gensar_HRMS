@@ -32,8 +32,8 @@
         </div>
         <nav class="sidebar-nav">
             <div class="nav-section-title">Main</div>
-            <a href="/pages/manager/my-team.html" class="nav-item active"><i class="fas fa-users"></i><span class="nav-text">My Team</span></a>
             <a href="/pages/employee/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/pages/manager/my-team.html" class="nav-item active"><i class="fas fa-users"></i><span class="nav-text">My Team</span></a>
             <div class="nav-section-title">My Info</div>
             <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
             <a href="/pages/employee/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
@@ -53,7 +53,7 @@
                 <h2 style="font-size:1.25rem;font-weight:600;">My Team</h2>
             </div>
             <div class="header-right">
-                <a href="/pages/employee/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
                 <div style="position:relative">
                     <button class="profile-btn" onclick="toggleProfileMenu()">
@@ -149,6 +149,7 @@
 
     <script src="../../js/auth.js"></script>
     <script src="../../js/dashboard.js"></script>
+    <script src="../../js/tickets.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (!checkAuth()) throw new Error('Not authenticated');
@@ -314,6 +315,7 @@
                 showToast('Request ' + status + '!', 'success');
                 loadLeaves();
                 loadWfh();
+                loadNotifBadge();
             } else {
                 showToast(data?.message || 'Failed to update request', 'error');
             }
@@ -342,6 +344,7 @@
             if (data && data.success) {
                 showToast('Response submitted!', 'success');
                 loadTickets();
+                loadNotifBadge();
             } else {
                 showToast(data?.message || 'Failed to submit response', 'error');
             }

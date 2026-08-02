@@ -48,7 +48,7 @@
             <div class="header-right">
                 <button class="btn btn-success" onclick="downloadEmployeesExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
                 <button class="btn btn-primary" onclick="openAddEmployeeModal()"><i class="fas fa-plus"></i> Add Employee</button>
-                <a href="/pages/admin/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
                 <div style="position:relative">
                     <button class="profile-btn" onclick="toggleProfileMenu()">
@@ -1001,6 +1001,7 @@
                 await Promise.all([viewEmployee(currentViewEmployee.id), loadPendingCounts(), loadEmployees()]);
                 renderEmployees(allEmployees);
                 showViewTab(restoreTab);
+                loadNotifBadge();
             } else {
                 showToast(result?.message || 'Failed to approve', 'error');
             }
@@ -1023,6 +1024,7 @@
                 await Promise.all([viewEmployee(currentViewEmployee.id), loadPendingCounts(), loadEmployees()]);
                 renderEmployees(allEmployees);
                 showViewTab(restoreTab);
+                loadNotifBadge();
             } else {
                 showToast(result?.message || 'Failed to reject', 'error');
             }

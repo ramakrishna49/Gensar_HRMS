@@ -45,7 +45,7 @@
                 <h2 style="font-size:1.25rem;font-weight:600;">Dashboard</h2>
             </div>
             <div class="header-right">
-                <a href="/pages/admin/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
                 <div style="position:relative">
                     <button class="profile-btn" onclick="toggleProfileMenu()">
@@ -133,10 +133,10 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-bullhorn" style="color:var(--primary);"></i> Recent Activity</h2>
-                        <a href="/pages/admin/announcements.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
+                        <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-user-edit" style="color:var(--warning);"></i> Employee Data Requests <span id="pendingProfileBadge" style="display:none;margin-left:6px;background:var(--danger);color:#fff;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:600;"></span></h2>
+                        <a href="/pages/admin/employees.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Review</a>
                     </div>
-                    <div id="activityFeed">
+                    <div id="pendingProfileInfo">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
                     </div>
                 </div>
@@ -167,7 +167,6 @@
                     <div class="card-header">
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-clock" style="color:var(--warning);"></i> Pending Leave Requests</h2>
                         <a href="/pages/admin/leave.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Manage</a>
-            <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
                     </div>
                     <div id="pendingLeaveInfo">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
@@ -188,10 +187,10 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-user-edit" style="color:var(--warning);"></i> Employee Data Requests <span id="pendingProfileBadge" style="display:none;margin-left:6px;background:var(--danger);color:#fff;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:600;"></span></h2>
-                        <a href="/pages/admin/employees.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Review</a>
+                        <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-bullhorn" style="color:var(--primary);"></i> Recent Activity</h2>
+                        <a href="/pages/admin/announcements.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
-                    <div id="pendingProfileInfo">
+                    <div id="activityFeed">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
                     </div>
                 </div>
@@ -305,6 +304,7 @@
                 if (result && result.success) {
                     showToast('Request approved and applied automatically', 'success');
                     loadPendingProfileUpdates();
+                    loadNotifBadge();
                 } else {
                     showToast(result?.message || 'Failed to approve', 'error');
                 }
@@ -317,6 +317,7 @@
                 if (result && result.success) {
                     showToast('Request rejected', 'success');
                     loadPendingProfileUpdates();
+                    loadNotifBadge();
                 } else {
                     showToast(result?.message || 'Failed to reject', 'error');
                 }
@@ -419,8 +420,7 @@
                         <div style="font-size:3rem;font-weight:700;color:${count > 0 ? 'var(--warning)' : 'var(--success)'};">${count}</div>
                         <p style="color:var(--text-secondary);margin-bottom:16px;">Pending Leave Request${count !== 1 ? 's' : ''}</p>
                         ${count > 0
-                            ? `<a href="/pages/admin/leave.html" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Review Now</a>
-            <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>`
+                            ? `<a href="/pages/admin/leave.html" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Review Now</a>`
                             : `<p style="color:var(--success);font-size:0.9rem;"><i class="fas fa-check-circle"></i> All caught up!</p>`
                         }
                     </div>

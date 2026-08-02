@@ -47,24 +47,24 @@
         const btn = document.createElement('button');
         btn.id = 'ticketBtn';
         btn.title = 'Raise a query';
-        btn.setAttribute('onclick', 'openTicketModal()');
+        btn.setAttribute('onclick', 'openRaiseQuery()');
         btn.innerHTML = '<i class="fas fa-ticket-alt"></i><span class="tooltip">Raise a Query</span>';
         document.body.appendChild(btn);
 
         const modal = document.createElement('div');
         modal.className = 'modal';
-        modal.id = 'ticketModal';
+        modal.id = 'raiseQueryModal';
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
                     <h2><i class="fas fa-ticket-alt" style="color:var(--primary);margin-right:8px;"></i>Raise a Query</h2>
-                    <button onclick="closeTicketModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+                    <button onclick="closeRaiseQuery()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <form id="ticketForm" onsubmit="submitTicket(event)">
+                    <form id="raiseQueryForm" onsubmit="submitRaiseQuery(event)">
                         <div class="form-group">
                             <label>Category *</label>
-                            <select class="form-control" id="ticketCategory" required>
+                            <select class="form-control" id="raiseCategory" required>
                                 <option value="">Select category</option>
                                 <option value="Attendance">Attendance</option>
                                 <option value="Payroll & Salary">Payroll & Salary</option>
@@ -77,23 +77,23 @@
                         </div>
                         <div class="form-group">
                             <label>Subject *</label>
-                            <input type="text" class="form-control" id="ticketSubject" required maxlength="255" placeholder="Brief title of your query">
+                            <input type="text" class="form-control" id="raiseSubject" required maxlength="255" placeholder="Brief title of your query">
                         </div>
                         <div class="form-group">
                             <label>Description</label>
-                            <textarea class="form-control" id="ticketDescription" rows="4" placeholder="Describe your query in detail"></textarea>
+                            <textarea class="form-control" id="raiseDescription" rows="4" placeholder="Describe your query in detail"></textarea>
                         </div>
                         <div class="form-group">
                             <label>Priority</label>
-                            <select class="form-control" id="ticketPriority">
+                            <select class="form-control" id="raisePriority">
                                 <option value="low">Low</option>
                                 <option value="medium" selected>Medium</option>
                                 <option value="high">High</option>
                             </select>
                         </div>
                         <div class="modal-footer" style="padding:0;border:none;margin-top:8px;">
-                            <button type="button" class="btn btn-secondary" onclick="closeTicketModal()">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="ticketSubmitBtn"><i class="fas fa-paper-plane"></i> Submit Query</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeRaiseQuery()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="raiseSubmitBtn"><i class="fas fa-paper-plane"></i> Submit Query</button>
                         </div>
                     </form>
                     <div style="text-align:center;margin-top:14px;">
@@ -104,31 +104,38 @@
         document.body.appendChild(modal);
     }
 
-    document.addEventListener('DOMContentLoaded', injectTicketUI);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', injectTicketUI);
+    } else {
+        injectTicketUI();
+    }
 })();
 
-function openTicketModal() {
-    const modal = document.getElementById('ticketModal');
+function openRaiseQuery() {
+    const modal = document.getElementById('raiseQueryModal');
     if (!modal) return;
-    document.getElementById('ticketForm').reset();
-    document.getElementById('ticketPriority').value = 'medium';
+    const form = document.getElementById('raiseQueryForm');
+    if (form) form.reset();
+    const prio = document.getElementById('raisePriority');
+    if (prio) prio.value = 'medium';
     modal.classList.add('active');
 }
 
-function closeTicketModal() {
-    const modal = document.getElementById('ticketModal');
+function closeRaiseQuery() {
+    const modal = document.getElementById('raiseQueryModal');
     if (modal) modal.classList.remove('active');
 }
 
-async function submitTicket(e) {
+async function submitRaiseQuery(e) {
     e.preventDefault();
-    const submitBtn = document.getElementById('ticketSubmitBtn');
+    const submitBtn = document.getElementById('raiseSubmitBtn');
+    if (!submitBtn) return;
     const original = submitBtn.innerHTML;
 
-    const category = document.getElementById('ticketCategory').value;
-    const subject = document.getElementById('ticketSubject').value.trim();
-    const description = document.getElementById('ticketDescription').value.trim();
-    const priority = document.getElementById('ticketPriority').value;
+    const category = document.getElementById('raiseCategory').value;
+    const subject = document.getElementById('raiseSubject').value.trim();
+    const description = document.getElementById('raiseDescription').value.trim();
+    const priority = document.getElementById('raisePriority').value;
 
     if (!category || !subject) {
         showToast('Please fill all required fields', 'error');
@@ -147,7 +154,7 @@ async function submitTicket(e) {
 
     if (data && data.success) {
         showToast('Query submitted successfully!', 'success');
-        closeTicketModal();
+        closeRaiseQuery();
     } else {
         showToast(data?.message || 'Failed to submit query', 'error');
     }

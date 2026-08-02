@@ -190,23 +190,30 @@ function loadUserInfo() {
     loadNotifBadge();
     loadSidebarLogo();
     loadManagerNav();
-    initAdminNotificationPanel();
+    initNotificationBell();
 }
 
-// Admin notification bell: show pending employee requests (leave / WFH / queries)
-function initAdminNotificationPanel() {
+// Notification bell: route by role.
+//   admin/hr          -> pending employee requests (leave / WFH / queries)
+//   manager/team_lead -> their team's pending requests (added in manager flow)
+//   employee          -> announcements
+function initNotificationBell() {
     const user = getCurrentUser();
     if (!user) return;
-    if (user.role !== 'admin' && user.role !== 'hr') return;
-    const bells = document.querySelectorAll('.notification-btn[title="Notifications"]');
-    bells.forEach(bell => {
+    document.querySelectorAll('.notification-btn[title="Notifications"]').forEach(bell => {
         if (bell.getAttribute('data-requests-init')) return;
         bell.setAttribute('data-requests-init', 'true');
         bell.style.position = 'relative';
         bell.onclick = function(e) {
             e.preventDefault();
             e.stopPropagation();
-            toggleAdminRequestsPanel(bell);
+            if (user.role === 'admin' || user.role === 'hr') {
+                toggleAdminRequestsPanel(bell, 'admin');
+            } else if (user.role === 'manager' || user.role === 'team_lead') {
+                toggleAdminRequestsPanel(bell, 'manager');
+            } else {
+                toggleNotificationPanel();
+            }
         };
     });
     document.addEventListener('click', function(e) {
@@ -218,7 +225,9 @@ function initAdminNotificationPanel() {
     });
 }
 
-async function toggleAdminRequestsPanel(bell) {
+async function toggleAdminRequestsPanel(bell, mode) {
+    mode = mode || 'admin';
+    const isManagerMode = mode === 'manager';
     const existing = document.getElementById('adminNotifPanel');
     if (existing) { existing.remove(); return; }
 
@@ -226,9 +235,9 @@ async function toggleAdminRequestsPanel(bell) {
     panel.className = 'notification-panel';
     panel.id = 'adminNotifPanel';
     panel.innerHTML =
-        '<div class="notification-panel-header"><span><i class="fas fa-bell" style="margin-right:6px;"></i>Pending Requests</span></div>' +
+        '<div class="notification-panel-header"><span><i class="fas fa-bell" style="margin-right:6px;"></i>' + (isManagerMode ? 'Team Requests' : 'Pending Requests') + '</span></div>' +
         '<div class="notification-panel-list" id="adminNotifList" style="min-height:70px;"><div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>' +
-        '<div class="notification-panel-footer"><a href="/pages/admin/leave.html?status=pending">View all requests</a></div>';
+        '<div class="notification-panel-footer"><a href="' + (isManagerMode ? '/pages/manager/my-team.html' : '/pages/admin/leave.html?status=pending') + '">View all requests</a></div>';
     bell.appendChild(panel);
 
     const data = await apiCall('/notifications/requests');
@@ -245,28 +254,33 @@ async function toggleAdminRequestsPanel(bell) {
     } else {
         list.innerHTML = '<div class="notification-panel-empty"><i class="fas fa-bell-slash"></i>No pending requests</div>';
     }
+    loadNotifBadge();
 }
 
-// Inject a "My Team" link into the sidebar for approver-role users
+// Inject a "My Team" link into the sidebar for approver-role users,
+// placed right after the Dashboard link (active on the My Team page).
 function loadManagerNav() {
     const user = getCurrentUser();
     if (!user) return;
     if (user.role !== 'manager' && user.role !== 'team_lead' && user.role !== 'hr') return;
     const nav = document.querySelector('.sidebar-nav');
     if (!nav || nav.querySelector('[data-manager-nav]')) return;
+    if (nav.querySelector('a.nav-item[href="/pages/manager/my-team.html"]')) return;
     const link = document.createElement('a');
     link.href = '/pages/manager/my-team.html';
     link.className = 'nav-item';
     link.setAttribute('data-manager-nav', 'true');
     link.innerHTML = '<i class="fas fa-users"></i><span class="nav-text">My Team</span>';
-    let inserted = false;
-    nav.querySelectorAll('.nav-section-title').forEach(s => {
-        if (!inserted && s.textContent.trim() === 'Resources') {
-            nav.insertBefore(link, s);
-            inserted = true;
+    const dashboardLink = nav.querySelector('a.nav-item[href*="dashboard.html"]');
+    if (dashboardLink) {
+        if (window.location.pathname.indexOf('/pages/manager/my-team.html') !== -1) {
+            link.classList.add('active');
+            dashboardLink.classList.remove('active');
         }
-    });
-    if (!inserted) nav.appendChild(link);
+        dashboardLink.insertAdjacentElement('afterend', link);
+    } else {
+        nav.appendChild(link);
+    }
 }
 
 async function loadNotifBadge() {
@@ -280,6 +294,11 @@ async function loadNotifBadge() {
             const data = await apiCall('/notifications/counts');
             if (data && data.success) {
                 count = data.counts.pendingLeaves + data.counts.pendingWfh + data.counts.pendingProfileUpdates + data.counts.announcementsUnread + data.counts.pendingTickets;
+            }
+        } else if (user.role === 'manager' || user.role === 'team_lead') {
+            const data = await apiCall('/notifications/counts');
+            if (data && data.success) {
+                count = data.counts.pendingLeaves + data.counts.pendingWfh + data.counts.pendingTickets + data.counts.announcementsUnread;
             }
         } else {
             const data = await apiCall('/announcements/unread-count');
@@ -473,19 +492,6 @@ document.addEventListener('click', (e) => {
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
     loadUserInfo();
-
-    // Intercept bell click for employees to open notification popup
-    const bell = document.querySelector('.notification-btn[title="Notifications"]');
-    if (bell) {
-        bell.addEventListener('click', (e) => {
-            const user = getCurrentUser();
-            if (user && user.role !== 'admin') {
-                if (e.target.closest('#notificationPanel')) return;
-                e.preventDefault();
-                toggleNotificationPanel();
-            }
-        });
-    }
     
     // Load saved theme
     const savedTheme = localStorage.getItem('theme');

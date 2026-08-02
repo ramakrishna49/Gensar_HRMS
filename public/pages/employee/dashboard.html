@@ -76,7 +76,7 @@
                 <h2 style="font-size:1.25rem;font-weight:600;">Dashboard</h2>
             </div>
             <div class="header-right">
-                <a href="/pages/employee/announcements.html" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></a>
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
                 <div style="position:relative">
                     <button class="profile-btn" onclick="toggleProfileMenu()">
@@ -188,7 +188,6 @@
                     <div class="card-header">
                         <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-calendar-check" style="color:var(--secondary);margin-right:8px;"></i>Leave Balance</h3>
                         <a href="/pages/employee/leave.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
-            <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
                     </div>
                     <div id="leaveBalance">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
@@ -672,7 +671,7 @@
                     const d = new Date(h.date);
                     html += '<div class="holiday-item">';
                     html += '<div class="holiday-date-box"><div class="day">' + d.getDate() + '</div><div class="month">' + months[d.getMonth()] + '</div></div>';
-                    html += '<div><div style="font-weight:600;font-size:0.95rem;">' + escapeHtml(h.name) + '</div>';
+                    html += '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:0.95rem;">' + escapeHtml(h.name) + '</div>';
                     if (h.description) html += '<div style="font-size:0.8rem;color:var(--text-secondary);">' + escapeHtml(h.description) + '</div>';
                     html += '</div></div>';
                 });
@@ -686,7 +685,7 @@
             const data = await apiCall('/announcements');
             const container = document.getElementById('latestAnnouncements');
             if (data && data.success && data.announcements && data.announcements.length > 0) {
-                const latest = data.announcements.slice(0, 2);
+                const latest = data.announcements.slice(0, 3);
                 let html = '';
                 latest.forEach(a => {
                     const borderColors = {high:'var(--danger)',normal:'var(--info)',low:'var(--secondary)'};
@@ -697,7 +696,7 @@
                     if (isUnread) html += '<span style="display:inline-block;width:8px;height:8px;background:var(--primary);border-radius:50%;"></span>';
                     html += '<span class="badge badge-' + getPriorityBadge(a.priority) + '" style="font-size:0.65rem;">' + escapeHtml(a.priority || 'normal') + '</span>';
                     html += '<strong style="font-size:0.95rem;">' + escapeHtml(a.title) + '</strong></div>';
-                    html += '<p style="font-size:0.82rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(a.content || '') + '</p>';
+                    html += '<p style="font-size:0.82rem;color:var(--text-secondary);">' + escapeHtml(a.content || '') + '</p>';
                     html += '<p style="font-size:0.75rem;color:var(--text-tertiary);margin-top:4px;">' + escapeHtml(a.posted_by_name || 'Admin') + ' &middot; ' + formatDate(a.created_at) + '</p>';
                     html += '</div>';
                     if (isUnread) {
