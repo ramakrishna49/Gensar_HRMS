@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { sendToUser } = require('../services/push');
 
 const EDITABLE_FIELDS = [
     'gender',
@@ -128,6 +129,15 @@ router.post('/:id/approve', verifyToken, isAdmin, async (req, res) => {
         );
 
         res.json({ success: true, message: 'Request approved and applied', request: updateResult.rows[0] });
+
+        const fieldLabel = FIELD_LABELS[request.field] || request.field;
+        try {
+            await sendToUser(request.employee_id, {
+                title: 'Profile Update Approved',
+                body: `Your ${fieldLabel} change was approved`,
+                url: '/pages/employee/profile.html'
+            });
+        } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
         console.error('Approve profile update error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
@@ -163,6 +173,15 @@ router.post('/:id/reject', verifyToken, isAdmin, async (req, res) => {
         );
 
         res.json({ success: true, message: 'Request rejected', request: updateResult.rows[0] });
+
+        const fieldLabel = FIELD_LABELS[request.field] || request.field;
+        try {
+            await sendToUser(request.employee_id, {
+                title: 'Profile Update Rejected',
+                body: `Your ${fieldLabel} change was rejected`,
+                url: '/pages/employee/profile.html'
+            });
+        } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
         console.error('Reject profile update error:', error);
         res.status(500).json({ success: false, message: 'Server error' });

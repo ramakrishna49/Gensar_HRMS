@@ -1,10 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Team - Gensar HRMS</title>
     <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
     <link rel="stylesheet" href="../../css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -180,7 +186,7 @@
                 }
                 container.innerHTML = team.map(m =>
                     '<span class="team-chip"><span style="width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;flex-shrink:0;">' + escapeHtml(getInitials(m.first_name, m.last_name)) + '</span>' +
-                    '<span>' + escapeHtml(m.first_name + ' ' + (m.last_name || '')) + ' <span style="color:var(--text-secondary);font-size:0.75rem;">' + escapeHtml(m.employee_id) + ' · ' + escapeHtml(m.designation_name || m.role || '-') + '</span></span></span>'
+                    '<span>' + escapeHtml(m.first_name + ' ' + (m.last_name || '')) + ' <span style="color:var(--text-secondary);font-size:0.75rem;">' + escapeHtml(m.employee_id) + ' Â· ' + escapeHtml(m.designation_name || m.role || '-') + '</span></span></span>'
                 ).join('');
             } else {
                 container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--danger);font-size:0.9rem;">Failed to load team</div>';
@@ -201,7 +207,7 @@
                 container.innerHTML = leaves.map(l =>
                     '<div class="request-card">' +
                         '<div class="req-top"><div><div class="req-emp">' + escapeHtml(l.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(l.emp_id) + '</span></div>' +
-                        '<div class="req-meta">' + escapeHtml(l.leave_type_name || '-') + ' · ' + formatDate(l.start_date) + ' to ' + formatDate(l.end_date) + ' · ' + l.total_days + ' day' + (l.total_days > 1 ? 's' : '') + '</div></div>' +
+                        '<div class="req-meta">' + escapeHtml(l.leave_type_name || '-') + ' Â· ' + formatDate(l.start_date) + ' to ' + formatDate(l.end_date) + ' Â· ' + l.total_days + ' day' + (l.total_days > 1 ? 's' : '') + '</div></div>' +
                         '<span class="badge badge-warning">Pending</span></div>' +
                         (l.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(l.reason) + '</div>' : '') +
                         '<div class="req-actions">' +
@@ -229,7 +235,7 @@
                 container.innerHTML = wfh.map(w =>
                     '<div class="request-card">' +
                         '<div class="req-top"><div><div class="req-emp">' + escapeHtml(w.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(w.emp_id) + '</span></div>' +
-                        '<div class="req-meta">' + formatDate(w.start_date) + ' to ' + formatDate(w.end_date) + ' · ' + w.total_days + ' day' + (w.total_days > 1 ? 's' : '') + '</div></div>' +
+                        '<div class="req-meta">' + formatDate(w.start_date) + ' to ' + formatDate(w.end_date) + ' Â· ' + w.total_days + ' day' + (w.total_days > 1 ? 's' : '') + '</div></div>' +
                         '<span class="badge badge-warning">Pending</span></div>' +
                         (w.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(w.reason) + '</div>' : '') +
                         '<div class="req-actions">' +
@@ -258,7 +264,7 @@
                     '<div class="request-card">' +
                         '<div class="req-top"><div><div class="req-emp">' + escapeHtml(t.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(t.emp_id) + '</span></div>' +
                         '<div class="req-sub"><strong>' + escapeHtml(t.subject) + '</strong></div>' +
-                        '<div class="req-meta"><span class="badge badge-' + (t.priority === 'high' ? 'danger' : t.priority === 'low' ? 'secondary' : 'warning') + '" style="font-size:0.68rem;">' + escapeHtml(t.priority) + '</span> · ' + escapeHtml(t.category || 'Query') + '</div>' +
+                        '<div class="req-meta"><span class="badge badge-' + (t.priority === 'high' ? 'danger' : t.priority === 'low' ? 'secondary' : 'warning') + '" style="font-size:0.68rem;">' + escapeHtml(t.priority) + '</span> Â· ' + escapeHtml(t.category || 'Query') + '</div>' +
                         (t.description ? '<div class="req-sub">' + escapeHtml(t.description) + '</div>' : '') +
                         '</div>' +
                         '<span class="badge badge-warning">' + escapeHtml(t.status) + '</span></div>' +
@@ -325,7 +331,7 @@
 
         function openTicket(id, empName, subject) {
             currentTicket = id;
-            document.getElementById('ticketInfo').innerHTML = '<strong>' + escapeHtml(empName) + '</strong> — ' + escapeHtml(subject);
+            document.getElementById('ticketInfo').innerHTML = '<strong>' + escapeHtml(empName) + '</strong> â€” ' + escapeHtml(subject);
             document.getElementById('ticketResponse').value = '';
             document.getElementById('ticketStatus').value = 'in_progress';
             document.getElementById('ticketModal').classList.add('active');

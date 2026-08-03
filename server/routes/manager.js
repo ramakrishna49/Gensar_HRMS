@@ -3,6 +3,7 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isManager } = require('../middleware/auth');
 const { istDateString } = require('../utils/date');
+const { sendToUser } = require('../services/push');
 
 // @route   GET /api/manager/team
 // @desc    Get current user's direct reports
@@ -150,6 +151,16 @@ router.put('/leaves/:id', verifyToken, isManager, async (req, res) => {
         }
 
         res.json({ success: true, leave: result.rows[0] });
+
+        const lt = await query('SELECT name FROM leave_types WHERE id = $1', [leaveApp.leave_type_id]).catch(() => ({ rows: [] }));
+        const typeName = (lt.rows[0] && lt.rows[0].name) || 'Leave';
+        try {
+            await sendToUser(leaveApp.employee_id, {
+                title: status === 'approved' ? 'Leave Approved' : 'Leave Rejected',
+                body: `Your ${typeName} request was ${status}`,
+                url: '/pages/employee/leave.html'
+            });
+        } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
         console.error('Manager leave approve error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
@@ -182,6 +193,15 @@ router.put('/wfh/:id', verifyToken, isManager, async (req, res) => {
         );
 
         res.json({ success: true, wfh: result.rows[0] });
+
+        const wfhApp = appRes.rows[0];
+        try {
+            await sendToUser(wfhApp.employee_id, {
+                title: status === 'approved' ? 'WFH Approved' : 'WFH Rejected',
+                body: `Your work-from-home request was ${status}`,
+                url: '/pages/employee/wfh.html'
+            });
+        } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
         console.error('Manager WFH approve error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
@@ -216,6 +236,15 @@ router.put('/tickets/:id', verifyToken, isManager, async (req, res) => {
         );
 
         res.json({ success: true, ticket: result.rows[0] });
+
+        const ticket = appRes.rows[0];
+        try {
+            await sendToUser(ticket.employee_id, {
+                title: 'Ticket Response',
+                body: `Your query "${ticket.subject}" was ${newStatus}`,
+                url: '/pages/employee/tickets.html'
+            });
+        } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
         console.error('Manager ticket respond error:', error);
         res.status(500).json({ success: false, message: 'Server error' });

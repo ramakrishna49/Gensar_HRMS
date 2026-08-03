@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { sendToAudience } = require('../services/push');
 
 router.get('/', verifyToken, async (req, res) => {
     try {
@@ -82,6 +83,16 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
             [title, content, priority || 'normal', req.user.id, target_audience || 'all']
         );
+
+        try {
+            const sent = await sendToAudience(target_audience || 'all', {
+                title: priority === 'urgent' ? 'Urgent Announcement' : 'New Announcement',
+                body: title,
+                url: '/pages/employee/announcements.html'
+            });
+            if (sent.sent > 0) console.log(`[Push] Announcement "${title}" sent to ${sent.sent} device(s)`);
+        } catch (e) { console.error('Push notify error:', e.message); }
+
         res.status(201).json({ success: true, announcement: result.rows[0] });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });

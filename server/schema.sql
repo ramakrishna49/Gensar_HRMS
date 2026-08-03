@@ -271,6 +271,17 @@ CREATE TABLE IF NOT EXISTS profile_update_requests (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- 19. PUSH SUBSCRIPTIONS (PWA web-push)
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id SERIAL PRIMARY KEY,
+    employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL UNIQUE,
+    subscription JSONB NOT NULL,
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- INDEXES
 CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email);
 CREATE INDEX IF NOT EXISTS idx_employees_employee_id ON employees(employee_id);
@@ -291,6 +302,7 @@ CREATE INDEX IF NOT EXISTS idx_attendance_photos_expires ON attendance_photos(ex
 CREATE INDEX IF NOT EXISTS idx_profile_requests_employee ON profile_update_requests(employee_id);
 CREATE INDEX IF NOT EXISTS idx_profile_requests_status ON profile_update_requests(status);
 CREATE INDEX IF NOT EXISTS idx_announcement_reads_employee ON announcement_reads(employee_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_employee ON push_subscriptions(employee_id);
 
 -- ============================================
 -- SEED DATA

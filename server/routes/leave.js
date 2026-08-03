@@ -4,6 +4,7 @@ const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateLeave } = require('../middleware/validation');
 const { istDateString, istYear } = require('../utils/date');
+const { sendToUser } = require('../services/push');
 
 function isWeekend(dateStr) {
     const d = new Date(dateStr);
@@ -80,6 +81,21 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
             [req.user.id, leave_type_id, reporting_manager_id, start_date, end_date, totalDays, reason]
         );
+
+        if (reporting_manager_id) {
+            const applicant = await query(
+                "SELECT first_name || ' ' || last_name as name FROM employees WHERE id = $1",
+                [req.user.id]
+            ).catch(() => ({ rows: [] }));
+            const name = (applicant.rows[0] && applicant.rows[0].name) || req.user.employee_id;
+            try {
+                await sendToUser(reporting_manager_id, {
+                    title: 'New Leave Request',
+                    body: `${name} applied for leave (${totalDays} day${totalDays > 1 ? 's' : ''})`,
+                    url: '/pages/manager/my-team.html'
+                });
+            } catch (e) { console.error('Push notify error:', e.message); }
+        }
 
         res.status(201).json({ success: true, leave: result.rows[0] });
     } catch (error) {
@@ -212,6 +228,17 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
         }
         
         res.json({ success: true, leave: result.rows[0] });
+
+        const app = leaveApp.rows[0];
+        const lt = await query('SELECT name FROM leave_types WHERE id = $1', [app.leave_type_id]).catch(() => ({ rows: [] }));
+        const typeName = (lt.rows[0] && lt.rows[0].name) || 'Leave';
+        try {
+            await sendToUser(app.employee_id, {
+                title: status === 'approved' ? 'Leave Approved' : 'Leave Rejected',
+                body: `Your ${typeName} request was ${status}`,
+                url: '/pages/employee/leave.html'
+            });
+        } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }

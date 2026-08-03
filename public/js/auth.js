@@ -65,6 +65,7 @@ async function handleLogin(event, portal) {
         if (data.success) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
+            requestPushPermission();
             
             submitBtn.innerHTML = '<i class="fas fa-check"></i> Success!';
             submitBtn.style.background = 'var(--success)';
@@ -275,3 +276,122 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark-mode');
     }
 });
+
+// ==================== PWA SUPPORT ====================
+
+const PWA_CAN_REGISTER = 'serviceWorker' in navigator &&
+    (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+
+// Register the service worker once on first load.
+if (PWA_CAN_REGISTER) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showToast('New version available. Refreshing...', 'info');
+                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        setTimeout(() => window.location.reload(), 1200);
+                    }
+                });
+            });
+        }).catch(() => {});
+    });
+}
+
+// Offline / online toasts
+window.addEventListener('offline', () => {
+    showToast('You are offline - showing cached app', 'warning');
+});
+window.addEventListener('online', () => {
+    showToast('Back online', 'success');
+});
+
+// ---------- Install (A2HS) prompt ----------
+let deferredInstallPrompt = null;
+let installBtnEl = null;
+
+function ensureInstallButton() {
+    if (installBtnEl || !deferredInstallPrompt) return;
+    installBtnEl = document.createElement('button');
+    installBtnEl.id = 'pwaInstallBtn';
+    installBtnEl.innerHTML = '<i class="fas fa-download"></i> Install App';
+    installBtnEl.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:#4F46E5;color:#fff;border:none;border-radius:50px;padding:12px 18px;font-size:0.9rem;font-weight:600;cursor:pointer;box-shadow:0 8px 20px rgba(79,70,229,0.4);display:flex;align-items:center;gap:8px;';
+    installBtnEl.onclick = async () => {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        if (outcome === 'accepted') hideInstallButton();
+    };
+    document.body.appendChild(installBtnEl);
+}
+
+function hideInstallButton() {
+    if (installBtnEl) { installBtnEl.remove(); installBtnEl = null; }
+}
+
+if (PWA_CAN_REGISTER) {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        ensureInstallButton();
+    });
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        hideInstallButton();
+    });
+}
+
+// ---------- Push notifications ----------
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+}
+
+async function pushSubscription() {
+    if (!PWA_CAN_REGISTER || !('PushManager' in window)) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    let publicKey = null;
+    try {
+        const keyRes = await apiCall('/push/vapid-public-key');
+        publicKey = keyRes && keyRes.success ? keyRes.publicKey : null;
+    } catch (e) { return; }
+    if (!publicKey) return; // push not configured
+
+    try {
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+            if (Notification.permission !== 'granted') {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return;
+            }
+            sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicKey)
+            });
+        }
+        await apiCall('/push/subscribe', 'POST', { subscription: sub.toJSON() });
+    } catch (e) {
+        console.error('Push subscription error:', e);
+    }
+}
+
+// Called right after a successful login (user gesture is available for the permission prompt).
+function requestPushPermission() {
+    pushSubscription();
+}
+
+// If the user is already logged in (e.g. reopening the app), keep the subscription in sync.
+if (PWA_CAN_REGISTER && localStorage.getItem('token')) {
+    document.addEventListener('DOMContentLoaded', () => pushSubscription());
+}

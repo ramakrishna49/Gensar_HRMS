@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { sendToUser } = require('../services/push');
 
 router.post('/', verifyToken, async (req, res) => {
     try {
@@ -28,6 +29,21 @@ router.post('/', verifyToken, async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
             [req.user.id, reporting_manager_id, category, subject.trim(), description || '', prio]
         );
+
+        if (reporting_manager_id) {
+            const applicant = await query(
+                "SELECT first_name || ' ' || last_name as name FROM employees WHERE id = $1",
+                [req.user.id]
+            ).catch(() => ({ rows: [] }));
+            const name = (applicant.rows[0] && applicant.rows[0].name) || req.user.employee_id;
+            try {
+                await sendToUser(reporting_manager_id, {
+                    title: 'New Support Query',
+                    body: `${name} raised: ${subject.trim()}`,
+                    url: '/pages/manager/my-team.html'
+                });
+            } catch (e) { console.error('Push notify error:', e.message); }
+        }
 
         res.status(201).json({ success: true, ticket: result.rows[0] });
     } catch (error) {
@@ -131,6 +147,15 @@ router.put('/respond/:id', verifyToken, isAdmin, async (req, res) => {
         );
 
         res.json({ success: true, ticket: result.rows[0] });
+
+        const tk = ticket.rows[0];
+        try {
+            await sendToUser(tk.employee_id, {
+                title: 'Ticket Response',
+                body: `Your query "${tk.subject}" was ${status}`,
+                url: '/pages/employee/tickets.html'
+            });
+        } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
         console.error('Ticket respond error:', error);
         res.status(500).json({ success: false, message: 'Server error' });

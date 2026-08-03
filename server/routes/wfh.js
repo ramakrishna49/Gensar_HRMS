@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { sendToUser } = require('../services/push');
 
 function isWeekend(dateStr) {
     const d = new Date(dateStr);
@@ -55,6 +56,21 @@ router.post('/apply', verifyToken, async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
             [req.user.id, reporting_manager_id, start_date, end_date, totalDays, reason]
         );
+
+        if (reporting_manager_id) {
+            const applicant = await query(
+                "SELECT first_name || ' ' || last_name as name FROM employees WHERE id = $1",
+                [req.user.id]
+            ).catch(() => ({ rows: [] }));
+            const name = (applicant.rows[0] && applicant.rows[0].name) || req.user.employee_id;
+            try {
+                await sendToUser(reporting_manager_id, {
+                    title: 'New WFH Request',
+                    body: `${name} requested work from home (${totalDays} day${totalDays > 1 ? 's' : ''})`,
+                    url: '/pages/manager/my-team.html'
+                });
+            } catch (e) { console.error('Push notify error:', e.message); }
+        }
 
         res.status(201).json({ success: true, wfh: result.rows[0] });
     } catch (error) {
@@ -153,7 +169,16 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
         );
 
         res.json({ success: true, wfh: result.rows[0] });
+
+        try {
+            await sendToUser(wfhApp.rows[0].employee_id, {
+                title: status === 'approved' ? 'WFH Approved' : 'WFH Rejected',
+                body: `Your work-from-home request was ${status}`,
+                url: '/pages/employee/wfh.html'
+            });
+        } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
+        console.error('WFH approve error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

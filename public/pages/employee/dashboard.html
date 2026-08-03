@@ -1,10 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Dashboard - Gensar HRMS</title>
     <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
     <link rel="stylesheet" href="../../css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -526,7 +532,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking in...';
             const data = await apiCall('/attendance/check-in', 'POST', { location: location || '', photo });
             if (data && data.success) {
-                showToast('Checked in successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
+                showToast('Checked in successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo â€” camera not available)'), 'success');
                 todayAttendance = null;
                 await loadAttendanceStatus();
             } else {
@@ -547,7 +553,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking out...';
             const data = await apiCall('/attendance/check-out', 'POST', { location: location || '', photo });
             if (data && data.success) {
-                showToast('Checked out successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
+                showToast('Checked out successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo â€” camera not available)'), 'success');
                 todayAttendance = null;
                 await loadAttendanceStatus();
             } else {
