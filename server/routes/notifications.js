@@ -8,7 +8,7 @@ const { verifyToken, isManager } = require('../middleware/auth');
 // @access  Private (Admin/HR sees all, Manager/Team Lead sees own team)
 router.get('/counts', verifyToken, isManager, async (req, res) => {
     try {
-        const isAdminRole = req.user.role === 'admin' || req.user.role === 'hr';
+        const isAdminRole = req.user.role === 'admin';
         const scopeClause = isAdminRole ? '' : ' AND reporting_manager_id = $1';
         const scopeParams = isAdminRole ? [] : [req.user.id];
 
@@ -47,7 +47,7 @@ router.get('/counts', verifyToken, isManager, async (req, res) => {
 // @access  Private (Admin/HR sees all, Manager/Team Lead sees own team)
 router.get('/requests', verifyToken, isManager, async (req, res) => {
     try {
-        const isAdminRole = req.user.role === 'admin' || req.user.role === 'hr';
+        const isAdminRole = req.user.role === 'admin';
 
         let leaveUrl, wfhUrl, ticketUrl;
         let leavesQuery, wfhQuery, ticketsQuery, profilesQuery = null;

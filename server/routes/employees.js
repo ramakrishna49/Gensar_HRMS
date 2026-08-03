@@ -105,7 +105,7 @@ router.get('/:id', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid employee id' });
         }
 
-        const isAdminUser = req.user.role === 'admin' || req.user.role === 'hr';
+        const isAdminUser = req.user.role === 'admin';
         if (!isAdminUser) {
             const canView = await query(
                 `WITH RECURSIVE chain AS (

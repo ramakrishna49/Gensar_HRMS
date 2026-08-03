@@ -48,14 +48,14 @@ router.post('/login', validateLogin, async (req, res) => {
 
         // Portal role enforcement
         if (portal === 'admin') {
-            if (user.role !== 'admin' && user.role !== 'hr') {
+            if (user.role !== 'admin') {
                 return res.status(403).json({
                     success: false,
                     message: 'This account does not have Admin access. Use the Employee Portal.'
                 });
             }
         } else if (portal === 'employee') {
-            if (user.role === 'admin' || user.role === 'hr') {
+            if (user.role === 'admin') {
                 return res.status(403).json({
                     success: false,
                     message: 'Admin accounts must sign in through the Admin Portal.'

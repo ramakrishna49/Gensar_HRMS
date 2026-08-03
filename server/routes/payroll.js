@@ -86,7 +86,7 @@ router.get('/:id', verifyToken, async (req, res) => {
 // @access  Private (employee owns the payslip or admin/hr)
 router.get('/:id/pdf', verifyToken, async (req, res) => {
     try {
-        const isPrivileged = req.user.role === 'admin' || req.user.role === 'hr';
+        const isPrivileged = req.user.role === 'admin';
         const result = await query(
             `SELECT p.*, e.first_name, e.last_name, e.employee_id as emp_id,
                 e.department_id, d.name as department_name,

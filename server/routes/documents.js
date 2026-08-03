@@ -65,7 +65,7 @@ router.get('/:id/download', verifyToken, async (req, res) => {
         
         const doc = result.rows[0];
 
-        const isAdminUser = req.user.role === 'admin' || req.user.role === 'hr';
+        const isAdminUser = req.user.role === 'admin';
         let canAccess = isAdminUser || doc.employee_id === req.user.id;
         if (!canAccess && (req.user.role === 'manager' || req.user.role === 'team_lead')) {
             const teamCheck = await query(

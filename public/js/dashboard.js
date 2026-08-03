@@ -190,41 +190,11 @@ function loadUserInfo() {
     loadNotifBadge();
     loadSidebarLogo();
     loadManagerNav();
-    loadHrAdminNav();
     initNotificationBell();
 }
 
-// Inject an "Admin" section into the employee sidebar for HR users so they can
-// check in like an employee and still reach the admin tools.
-function loadHrAdminNav() {
-    const user = getCurrentUser();
-    if (!user || user.role !== 'hr') return;
-    const nav = document.querySelector('.sidebar-nav');
-    if (!nav || nav.querySelector('[data-hr-admin-nav]')) return;
-    if (nav.querySelector('a.nav-item[href="/pages/admin/dashboard.html"]')) return;
-    const section = document.createElement('div');
-    section.setAttribute('data-hr-admin-nav', 'true');
-    section.innerHTML =
-        '<div class="nav-section-title">Admin</div>' +
-        '<a href="/pages/admin/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>' +
-        '<a href="/pages/admin/employees.html" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>' +
-        '<a href="/pages/admin/departments.html" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>' +
-        '<a href="/pages/admin/designations.html" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>' +
-        '<a href="/pages/admin/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>' +
-        '<a href="/pages/admin/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>' +
-        '<a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>' +
-        '<a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>' +
-        '<a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>' +
-        '<a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>' +
-        '<a href="/pages/admin/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>' +
-        '<a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>' +
-        '<a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>' +
-        '<a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>';
-    nav.appendChild(section);
-}
-
 // Notification bell: route by role.
-//   admin/hr          -> pending employee requests (leave / WFH / queries)
+//   admin             -> pending employee requests (leave / WFH / queries)
 //   manager/team_lead -> their team's pending requests (added in manager flow)
 //   employee          -> announcements
 function initNotificationBell() {
@@ -237,7 +207,7 @@ function initNotificationBell() {
         bell.onclick = function(e) {
             e.preventDefault();
             e.stopPropagation();
-            if (user.role === 'admin' || user.role === 'hr') {
+            if (user.role === 'admin') {
                 toggleAdminRequestsPanel(bell, 'admin');
             } else if (user.role === 'manager' || user.role === 'team_lead') {
                 toggleAdminRequestsPanel(bell, 'manager');
@@ -363,7 +333,7 @@ async function loadAnnouncementsSection(listEl, announcementsUrl) {
 function loadManagerNav() {
     const user = getCurrentUser();
     if (!user) return;
-    if (user.role !== 'manager' && user.role !== 'team_lead' && user.role !== 'hr') return;
+    if (user.role !== 'manager' && user.role !== 'team_lead') return;
     const nav = document.querySelector('.sidebar-nav');
     if (!nav || nav.querySelector('[data-manager-nav]')) return;
     if (nav.querySelector('a.nav-item[href="/pages/manager/my-team.html"]')) return;
@@ -391,7 +361,7 @@ async function loadNotifBadge() {
     if (!user) return;
     try {
         let count = 0;
-        if (user.role === 'admin' || user.role === 'hr') {
+        if (user.role === 'admin') {
             const data = await apiCall('/notifications/counts');
             if (data && data.success) {
                 count = data.counts.pendingLeaves + data.counts.pendingWfh + data.counts.pendingProfileUpdates + data.counts.announcementsUnread + data.counts.pendingTickets;

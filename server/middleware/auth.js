@@ -49,10 +49,10 @@ const verifyToken = async (req, res, next) => {
 
 // Check if user is Admin
 const isAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'hr') {
+    if (req.user.role !== 'admin') {
         return res.status(403).json({ 
             success: false, 
-            message: 'Access denied. Admin or HR role required.' 
+            message: 'Access denied. Admin role required.' 
         });
     }
     next();
@@ -60,7 +60,7 @@ const isAdmin = (req, res, next) => {
 
 // Check if user is Manager or above
 const isManager = (req, res, next) => {
-    const allowedRoles = ['admin', 'hr', 'manager', 'team_lead'];
+    const allowedRoles = ['admin', 'manager', 'team_lead'];
     if (!allowedRoles.includes(req.user.role)) {
         return res.status(403).json({ 
             success: false, 

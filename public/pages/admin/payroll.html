@@ -174,7 +174,7 @@
     <script src="../../js/auth.js"></script>
     <script src="../../js/dashboard.js"></script>
     <script>
-        if (!checkAuth()) throw new Error('Not authenticated');
+        if (!requireAdmin()) throw new Error('Not authenticated');
         const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
         const currentYear = new Date().getFullYear();
         let payrollData = [];

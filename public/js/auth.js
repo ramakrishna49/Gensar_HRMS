@@ -233,6 +233,17 @@ function checkAuth() {
     return true;
 }
 
+// Admin-only guard for admin pages. Redirects non-admin users to the employee portal.
+function requireAdmin() {
+    if (!checkAuth()) return false;
+    const user = getCurrentUser();
+    if (!user || user.role !== 'admin') {
+        window.location.href = '/pages/employee/dashboard.html';
+        return false;
+    }
+    return true;
+}
+
 // Get initials from name
 function getInitials(firstName, lastName) {
     return ((firstName?.[0] || '') + (lastName?.[0] || '')).toUpperCase();
