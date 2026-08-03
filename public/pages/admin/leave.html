@@ -146,7 +146,7 @@
 
         async function filterLeaves(filter) {
             setActiveFilter(filter);
-            const url = filter === 'all' ? '/leave/all' : `/leave/${filter}`;
+            const url = `/leave/all?status=${filter}`;
             const data = await apiCall(url);
             const tbody = document.getElementById('leavesTable');
 

@@ -1,7 +1,7 @@
 ﻿const API_URL = '/api';
 
 function getLoginUrl(user) {
-    if (user && (user.role === 'admin' || user.role === 'hr')) return '/admin/';
+    if (user && user.role === 'admin') return '/admin/';
     return '/';
 }
 
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const onLoginPage = path.includes('login.html') || path === '/' || path === '' || path.startsWith('/admin');
     if (token && onLoginPage) {
         const user = getCurrentUser();
-        if (user && (user.role === 'admin' || user.role === 'hr')) {
+        if (user && user.role === 'admin') {
             window.location.href = '/pages/admin/dashboard.html';
         } else if (user) {
             window.location.href = '/pages/employee/dashboard.html';
@@ -73,8 +73,8 @@ async function handleLogin(event, portal) {
             
             setTimeout(() => {
                 if (data.must_change_password) {
-                    window.location.href = data.user.role === 'admin' || data.user.role === 'hr' ? '/pages/admin/settings.html' : '/pages/employee/profile.html';
-                } else if (data.user.role === 'admin' || data.user.role === 'hr') {
+                    window.location.href = data.user.role === 'admin' ? '/pages/admin/settings.html' : '/pages/employee/profile.html';
+                } else if (data.user.role === 'admin') {
                     window.location.href = '/pages/admin/dashboard.html';
                 } else {
                     window.location.href = '/pages/employee/dashboard.html';

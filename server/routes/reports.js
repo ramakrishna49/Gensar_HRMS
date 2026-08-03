@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { istDateString, istMonth, istYear } = require('../utils/date');
 
-router.get('/dashboard', verifyToken, async (req, res) => {
+router.get('/dashboard', verifyToken, isAdmin, async (req, res) => {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = istDateString();
         
         const [totalEmp, presentToday, absentToday, pendingLeaves, departments, lateToday, todayRows, pendingProfileUpdates] = await Promise.all([
             query("SELECT COUNT(*) as count FROM employees WHERE status = 'active' AND role != 'admin'"),
@@ -63,8 +64,8 @@ router.get('/employees', verifyToken, isAdmin, async (req, res) => {
 router.get('/attendance', verifyToken, isAdmin, async (req, res) => {
     try {
         const { month, year } = req.query;
-        const m = String(month || new Date().getMonth() + 1).padStart(2, '0');
-        const y = String(year || new Date().getFullYear());
+        const m = String(month || istMonth()).padStart(2, '0');
+        const y = String(year || istYear());
         const result = await query(
             `SELECT a.status, COUNT(*) as count 
             FROM attendance a 

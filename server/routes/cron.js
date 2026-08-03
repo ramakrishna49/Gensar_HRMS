@@ -4,13 +4,12 @@ const { query } = require('../config/database');
 const { runAutoMark } = require('../services/attendanceAutoMark');
 
 // Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` if configured, and also
-// an `x-vercel-cron` header. Allow either so the endpoints can't be hit publicly.
+// an `x-vercel-cron` header. Require the secret so the endpoints can't be hit
+// publicly; when no secret is configured they are disabled entirely.
 function isCronAuthorized(req) {
     const secret = process.env.CRON_SECRET;
-    if (secret) {
-        return req.headers.authorization === `Bearer ${secret}`;
-    }
-    return req.headers['x-vercel-cron'] === '1';
+    if (!secret) return false;
+    return req.headers.authorization === `Bearer ${secret}`;
 }
 
 router.get('/auto-attendance', async (req, res) => {

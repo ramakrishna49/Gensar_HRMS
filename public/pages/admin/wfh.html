@@ -146,7 +146,7 @@
 
         async function filterRequests(filter) {
             setActiveFilter(filter);
-            const url = filter === 'all' ? '/wfh/all' : `/wfh/${filter}`;
+            const url = `/wfh/all?status=${filter}`;
             const data = await apiCall(url);
             const tbody = document.getElementById('wfhTable');
 

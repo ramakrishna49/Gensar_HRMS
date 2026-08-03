@@ -61,7 +61,7 @@
 
         <div style="padding:30px;">
             <div id="rmWarning" style="display:none;border:1px solid var(--warning);background:var(--warning-light,#FEF3C7);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:0.9rem;line-height:1.5;color:#92400E;">
-                <i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i><strong>Reporting Manager not assigned.</strong> You cannot request WFH until an admin assigns your reporting manager. Please contact your administrator.
+                <i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i><strong>Reporting To not assigned.</strong> You cannot request WFH until an admin assigns your reporting person. Please contact your administrator.
             </div>
             <div class="card slide-up stagger-1">
                 <div class="card-header">
@@ -214,7 +214,7 @@
             const text = document.getElementById('approverInfoText');
             if (info && text) {
                 if (reportingManagerName) {
-                    text.textContent = 'Your request will go to your reporting manager: ' + reportingManagerName;
+                    text.textContent = 'Your request will go to your reporting person: ' + reportingManagerName;
                     info.style.display = 'flex';
                 } else {
                     info.style.display = 'none';
@@ -229,7 +229,7 @@
         async function applyWfh(e) {
             e.preventDefault();
             if (needsRM && !reportingManagerName) {
-                showToast('No reporting manager assigned. Contact your administrator.', 'error');
+                showToast('No reporting person assigned. Contact your administrator.', 'error');
                 return;
             }
             const submitBtn = document.getElementById('submitBtn');

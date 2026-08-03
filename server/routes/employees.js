@@ -97,9 +97,30 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
 
 // @route   GET /api/employees/:id
 // @desc    Get single employee
-// @access  Private
+// @access  Private (Admin/HR full access; others self or reporting-chain members only, PII stripped)
 router.get('/:id', verifyToken, async (req, res) => {
     try {
+        const targetId = parseInt(req.params.id, 10);
+        if (!Number.isInteger(targetId)) {
+            return res.status(400).json({ success: false, message: 'Invalid employee id' });
+        }
+
+        const isAdminUser = req.user.role === 'admin' || req.user.role === 'hr';
+        if (!isAdminUser) {
+            const canView = await query(
+                `WITH RECURSIVE chain AS (
+                    SELECT id, reporting_manager_id FROM employees WHERE id = $1
+                    UNION
+                    SELECT e.id, e.reporting_manager_id FROM employees e JOIN chain c ON e.reporting_manager_id = c.id
+                 )
+                 SELECT 1 AS found FROM chain WHERE id = $2 LIMIT 1`,
+                [targetId, req.user.id]
+            );
+            if (canView.rows.length === 0) {
+                return res.status(403).json({ success: false, message: 'Access denied' });
+            }
+        }
+
         const result = await query(
             `SELECT e.*, d.name as department_name, des.name as designation_name, des.level as designation_level,
             rm.first_name || ' ' || rm.last_name as reporting_manager_name, rm.employee_id as reporting_manager_employee_id
@@ -108,7 +129,7 @@ router.get('/:id', verifyToken, async (req, res) => {
             LEFT JOIN designations des ON e.designation_id = des.id 
             LEFT JOIN employees rm ON e.reporting_manager_id = rm.id
             WHERE e.id = $1`,
-            [req.params.id]
+            [targetId]
         );
         
         if (result.rows.length === 0) {
@@ -117,6 +138,13 @@ router.get('/:id', verifyToken, async (req, res) => {
         
         const employee = result.rows[0];
         delete employee.password_hash;
+
+        // Strip sensitive PII for non-admin viewers (self/team view still gets base profile)
+        if (!isAdminUser) {
+            const sensitiveFields = ['salary', 'pan_number', 'aadhaar_number', 'passport_number',
+                'bank_name', 'bank_branch', 'bank_account', 'bank_ifsc'];
+            sensitiveFields.forEach(f => delete employee[f]);
+        }
         
         res.json({ success: true, employee });
         

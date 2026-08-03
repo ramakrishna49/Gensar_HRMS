@@ -329,7 +329,7 @@
             const now = new Date();
             const data = await apiCall(`/attendance/my?month=${now.getMonth()+1}&year=${now.getFullYear()}`);
             if (data && data.success) {
-                const today = new Date().toISOString().split('T')[0];
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
                 todayAttendance = data.attendance?.find(a => {
                     const adate = a.date ? a.date.split('T')[0] : '';
                     return adate === today;
@@ -502,23 +502,32 @@
             openCameraModal('check-out');
         }
 
+        // Best-effort geolocation: try high accuracy, retry with low accuracy,
+        // return null if the user denies permission or it times out.
+        async function getLocation() {
+            if (!navigator.geolocation) return null;
+            const attempt = (enableHighAccuracy) => new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => resolve(pos.coords.latitude + ',' + pos.coords.longitude),
+                    () => resolve(null),
+                    { timeout: enableHighAccuracy ? 8000 : 12000, enableHighAccuracy }
+                );
+            });
+            let loc = await attempt(true);
+            if (!loc) loc = await attempt(false);
+            return loc;
+        }
+
         async function doCheckIn(photo) {
             const btn = document.getElementById('checkInBtn');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
             btn.disabled = true;
-            let location = '';
-            if (navigator.geolocation) {
-                try {
-                    const pos = await new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: true });
-                    });
-                    location = pos.coords.latitude + ',' + pos.coords.longitude;
-                } catch (e) {
-                    console.log('Location unavailable:', e.message);
-                }
+            const location = await getLocation();
+            if (!location) {
+                showToast('Location not captured. Please allow location access so your check-in can be verified.', 'warning');
             }
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking in...';
-            const data = await apiCall('/attendance/check-in', 'POST', { location, photo });
+            const data = await apiCall('/attendance/check-in', 'POST', { location: location || '', photo });
             if (data && data.success) {
                 showToast('Checked in successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
                 todayAttendance = null;
@@ -534,19 +543,12 @@
             const btn = document.getElementById('checkOutBtn');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
             btn.disabled = true;
-            let location = '';
-            if (navigator.geolocation) {
-                try {
-                    const pos = await new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: true });
-                    });
-                    location = pos.coords.latitude + ',' + pos.coords.longitude;
-                } catch (e) {
-                    console.log('Location unavailable:', e.message);
-                }
+            const location = await getLocation();
+            if (!location) {
+                showToast('Location not captured. Please allow location access so your check-out can be verified.', 'warning');
             }
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking out...';
-            const data = await apiCall('/attendance/check-out', 'POST', { location, photo });
+            const data = await apiCall('/attendance/check-out', 'POST', { location: location || '', photo });
             if (data && data.success) {
                 showToast('Checked out successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
                 todayAttendance = null;

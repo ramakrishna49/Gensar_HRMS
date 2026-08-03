@@ -64,6 +64,25 @@ router.get('/:id/download', verifyToken, async (req, res) => {
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
         
         const doc = result.rows[0];
+
+        const isAdminUser = req.user.role === 'admin' || req.user.role === 'hr';
+        let canAccess = isAdminUser || doc.employee_id === req.user.id;
+        if (!canAccess && (req.user.role === 'manager' || req.user.role === 'team_lead')) {
+            const teamCheck = await query(
+                `WITH RECURSIVE chain AS (
+                    SELECT id, reporting_manager_id FROM employees WHERE id = $1
+                    UNION
+                    SELECT e.id, e.reporting_manager_id FROM employees e JOIN chain c ON e.reporting_manager_id = c.id
+                 )
+                 SELECT 1 AS found FROM chain WHERE id = $2 LIMIT 1`,
+                [doc.employee_id, req.user.id]
+            );
+            if (teamCheck.rows.length > 0) canAccess = true;
+        }
+        if (!canAccess) {
+            return res.status(403).json({ success: false, message: 'Access denied' });
+        }
+
         if (!doc.file_name) return res.status(404).json({ success: false, message: 'File not found' });
         
         const { data, error } = await getStorageClient().storage.from('documents').download(doc.file_name);

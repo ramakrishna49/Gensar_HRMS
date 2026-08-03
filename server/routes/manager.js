@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isManager } = require('../middleware/auth');
+const { istDateString } = require('../utils/date');
 
 // @route   GET /api/manager/team
 // @desc    Get current user's direct reports
@@ -122,8 +123,18 @@ router.put('/leaves/:id', verifyToken, isManager, async (req, res) => {
         if (status === 'approved') {
             const start = new Date(leaveApp.start_date);
             const end = new Date(leaveApp.end_date);
+
+            const holidayRows = await query(
+                `SELECT to_char(date, 'YYYY-MM-DD') as d FROM holidays WHERE date BETWEEN $1 AND $2`,
+                [leaveApp.start_date, leaveApp.end_date]
+            );
+            const holidays = new Set((holidayRows.rows || []).map(r => r.d));
+
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                const dateStr = d.toISOString().split('T')[0];
+                const dow = d.getDay();
+                if (dow === 0 || dow === 6) continue;
+                const dateStr = istDateString(d);
+                if (holidays.has(dateStr)) continue;
                 const existing = await query(
                     'SELECT id FROM attendance WHERE employee_id = $1 AND date = $2',
                     [leaveApp.employee_id, dateStr]

@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const { istDateString, istTimeString } = require('../utils/date');
 
 const OFFICE_END_TIME = '18:30:00';
 const CHECK_INTERVAL_MS = 30 * 60 * 1000;
@@ -10,7 +11,7 @@ function isWeekend(dateStr) {
 }
 
 function isPastCutoff(now) {
-    const currentTime = now.toTimeString().split(' ')[0];
+    const currentTime = istTimeString(now);
     return currentTime > OFFICE_END_TIME;
 }
 
@@ -44,7 +45,7 @@ async function markAbsentForDate(dateStr) {
 // For today, only mark absent once the office end time has passed.
 async function runAutoMark() {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = istDateString();
     const today = new Date(todayStr + 'T00:00:00');
 
     let total = 0;
@@ -54,7 +55,7 @@ async function runAutoMark() {
     for (let i = 29; i >= 0; i--) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = istDateString(d);
 
         if (dateStr > todayStr) continue;
         if (isWeekend(dateStr)) continue;

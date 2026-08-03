@@ -3,14 +3,15 @@ const router = express.Router();
 const crypto = require('crypto');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { istDateString, istTimeString, istMonth, istYear } = require('../utils/date');
 
 router.post('/check-in', verifyToken, async (req, res) => {
     try {
         if (req.user.role === 'admin') {
             return res.status(400).json({ success: false, message: 'Attendance is not tracked for admin accounts' });
         }
-        const today = new Date().toISOString().split('T')[0];
-        const now = new Date().toTimeString().split(' ')[0];
+        const today = istDateString();
+        const now = istTimeString();
         const location = req.body.location || '';
         
         const existing = await query(
@@ -103,8 +104,8 @@ router.post('/check-out', verifyToken, async (req, res) => {
         if (req.user.role === 'admin') {
             return res.status(400).json({ success: false, message: 'Attendance is not tracked for admin accounts' });
         }
-        const today = new Date().toISOString().split('T')[0];
-        const now = new Date().toTimeString().split(' ')[0];
+        const today = istDateString();
+        const now = istTimeString();
         const location = req.body.location || '';
         
         const checkIn = await query(
@@ -167,8 +168,8 @@ router.post('/check-out', verifyToken, async (req, res) => {
 
 router.post('/break-start', verifyToken, async (req, res) => {
     try {
-        const today = new Date().toISOString().split('T')[0];
-        const now = new Date().toTimeString().split(' ')[0];
+        const today = istDateString();
+        const now = istTimeString();
 
         const record = await query(
             'SELECT * FROM attendance WHERE employee_id = $1 AND date = $2',
@@ -201,8 +202,8 @@ router.post('/break-start', verifyToken, async (req, res) => {
 
 router.post('/break-end', verifyToken, async (req, res) => {
     try {
-        const today = new Date().toISOString().split('T')[0];
-        const now = new Date().toTimeString().split(' ')[0];
+        const today = istDateString();
+        const now = istTimeString();
 
         const record = await query(
             'SELECT * FROM attendance WHERE employee_id = $1 AND date = $2',
@@ -389,8 +390,8 @@ router.get('/all', verifyToken, isAdmin, async (req, res) => {
 
 router.get('/late-count', verifyToken, isAdmin, async (req, res) => {
     try {
-        const month = String(parseInt(req.query.month) || (new Date().getMonth() + 1)).padStart(2, '0');
-        const year = String(parseInt(req.query.year) || new Date().getFullYear());
+        const month = String(parseInt(req.query.month) || istMonth()).padStart(2, '0');
+        const year = String(parseInt(req.query.year) || istYear());
         const result = await query(
             `SELECT e.id, e.first_name, e.last_name, e.employee_id, 
             COUNT(a.id) as late_count
@@ -413,8 +414,8 @@ router.get('/late-count', verifyToken, isAdmin, async (req, res) => {
 
 router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
     try {
-        const month = parseInt(req.query.month) || (new Date().getMonth() + 1);
-        const year = parseInt(req.query.year) || new Date().getFullYear();
+        const month = parseInt(req.query.month) || istMonth();
+        const year = parseInt(req.query.year) || istYear();
         const lastDay = new Date(year, month, 0).getDate();
 
         const employees = await query(

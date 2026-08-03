@@ -6,7 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { query } = require('../config/database');
 const { verifyToken, generateToken } = require('../middleware/auth');
-const { validateRegistration, validateLogin, collectFieldErrors } = require('../middleware/validation');
+const { validateLogin, collectFieldErrors } = require('../middleware/validation');
 const { sendOTPEmail } = require('../services/email');
 const { uploadBuffer } = require('../services/storage');
 const { EDITABLE_FIELDS } = require('./profileUpdates');
@@ -86,103 +86,6 @@ router.post('/login', validateLogin, async (req, res) => {
     }
 });
 
-
-// @route   POST /api/auth/register
-// @desc    Register new employee
-// @access  Public (or Protected based on requirements)
-router.post('/register', validateRegistration, async (req, res) => {
-    try {
-        const { 
-            employee_id, 
-            first_name, 
-            last_name, 
-            email, 
-            phone, 
-            password, 
-            department_id, 
-            designation_id, 
-            joining_date, 
-            salary,
-            role 
-        } = req.body;
-        
-        // Check if email already exists
-        const emailCheck = await query(
-            'SELECT id FROM employees WHERE email = $1',
-            [email]
-        );
-        
-        if (emailCheck.rows.length > 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email already registered' 
-            });
-        }
-        
-        // Check if employee_id already exists
-        if (employee_id) {
-            const empIdCheck = await query(
-                'SELECT id FROM employees WHERE employee_id = $1',
-                [employee_id]
-            );
-            
-            if (empIdCheck.rows.length > 0) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Employee ID already exists' 
-                });
-            }
-        }
-        
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const password_hash = await bcrypt.hash(password, salt);
-        
-        // Generate employee_id if not provided
-        const finalEmployeeId = employee_id || `EMP${Date.now().toString().slice(-6)}`;
-        
-        // Insert new employee
-        const result = await query(
-            `INSERT INTO employees 
-            (employee_id, first_name, last_name, email, phone, password_hash, 
-             department_id, designation_id, joining_date, salary, role) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
-            RETURNING id, employee_id, first_name, last_name, email, role`,
-            [
-                finalEmployeeId, 
-                first_name, 
-                last_name, 
-                email, 
-                phone || null, 
-                password_hash,
-                department_id || null, 
-                designation_id || null, 
-                joining_date, 
-                salary || null,
-                role || 'employee'
-            ]
-        );
-        
-        const newUser = result.rows[0];
-        
-        // Generate token
-        const token = generateToken(newUser);
-        
-        res.status(201).json({
-            success: true,
-            message: 'Registration successful',
-            token,
-            user: newUser
-        });
-        
-    } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Server error during registration' 
-        });
-    }
-});
 
 // @route   GET /api/auth/me
 // @desc    Get current user profile

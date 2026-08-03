@@ -106,7 +106,7 @@
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr><th>Employee</th><th>ID</th><th>Email</th><th>Phone</th><th>Department</th><th>Designation</th><th>Reporting Manager</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                            <tr><th>Employee</th><th>ID</th><th>Email</th><th>Phone</th><th>Department</th><th>Designation</th><th>Reporting To</th><th>Role</th><th>Status</th><th>Actions</th></tr>
                         </thead>
                         <tbody id="employeesTable">
                             <tr><td colspan="10" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
@@ -877,7 +877,7 @@
                     vRow('Joining Date', emp.joining_date ? formatDate(emp.joining_date) : null) +
                     vRow('Department', emp.department_name) +
                     vRow('Designation', emp.designation_name ? emp.designation_name + (emp.designation_level ? ' (Level ' + emp.designation_level + ')' : '') : null) +
-                    vRow('Reporting Manager', emp.reporting_manager_name ? emp.reporting_manager_name + (emp.reporting_manager_employee_id ? ' (' + emp.reporting_manager_employee_id + ')' : '') : null));
+                    vRow('Reporting To', emp.reporting_manager_name ? emp.reporting_manager_name + (emp.reporting_manager_employee_id ? ' (' + emp.reporting_manager_employee_id + ')' : '') : null));
 
             document.getElementById('viewTabPersonal').innerHTML =
                 vSection('Addresses', 'fa-home',

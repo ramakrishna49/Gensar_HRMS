@@ -3,6 +3,7 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateLeave } = require('../middleware/validation');
+const { istDateString, istYear } = require('../utils/date');
 
 function isWeekend(dateStr) {
     const d = new Date(dateStr);
@@ -182,8 +183,20 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
             const app = leaveApp.rows[0];
             const start = new Date(app.start_date);
             const end = new Date(app.end_date);
+
+            // Fetch holidays once for the range so weekend/holiday days are not
+            // back-filled as absent (they are not counted in total_days either).
+            const holidayRows = await query(
+                `SELECT to_char(date, 'YYYY-MM-DD') as d FROM holidays WHERE date BETWEEN $1 AND $2`,
+                [app.start_date, app.end_date]
+            );
+            const holidays = new Set((holidayRows.rows || []).map(r => r.d));
+
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                const dateStr = d.toISOString().split('T')[0];
+                const dow = d.getDay();
+                if (dow === 0 || dow === 6) continue;
+                const dateStr = istDateString(d);
+                if (holidays.has(dateStr)) continue;
                 const existing = await query(
                     'SELECT id FROM attendance WHERE employee_id = $1 AND date = $2',
                     [app.employee_id, dateStr]
@@ -206,7 +219,7 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
 
 router.get('/balance', verifyToken, async (req, res) => {
     try {
-        const currentYear = new Date().getFullYear();
+        const currentYear = istYear();
         
         const user = await query('SELECT gender FROM employees WHERE id = $1', [req.user.id]);
         const gender = user.rows[0]?.gender || 'all';
