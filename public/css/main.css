@@ -1209,6 +1209,7 @@ textarea.form-control {
    PROFILE
    ============================================ */
 .profile-photo {
+    position: relative;
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -1775,6 +1776,7 @@ textarea.form-control {
     margin-bottom: 16px;
 }
 .view-hero .avatar {
+    position: relative;
     width: 72px;
     height: 72px;
     border-radius: 50%;
@@ -1789,7 +1791,7 @@ textarea.form-control {
     overflow: hidden;
     box-shadow: var(--shadow-md);
 }
-.view-hero .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.view-hero .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .view-hero .hero-info { flex: 1; min-width: 200px; }
 .view-hero .hero-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .view-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; }

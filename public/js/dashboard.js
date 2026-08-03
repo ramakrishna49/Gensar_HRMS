@@ -181,7 +181,7 @@ function loadUserInfo() {
     const initials = ((user.first_name || '')[0] || '') + ((user.last_name || '')[0] || '');
     profilePhotoEls.forEach(el => {
         if (user.profile_photo) {
-            el.innerHTML = '<img src="' + user.profile_photo + '" alt="Profile" data-initials="' + initials.toUpperCase() + '" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.remove();this.parentElement.textContent=this.getAttribute(\'data-initials\');">';
+            el.innerHTML = '<img src="' + user.profile_photo + '" alt="Profile" data-initials="' + initials.toUpperCase() + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.remove();this.parentElement.textContent=this.getAttribute(\'data-initials\');">';
         } else {
             el.textContent = initials.toUpperCase();
         }
