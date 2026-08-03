@@ -6,11 +6,31 @@ function toggleSidebar() {
     const mainContent = document.getElementById('mainContent');
     
     if (window.innerWidth <= 1024) {
-        sidebar.classList.toggle('active');
+        const isActive = sidebar.classList.toggle('active');
+        if (document.body.classList.contains('admin-app')) {
+            const bd = getSidebarBackdrop();
+            bd.classList.toggle('show', isActive);
+        }
     } else {
         sidebar.classList.toggle('collapsed');
         mainContent.classList.toggle('expanded');
     }
+}
+
+function getSidebarBackdrop() {
+    let bd = document.getElementById('sidebarBackdrop');
+    if (!bd) {
+        bd = document.createElement('div');
+        bd.id = 'sidebarBackdrop';
+        bd.className = 'sidebar-backdrop';
+        document.body.appendChild(bd);
+        bd.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.classList.remove('active');
+            bd.classList.remove('show');
+        });
+    }
+    return bd;
 }
 
 // Toggle dark mode
@@ -619,9 +639,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const sidebar = document.getElementById('sidebar');
         if (window.innerWidth <= 1024) {
             sidebar.classList.remove('collapsed');
+        } else {
+            const bd = document.getElementById('sidebarBackdrop');
+            if (bd) {
+                sidebar.classList.remove('active');
+                bd.classList.remove('show');
+            }
         }
     };
     
     window.addEventListener('resize', handleResize);
     handleResize();
+
+    initAdminMobile();
 });
+
+// --- Admin app mobile helpers (gated on body.admin-app) ---
+
+let adminTableTimer = null;
+
+function adminStampTableLabels() {
+    document.querySelectorAll('.table-container table').forEach(table => {
+        const theadRow = table.querySelector('thead tr');
+        const tbody = table.querySelector('tbody');
+        if (!theadRow || !tbody) return;
+        const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent.trim());
+        tbody.querySelectorAll('tr').forEach(row => {
+            Array.from(row.children).forEach((td, i) => {
+                const want = headers[i] || '';
+                if (td.getAttribute('data-label') !== want) td.setAttribute('data-label', want);
+            });
+        });
+    });
+}
+
+function adminTableRescan() {
+    if (adminTableTimer) clearTimeout(adminTableTimer);
+    adminTableTimer = setTimeout(adminStampTableLabels, 60);
+}
+
+function initAdminMobile() {
+    if (!document.body.classList.contains('admin-app')) return;
+    adminStampTableLabels();
+    const mo = new MutationObserver(adminTableRescan);
+    mo.observe(document.body, { childList: true, subtree: true });
+}

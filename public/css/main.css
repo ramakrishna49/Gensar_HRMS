@@ -1872,3 +1872,212 @@ textarea.form-control {
         font-size: 3.25rem;
     }
 }
+
+/* ============================================
+   ADMIN MOBILE UI (phone PWA - admin pages only)
+   Scoped under body.admin-app; desktop untouched.
+   ============================================ */
+body.admin-app .page-body {
+    padding: 30px;
+}
+
+/* Sidebar backdrop for mobile drawer */
+body.admin-app .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 999;
+}
+body.admin-app .sidebar-backdrop.show {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+body.admin-app .sidebar {
+    padding-top: env(safe-area-inset-top, 0px);
+}
+
+@media (max-width: 768px) {
+    body.admin-app .page-body {
+        padding: 14px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.admin-app .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    body.admin-app .card {
+        padding: 14px;
+    }
+
+    body.admin-app .card-header {
+        margin-bottom: 14px;
+    }
+
+    body.admin-app .stat-card {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    body.admin-app .stat-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.15rem;
+    }
+
+    /* Tables -> stacked label:value cards */
+    body.admin-app .table-container {
+        overflow: visible;
+        border-radius: 0;
+    }
+
+    body.admin-app .table-container table {
+        min-width: 0;
+        display: block;
+    }
+
+    body.admin-app .table-container thead {
+        display: none;
+    }
+
+    body.admin-app .table-container tbody {
+        display: block;
+    }
+
+    body.admin-app .table-container tbody tr {
+        display: block;
+        background: #fff;
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        padding: 8px 12px;
+        margin-bottom: 12px;
+    }
+
+    body.admin-app .table-container tbody tr:hover {
+        background: #fff;
+    }
+
+    body.admin-app .table-container tbody td {
+        display: block;
+        border: none;
+        padding: 7px 0;
+        font-size: 0.85rem;
+        text-align: left;
+    }
+
+    body.admin-app .table-container tbody td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.66rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-secondary);
+        margin-bottom: 2px;
+    }
+
+    body.admin-app .table-container tbody td[colspan] {
+        text-align: center;
+        padding: 20px 0;
+    }
+
+    body.admin-app .table-container tbody td[colspan]::before {
+        display: none;
+    }
+
+    body.admin-app .table-container tbody td > div {
+        max-width: 100%;
+    }
+
+    /* Modals -> bottom sheets */
+    body.admin-app .modal {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    body.admin-app .modal-content {
+        max-width: 100%;
+        max-height: 88vh;
+        border-radius: 18px 18px 0 0;
+    }
+
+    body.admin-app .modal-header {
+        border-radius: 18px 18px 0 0;
+    }
+
+    body.admin-app .modal-footer {
+        border-radius: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    body.admin-app .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    body.admin-app .grid-2,
+    body.admin-app .grid-3 {
+        grid-template-columns: 1fr;
+    }
+
+    body.admin-app .stat-card {
+        padding: 10px;
+    }
+
+    body.admin-app .stat-info h3 {
+        font-size: 1.2rem;
+    }
+
+    /* Header action buttons: icon-only on phones */
+    body.admin-app .btn-label {
+        display: none;
+    }
+
+    body.admin-app .header-right .btn {
+        padding: 9px 11px;
+        font-size: 0.85rem;
+    }
+
+    /* Toast -> bottom, full width */
+    body.admin-app .toast-container {
+        top: auto;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        left: 16px;
+        right: 16px;
+    }
+
+    body.admin-app .toast {
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Notification panel -> bottom sheet */
+    body.admin-app .notification-panel {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        max-height: 80vh;
+        border-radius: 18px 18px 0 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+}
+
+/* Dark mode: card rows + bottom sheets follow theme */
+body.admin-app.dark-mode .table-container tbody tr,
+body.admin-app.dark-mode .modal-content,
+body.admin-app.dark-mode .notification-panel {
+    background: var(--bg-card);
+}
+body.admin-app.dark-mode .table-container tbody tr {
+    border-color: var(--border);
+}

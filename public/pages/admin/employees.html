@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
-<body>
+<body class="admin-app">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
@@ -52,8 +52,8 @@
                 <h2 style="font-size:1.25rem;font-weight:600;">Employee Management</h2>
             </div>
             <div class="header-right">
-                <button class="btn btn-success" onclick="downloadEmployeesExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
-                <button class="btn btn-primary" onclick="openAddEmployeeModal()"><i class="fas fa-plus"></i> Add Employee</button>
+                <button class="btn btn-success" onclick="downloadEmployeesExcel()"><i class="fas fa-file-excel"></i> <span class="btn-label">Download Excel</span></button>
+                <button class="btn btn-primary" onclick="openAddEmployeeModal()"><i class="fas fa-plus"></i> <span class="btn-label">Add Employee</span></button>
                 <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
                 <div style="position:relative">
@@ -71,7 +71,7 @@
             </div>
         </header>
 
-        <div style="padding:30px;">
+        <div class="page-body">
             <div class="grid grid-4" style="margin-bottom:24px;">
                 <div class="stat-card slide-up stagger-1">
                     <div class="stat-icon blue"><i class="fas fa-users"></i></div>
