@@ -301,8 +301,13 @@ router.post('/profile-request', verifyToken, async (req, res) => {
         for (const [field, newValue] of Object.entries(changes)) {
             if (!EDITABLE_FIELDS.includes(field)) continue;
 
-            const oldValue = current[field] != null ? String(current[field]) : '';
+            let oldValue = current[field] != null ? String(current[field]) : '';
             const nextValue = newValue != null ? String(newValue) : '';
+
+            if (field === 'date_of_birth' && oldValue) {
+                const d = new Date(current[field]);
+                if (!isNaN(d.getTime())) oldValue = d.toISOString().split('T')[0];
+            }
 
             if (oldValue === nextValue) continue;
             if (nextValue === '') continue;

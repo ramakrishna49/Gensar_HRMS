@@ -44,6 +44,17 @@ const collectFieldErrors = (payload) => {
     if (payload.personal_email && !validateEmail(payload.personal_email)) {
         errors.push('Valid personal email is required');
     }
+    if (payload.gender && !['male', 'female', 'other'].includes(String(payload.gender).toLowerCase())) {
+        errors.push('Gender must be Male, Female or Other');
+    }
+    if (payload.date_of_birth) {
+        const dob = new Date(payload.date_of_birth);
+        if (isNaN(dob.getTime())) {
+            errors.push('Valid date of birth is required');
+        } else if (dob > new Date()) {
+            errors.push('Date of birth cannot be in the future');
+        }
+    }
     return errors;
 };
 

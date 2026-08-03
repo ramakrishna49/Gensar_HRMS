@@ -141,6 +141,13 @@
             <div class="modal-body">
                 <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:14px;">Changes you make are submitted to the admin for approval and applied once approved.</p>
                 <form id="editProfileForm">
+                    <div class="card" style="padding:16px;margin-bottom:16px;">
+                        <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-user" style="margin-right:8px;color:var(--primary);"></i>Basic Details</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label>Date of Birth</label><input type="date" class="form-control" name="date_of_birth"></div>
+                            <div class="form-group"><label>Gender</label><select class="form-control" name="gender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+                        </div>
+                    </div>
                     <div class="grid grid-2">
                         <div class="form-group"><label>Current Address</label><textarea class="form-control" name="address" rows="2"></textarea></div>
                         <div class="form-group"><label>Permanent Address</label><textarea class="form-control" name="permanent_address" rows="2"></textarea></div>
@@ -310,6 +317,8 @@
             const u = currentUser;
             const form = document.getElementById('editProfileForm');
             const map = {
+                gender: u.gender,
+                date_of_birth: u.date_of_birth ? (String(u.date_of_birth).includes('T') ? String(u.date_of_birth).split('T')[0] : String(u.date_of_birth)) : '',
                 address: u.address, permanent_address: u.permanent_address,
                 languages_spoken: u.languages_spoken, marital_status: u.marital_status,
                 personal_email: u.personal_email, emergency_contact_name: u.emergency_contact_name,
@@ -333,7 +342,7 @@
             btn.disabled = true;
 
             const changes = {};
-            const fields = ['address','permanent_address','languages_spoken','marital_status','personal_email',
+            const fields = ['gender','date_of_birth','address','permanent_address','languages_spoken','marital_status','personal_email',
                 'emergency_contact_name','emergency_contact','blood_group','qualification','specialization',
                 'pan_number','aadhaar_number','passport_number','bank_name','bank_branch','bank_account','bank_ifsc'];
             fields.forEach(f => {
@@ -370,6 +379,7 @@
                     return;
                 }
                 const labels = {
+                    gender: 'Gender', date_of_birth: 'Date of Birth',
                     address: 'Current Address', permanent_address: 'Permanent Address', languages_spoken: 'Languages Spoken',
                     marital_status: 'Marital Status', personal_email: 'Personal Email', emergency_contact: 'Emergency Contact Number',
                     emergency_contact_name: 'Emergency Contact Name', blood_group: 'Blood Group', qualification: 'Qualification',
@@ -402,6 +412,7 @@
         }
 
         const fieldLabelMap = {
+            gender: 'Gender', date_of_birth: 'Date of Birth',
             address: 'Current Address', permanent_address: 'Permanent Address', languages_spoken: 'Languages Spoken',
             marital_status: 'Marital Status', personal_email: 'Personal Email', emergency_contact: 'Emergency Contact',
             blood_group: 'Blood Group', qualification: 'Qualification', specialization: 'Specialization',

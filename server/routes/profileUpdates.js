@@ -4,6 +4,8 @@ const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 
 const EDITABLE_FIELDS = [
+    'gender',
+    'date_of_birth',
     'address',
     'permanent_address',
     'languages_spoken',
@@ -24,6 +26,8 @@ const EDITABLE_FIELDS = [
 ];
 
 const FIELD_LABELS = {
+    gender: 'Gender',
+    date_of_birth: 'Date of Birth',
     address: 'Current Address',
     permanent_address: 'Permanent Address',
     languages_spoken: 'Languages Spoken',
