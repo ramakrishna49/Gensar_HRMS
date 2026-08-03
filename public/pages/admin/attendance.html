@@ -337,8 +337,10 @@
                     else if (cell.status === 'absent') a++;
                     else if (cell.status === 'weekoff') w++;
                     else if (cell.status === 'upcoming') u++;
-                    const label = cell.check_in ? cell.check_in : getStatusForDisplay(cell.status);
-                    html += '<td class="' + cls + '" onmouseenter="showTooltip(event, \'' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '\', ' + d + ', \'' + cell.status + '\', \'' + (cell.check_in || '') + '\', \'' + (cell.check_out || '') + '\', \'' + (cell.check_in_location || '') + '\')" onmouseleave="hideTooltip()" onclick="handleCellClick(' + emp.id + ', ' + d + ', \'' + cell.status + '\')">' + escapeHtml(label) + '</td>';
+                    const label = cell.check_in
+                        ? escapeHtml(cell.check_in) + (cell.check_out ? '<span style="display:block;font-size:0.6rem;color:var(--text-secondary);margin-top:2px;">' + escapeHtml(cell.check_out) + '</span>' : '')
+                        : escapeHtml(getStatusForDisplay(cell.status));
+                    html += '<td class="' + cls + '" onmouseenter="showTooltip(event, \'' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '\', ' + d + ', \'' + cell.status + '\', \'' + (cell.check_in || '') + '\', \'' + (cell.check_out || '') + '\', \'' + (cell.check_in_location || '') + '\')" onmouseleave="hideTooltip()" onclick="handleCellClick(' + emp.id + ', ' + d + ', \'' + cell.status + '\')">' + label + '</td>';
                 }
                 grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandUpcoming += u;
                 const totalDays = p + l + (h * 0.5);

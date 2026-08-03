@@ -763,11 +763,11 @@
             currentViewRequests = (reqRes && reqRes.success) ? reqRes.requests : [];
 
             const initials = getInitials(emp.first_name, emp.last_name);
-            let photoHtml = emp.profile_photo
-                ? '<img src="' + escapeHtml(emp.profile_photo) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'
+            let avatarInner = emp.profile_photo
+                ? '<img src="' + escapeHtml(emp.profile_photo) + '" alt="Profile" onerror="this.remove();">'
                 : '';
             let header = '<div class="view-hero">';
-            header += '<div class="avatar" ' + (photoHtml ? 'style="display:none;"' : '') + '>' + escapeHtml(initials) + '</div>' + photoHtml;
+            header += '<div class="avatar">' + avatarInner + escapeHtml(initials) + '</div>';
             header += '<div class="hero-info">';
             header += '<h3 style="font-weight:700;font-size:1.2rem;margin-bottom:6px;">' + escapeHtml(emp.first_name) + ' ' + escapeHtml(emp.last_name) +
                 ' <span class="badge badge-' + (emp.role==='admin'?'danger':emp.role==='hr'?'warning':emp.role==='manager'?'info':emp.role==='team_lead'?'primary':'secondary') + '">' + escapeHtml(emp.role || 'employee') + '</span>' +

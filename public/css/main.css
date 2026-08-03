@@ -304,6 +304,13 @@ body {
     color: var(--text-primary);
 }
 
+.profile-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
 .notification-badge {
     position: absolute;
     top: 2px;
@@ -460,6 +467,13 @@ body {
 
 .notification-panel-footer a:hover {
     text-decoration: underline;
+}
+
+#profileName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
 }
 
 .dark-mode .notification-panel {
@@ -1201,6 +1215,8 @@ textarea.form-control {
     object-fit: cover;
     border: 2px solid white;
     box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
 .profile-photo-lg {

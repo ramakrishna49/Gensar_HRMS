@@ -181,15 +181,15 @@ function loadUserInfo() {
     const initials = ((user.first_name || '')[0] || '') + ((user.last_name || '')[0] || '');
     profilePhotoEls.forEach(el => {
         if (user.profile_photo) {
-            el.innerHTML = '<img src="' + user.profile_photo + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="Profile">';
+            el.innerHTML = '<img src="' + user.profile_photo + '" alt="Profile" data-initials="' + initials.toUpperCase() + '" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.remove();this.parentElement.textContent=this.getAttribute(\'data-initials\');">';
         } else {
             el.textContent = initials.toUpperCase();
         }
     });
 
+    loadManagerNav();
     loadNotifBadge();
     loadSidebarLogo();
-    loadManagerNav();
     initNotificationBell();
 }
 
@@ -371,6 +371,7 @@ async function loadNotifBadge() {
             const data = await apiCall('/notifications/counts');
             if (data && data.success) {
                 count = data.counts.pendingLeaves + data.counts.pendingWfh + data.counts.pendingTickets + data.counts.announcementsUnread;
+                loadSidebarCounts(data.counts, 'manager');
             }
         } else {
             const data = await apiCall('/announcements/unread-count');
@@ -389,16 +390,19 @@ async function loadNotifBadge() {
     }
 }
 
-// Show pending-action counts next to admin sidebar menu items.
-// Maps menu item -> count key returned by GET /api/notifications/counts.
-function loadSidebarCounts(counts) {
+// Show pending-action counts next to sidebar menu items.
+// mode 'manager' -> "My Team" (their team's pending leave/WFH/tickets).
+// mode 'admin'   -> Leave/WFH/Queries/Employees menu items.
+function loadSidebarCounts(counts, mode) {
     if (!counts) return;
-    const map = {
-        '/pages/admin/leave.html': counts.pendingLeaves,
-        '/pages/admin/wfh.html': counts.pendingWfh,
-        '/pages/admin/tickets.html': counts.pendingTickets,
-        '/pages/admin/employees.html': counts.pendingProfileUpdates
-    };
+    const map = mode === 'manager'
+        ? { '/pages/manager/my-team.html': counts.pendingLeaves + counts.pendingWfh + counts.pendingTickets }
+        : {
+            '/pages/admin/leave.html': counts.pendingLeaves,
+            '/pages/admin/wfh.html': counts.pendingWfh,
+            '/pages/admin/tickets.html': counts.pendingTickets,
+            '/pages/admin/employees.html': counts.pendingProfileUpdates
+        };
     Object.keys(map).forEach(href => {
         const item = document.querySelector('.sidebar-nav a.nav-item[href="' + href + '"]');
         if (!item) return;
