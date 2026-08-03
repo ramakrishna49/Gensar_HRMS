@@ -2074,3 +2074,168 @@ td {
         font-size: 0.75rem;
     }
 }
+
+/* ============================================
+   ADMIN UI POLISH (v2)
+   ============================================ */
+
+/* --- Sidebar: refined but same structure --- */
+.sidebar {
+    box-shadow: 2px 0 14px rgba(0,0,0,0.1);
+}
+
+.sidebar-logo i {
+    color: #A5B4FC;
+}
+
+.nav-item.active {
+    background: rgba(79,70,229,0.35);
+    color: #fff;
+    font-weight: 500;
+}
+
+.nav-item.active::before {
+    width: 3px;
+    height: 55%;
+    background: #A5B4FC;
+}
+
+.nav-item:hover:not(.active) {
+    background: rgba(255,255,255,0.08);
+}
+
+/* --- Header: crisp --- */
+.header {
+    box-shadow: 0 1px 4px rgba(16,24,40,0.06);
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* --- Cards: clean, defined --- */
+.card,
+.stat-card {
+    border: 1px solid var(--border-light);
+    box-shadow: 0 1px 3px rgba(16,24,40,0.06);
+}
+
+.card:hover,
+.stat-card:hover {
+    box-shadow: 0 6px 16px rgba(16,24,40,0.09);
+}
+
+.card-header {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
+    margin-bottom: 16px;
+}
+
+.card-header h2 {
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.card-header h2 i {
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+/* --- Stat cards: balanced --- */
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+/* --- Quick actions: tile look (same markup) --- */
+.quick-actions-grid a {
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 18px 12px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
+.quick-actions-grid a i {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+}
+
+.quick-actions-grid a span {
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.quick-actions-grid a:hover {
+    background: var(--primary-50);
+    border-color: var(--primary-light);
+    color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(79,70,229,0.15);
+}
+
+.quick-actions-grid a:hover i {
+    color: var(--primary);
+}
+
+/* --- Tables: tidy --- */
+.table-container {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+th {
+    background: var(--bg-light);
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+tbody tr {
+    transition: background 0.15s ease;
+}
+
+/* --- Forms: tidy focus --- */
+.form-control:focus {
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.08);
+}
+
+/* --- Filter / toolbar rows inside cards --- */
+.card .filter-bar,
+.card > div[style*="flex"] {
+    gap: 12px;
+}
+
+/* --- Dark mode polish --- */
+.dark-mode .card,
+.dark-mode .stat-card,
+.dark-mode .table-container {
+    border-color: var(--border);
+}
+
+.dark-mode .quick-actions-grid a {
+    background: var(--bg-dark);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+.dark-mode .quick-actions-grid a i {
+    color: var(--text-secondary);
+}
+
+.dark-mode .quick-actions-grid a:hover {
+    background: #1E1B4B;
+    border-color: var(--primary);
+    color: #A5B4FC;
+}
+
+.dark-mode .quick-actions-grid a:hover i {
+    color: #A5B4FC;
+}
+
+@media (max-width: 768px) {
+    .quick-actions-grid a {
+        padding: 14px 10px;
+    }
+}
