@@ -6,10 +6,30 @@ function toggleSidebar() {
     const mainContent = document.getElementById('mainContent');
     
     if (window.innerWidth <= 1024) {
-        sidebar.classList.toggle('active');
+        const active = sidebar.classList.toggle('active');
+        toggleSidebarBackdrop(active);
     } else {
         sidebar.classList.toggle('collapsed');
         mainContent.classList.toggle('expanded');
+    }
+}
+
+// Mobile drawer backdrop
+function toggleSidebarBackdrop(show) {
+    const existing = document.getElementById('sidebarBackdrop');
+    if (show) {
+        if (existing) return;
+        const backdrop = document.createElement('div');
+        backdrop.id = 'sidebarBackdrop';
+        backdrop.className = 'sidebar-backdrop';
+        backdrop.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.classList.remove('active');
+            backdrop.remove();
+        });
+        document.body.appendChild(backdrop);
+    } else if (existing) {
+        existing.remove();
     }
 }
 
@@ -590,6 +610,8 @@ document.addEventListener('click', (e) => {
     if (window.innerWidth <= 1024 && sidebar && menuToggle) {
         if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
             sidebar.classList.remove('active');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (backdrop) backdrop.remove();
         }
     }
 });
