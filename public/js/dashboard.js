@@ -365,6 +365,7 @@ async function loadNotifBadge() {
             const data = await apiCall('/notifications/counts');
             if (data && data.success) {
                 count = data.counts.pendingLeaves + data.counts.pendingWfh + data.counts.pendingProfileUpdates + data.counts.announcementsUnread + data.counts.pendingTickets;
+                loadSidebarCounts(data.counts);
             }
         } else if (user.role === 'manager' || user.role === 'team_lead') {
             const data = await apiCall('/notifications/counts');
@@ -386,6 +387,35 @@ async function loadNotifBadge() {
     } catch (e) {
         badge.style.display = 'none';
     }
+}
+
+// Show pending-action counts next to admin sidebar menu items.
+// Maps menu item -> count key returned by GET /api/notifications/counts.
+function loadSidebarCounts(counts) {
+    if (!counts) return;
+    const map = {
+        '/pages/admin/leave.html': counts.pendingLeaves,
+        '/pages/admin/wfh.html': counts.pendingWfh,
+        '/pages/admin/tickets.html': counts.pendingTickets,
+        '/pages/admin/employees.html': counts.pendingProfileUpdates
+    };
+    Object.keys(map).forEach(href => {
+        const item = document.querySelector('.sidebar-nav a.nav-item[href="' + href + '"]');
+        if (!item) return;
+        const n = parseInt(map[href]) || 0;
+        let badge = item.querySelector('.nav-badge');
+        if (n > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'nav-badge';
+                item.appendChild(badge);
+            }
+            badge.textContent = n > 99 ? '99+' : n;
+            badge.style.display = '';
+        } else {
+            if (badge) badge.remove();
+        }
+    });
 }
 
 // Load sidebar logo

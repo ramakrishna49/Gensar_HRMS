@@ -446,9 +446,25 @@
         function uploadPhoto(e) {
             const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 5 * 1024 * 1024) {
-                showToast('File size must be under 5MB', 'error');
+            if (file.size > 1 * 1024 * 1024) {
+                showToast('File size must be under 1MB', 'error');
                 return;
+            }
+            const wrapper = document.querySelector('.profile-photo-wrapper');
+            if (wrapper) {
+                const url = URL.createObjectURL(file);
+                let img = wrapper.querySelector('img');
+                if (!img) {
+                    img = document.createElement('img');
+                    img.alt = 'Profile';
+                    const fallback = wrapper.querySelector('.profile-photo-fallback');
+                    if (fallback) wrapper.insertBefore(img, fallback);
+                    else wrapper.insertBefore(img, wrapper.firstChild);
+                }
+                img.src = url;
+                img.style.display = '';
+                const fallback = wrapper.querySelector('.profile-photo-fallback');
+                if (fallback) fallback.style.display = 'none';
             }
             const formData = new FormData();
             formData.append('photo', file);
@@ -460,13 +476,18 @@
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     showToast('Profile photo updated!', 'success');
-                    if (d.user) localStorage.setItem('user', JSON.stringify(d.user));
+                    const u = getCurrentUser();
+                    if (u && d.photo_url) {
+                        u.profile_photo = d.photo_url;
+                        localStorage.setItem('user', JSON.stringify(u));
+                    }
                     loadProfile();
                     loadUserInfo();
                 } else {
                     showToast(d.message || 'Failed to upload photo', 'error');
+                    loadProfile();
                 }
-            }).catch(() => showToast('Upload failed', 'error'));
+            }).catch(() => { showToast('Upload failed', 'error'); loadProfile(); });
             e.target.value = '';
         }
 
