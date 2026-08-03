@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -64,7 +64,7 @@
             <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
             <a href="/pages/employee/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
             <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
-            <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">Work From Home</span></a>
+            <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
             <a href="/pages/employee/payslips.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
             <div class="nav-section-title">Support</div>
             <a href="/pages/employee/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
@@ -532,7 +532,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking in...';
             const data = await apiCall('/attendance/check-in', 'POST', { location: location || '', photo });
             if (data && data.success) {
-                showToast('Checked in successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo â€” camera not available)'), 'success');
+                showToast('Checked in successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
                 todayAttendance = null;
                 await loadAttendanceStatus();
             } else {
@@ -553,7 +553,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking out...';
             const data = await apiCall('/attendance/check-out', 'POST', { location: location || '', photo });
             if (data && data.success) {
-                showToast('Checked out successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo â€” camera not available)'), 'success');
+                showToast('Checked out successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
                 todayAttendance = null;
                 await loadAttendanceStatus();
             } else {

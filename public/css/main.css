@@ -326,17 +326,19 @@ body {
 }
 
 .notification-panel {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
+    position: fixed;
+    top: 62px;
+    right: 12px;
+    left: auto;
     width: 350px;
     max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 80px);
     background: #fff;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-xl);
     z-index: 1001;
-    overflow: hidden;
+    overflow-y: auto;
     animation: fadeIn 0.2s ease;
 }
 

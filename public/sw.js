@@ -3,7 +3,7 @@
    - API data (/api/*) is NEVER cached (privacy: attendance, payroll, PII)
    - Push notification handlers for installed PWA
 */
-const CACHE_VERSION = 'gensar-v1';
+const CACHE_VERSION = 'gensar-v2';
 const APP_SHELL_CACHE = 'gensar-app-shell';
 const RUNTIME_CACHE = 'gensar-runtime';
 
@@ -172,7 +172,7 @@ self.addEventListener('push', (event) => {
         icon: '/assets/images/icon-192.png',
         badge: '/assets/images/fav-icon.png',
         data: { url: data.url || '/' },
-        tag: data.tag || 'gensar-hrms'
+        tag: data.tag || (data.url ? 'gensar-hrms:' + data.url : 'gensar-hrms')
     }));
 });
 
@@ -181,13 +181,27 @@ self.addEventListener('notificationclick', (event) => {
     const targetUrl = (event.notification.data && event.notification.data.url) || '/';
     event.waitUntil((async () => {
         const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+        // Already on the target page: just focus it.
         for (const client of allClients) {
-            if ('navigate' in client) {
-                client.navigate(targetUrl);
+            if (client.url && client.url.indexOf(targetUrl) !== -1) {
                 await client.focus();
                 return;
             }
         }
+
+        // Otherwise navigate an existing window (fall back through all of them).
+        for (const client of allClients) {
+            if ('navigate' in client) {
+                try {
+                    await client.navigate(targetUrl);
+                    await client.focus();
+                    return;
+                } catch (e) { /* try the next client */ }
+            }
+        }
+
+        // No usable window: open the app (brings an installed PWA to the front).
         if (self.clients.openWindow) {
             await self.clients.openWindow(targetUrl);
         }

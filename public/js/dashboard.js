@@ -597,6 +597,11 @@ document.addEventListener('click', (e) => {
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
     loadUserInfo();
+
+    // Real-time notification badge: refresh every 30s while the app is open
+    setInterval(() => {
+        if (getCurrentUser()) loadNotifBadge();
+    }, 30000);
     
     // Load saved theme
     const savedTheme = localStorage.getItem('theme');
