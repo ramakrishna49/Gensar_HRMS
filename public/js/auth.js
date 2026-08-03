@@ -73,8 +73,8 @@ async function handleLogin(event, portal) {
             showToast('Login successful! Redirecting...', 'success');
             
             setTimeout(() => {
-                if (data.must_change_password && data.user.role !== 'admin') {
-                    window.location.href = '/pages/employee/profile.html';
+                if (data.must_change_password) {
+                    window.location.href = data.user.role === 'admin' ? '/pages/admin/settings.html' : '/pages/employee/profile.html';
                 } else if (data.user.role === 'admin') {
                     window.location.href = '/pages/admin/dashboard.html';
                 } else {
