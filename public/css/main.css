@@ -2087,7 +2087,7 @@ body.admin-app.dark-mode .table-container tbody tr {
     font-size: 1.4rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-top: 14px;
+    margin-top: 6px;
 }
 
 @media (max-width: 480px) {
