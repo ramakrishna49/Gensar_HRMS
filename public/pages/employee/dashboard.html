@@ -252,9 +252,6 @@
             const user = getCurrentUser();
             if (user) {
                 document.getElementById('welcomeName').textContent = user.first_name;
-                const initials = getInitials(user.first_name, user.last_name);
-                const photoEl = document.getElementById('profilePhoto');
-                if (photoEl) photoEl.textContent = initials;
                 const nameEl = document.getElementById('profileName');
                 if (nameEl) nameEl.textContent = user.first_name + ' ' + user.last_name;
             }
