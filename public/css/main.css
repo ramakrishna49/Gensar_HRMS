@@ -2206,3 +2206,51 @@ tbody tr:hover {
         gap: 8px;
     }
 }
+
+/* ============================================
+   LOGIN PAGE REFINEMENT (v2)
+   ============================================ */
+.login-container {
+    padding-top: 4vh;
+    padding-bottom: 14vh;
+}
+
+.login-header .logo-icon {
+    width: 120px;
+    height: 120px;
+    border-radius: 24px;
+}
+
+.login-header .logo-icon img {
+    width: auto;
+    height: 110px;
+    max-width: 220px;
+    object-fit: contain;
+}
+
+.login-header .logo-icon i {
+    font-size: 4rem;
+}
+
+@media (max-height: 700px) {
+    .login-container {
+        padding-top: 24px;
+        padding-bottom: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-header .logo-icon {
+        width: 96px;
+        height: 96px;
+        border-radius: 20px;
+    }
+
+    .login-header .logo-icon img {
+        height: 88px;
+    }
+
+    .login-header .logo-icon i {
+        font-size: 3.25rem;
+    }
+}

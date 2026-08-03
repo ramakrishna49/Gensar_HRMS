@@ -313,8 +313,15 @@ window.addEventListener('online', () => {
 let deferredInstallPrompt = null;
 let installBtnEl = null;
 
+// Only surface the floating install button on the login screens.
+function isLoginPage() {
+    const p = location.pathname;
+    return p === '/' || /\/pages\/login\.html$/.test(p) || /\/pages\/admin-login\.html$/.test(p);
+}
+
 function ensureInstallButton() {
     if (installBtnEl || !deferredInstallPrompt) return;
+    if (!isLoginPage()) return;
     installBtnEl = document.createElement('button');
     installBtnEl.id = 'pwaInstallBtn';
     installBtnEl.innerHTML = '<i class="fas fa-download"></i> Install App';
