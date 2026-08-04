@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
@@ -7,9 +9,25 @@ const { sendPayslipEmail } = require('../services/email');
 
 const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+// Roboto ships with the Indian Rupee glyph (₹). pdfkit's built-in Helvetica
+// cannot render it, so we embed Roboto and only fall back when the font files
+// are missing. Uses ₹ on screen and in emails (client html2pdf renders it too).
+const FONT_DIR = path.join(__dirname, '..', 'assets', 'fonts');
+let fontsReady = false;
+try {
+    fs.accessSync(path.join(FONT_DIR, 'Roboto-Regular.ttf'));
+    fs.accessSync(path.join(FONT_DIR, 'Roboto-Bold.ttf'));
+    fontsReady = true;
+} catch (e) {
+    fontsReady = false;
+}
+
+const FONT_REG = fontsReady ? 'Roboto' : 'Helvetica';
+const FONT_BOLD = fontsReady ? 'Roboto-Bold' : 'Helvetica-Bold';
+
 function formatINR(amount) {
     const n = Number(amount || 0);
-    return 'Rs. ' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (fontsReady ? '₹' : 'Rs. ') + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function formatDateOnly(value) {
@@ -138,11 +156,16 @@ async function renderPayslipPdf(p, company) {
             const ml = 50;
             const mr = PW - 50;
 
+            if (fontsReady) {
+                doc.registerFont('Roboto', path.join(FONT_DIR, 'Roboto-Regular.ttf'));
+                doc.registerFont('Roboto-Bold', path.join(FONT_DIR, 'Roboto-Bold.ttf'));
+            }
+
             // Header band
             doc.rect(0, 0, PW, 118).fill('#6E59A5');
             doc.rect(0, 112, PW, 6).fill('#8B78C6');
-            doc.fill('#FFFFFF').font('Helvetica-Bold').fontSize(20).text(p.company_name || company.name, ml, 24);
-            doc.font('Helvetica').fontSize(9);
+            doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(20).text(p.company_name || company.name, ml, 24);
+            doc.font(FONT_REG).fontSize(9);
             let hy = 48;
             const hlines = [];
             if (company.address) hlines.push(company.address);
@@ -150,16 +173,16 @@ async function renderPayslipPdf(p, company) {
             if (company.email) hlines.push(`Email: ${company.email}`);
             if (company.website) hlines.push(`Web: ${company.website}`);
             hlines.forEach(l => { doc.fill('#EDE9F8').text(l, ml, hy); hy += 12; });
-            doc.fill('#FFFFFF').font('Helvetica-Bold').fontSize(15).text('PAYSLIP', mr, 40, { align: 'right' });
-            doc.font('Helvetica').fontSize(11).text(`${MONTHS[p.month] || ''} ${p.year}`, mr, 62, { align: 'right' });
+            doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(15).text('PAYSLIP', mr, 40, { align: 'right' });
+            doc.font(FONT_REG).fontSize(11).text(`${MONTHS[p.month] || ''} ${p.year}`, mr, 62, { align: 'right' });
             doc.fill('#000000');
 
             let y = 140;
 
             // Employee details card
             doc.roundedRect(ml, y, PW - 100, 132, 8).fill('#F5F2FC');
-            doc.fill('#6E59A5').font('Helvetica-Bold').fontSize(11).text('EMPLOYEE DETAILS', ml + 14, y + 12);
-            doc.fill('#222222').font('Helvetica').fontSize(9);
+            doc.fill('#6E59A5').font(FONT_BOLD).fontSize(11).text('EMPLOYEE DETAILS', ml + 14, y + 12);
+            doc.fill('#222222').font(FONT_REG).fontSize(9);
             const empLeft = [
                 ['Employee ID', p.emp_id || '-'],
                 ['Employee Name', `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-'],
@@ -184,8 +207,8 @@ async function renderPayslipPdf(p, company) {
 
             // Earnings / Deductions tables
             const half = (PW - 100) / 2;
-            doc.fill('#222222').font('Helvetica-Bold').fontSize(11).text('EARNINGS', ml, y);
-            doc.fill('#222222').font('Helvetica-Bold').fontSize(11).text('DEDUCTIONS', ml + half + 14, y);
+            doc.fill('#222222').font(FONT_BOLD).fontSize(11).text('EARNINGS', ml, y);
+            doc.fill('#222222').font(FONT_BOLD).fontSize(11).text('DEDUCTIONS', ml + half + 14, y);
             y += 18;
 
             const earnings = [
@@ -211,12 +234,12 @@ async function renderPayslipPdf(p, company) {
             const drawMoneyTable = (x, rows, total, totalLabel) => {
                 let ty = y;
                 rows.forEach(([k, v]) => {
-                    doc.fill('#666666').font('Helvetica').fontSize(9).text(k, x, ty);
+                    doc.fill('#666666').font(FONT_REG).fontSize(9).text(k, x, ty);
                     doc.fill('#222222').text(formatINR(v), x + 120, ty, { align: 'right', width: 90 });
                     ty += 15;
                 });
                 doc.rect(x - 6, ty, half, 22).fill('#F4F1FB');
-                doc.fill('#6E59A5').font('Helvetica-Bold').fontSize(9).text(totalLabel, x, ty + 5);
+                doc.fill('#6E59A5').font(FONT_BOLD).fontSize(9).text(totalLabel, x, ty + 5);
                 doc.fill('#6E59A5').text(formatINR(total), x + 120, ty + 5, { align: 'right', width: 90 });
             };
 
@@ -234,21 +257,21 @@ async function renderPayslipPdf(p, company) {
             let cx = ml;
             cards.forEach(card => {
                 doc.roundedRect(cx, y, cardW, 58, 8).fill(card.color);
-                doc.fill('#FFFFFF').font('Helvetica').fontSize(8).text(card.label.toUpperCase(), cx + 10, y + 10);
-                doc.font('Helvetica-Bold').fontSize(13).text(formatINR(card.value), cx + 10, y + 26);
+                doc.fill('#FFFFFF').font(FONT_REG).fontSize(8).text(card.label.toUpperCase(), cx + 10, y + 10);
+                doc.font(FONT_BOLD).fontSize(13).text(formatINR(card.value), cx + 10, y + 26);
                 cx += cardW + 14;
             });
             y += 58 + 18;
 
             // Net in words
             doc.roundedRect(ml, y, PW - 100, 30, 8).fill('#F5F2FC');
-            doc.fill('#6E59A5').font('Helvetica-Bold').fontSize(9).text('NET SALARY IN WORDS', ml + 14, y + 4);
-            doc.fill('#222222').font('Helvetica').fontSize(9).text(amountToWords(p.net_salary), ml + 14, y + 15);
+            doc.fill('#6E59A5').font(FONT_BOLD).fontSize(9).text('NET SALARY IN WORDS', ml + 14, y + 4);
+            doc.fill('#222222').font(FONT_REG).fontSize(9).text(amountToWords(p.net_salary), ml + 14, y + 15);
             y += 30 + 16;
 
             // Attendance summary + Employer contribution
-            doc.fill('#222222').font('Helvetica-Bold').fontSize(11).text('ATTENDANCE SUMMARY', ml, y);
-            doc.fill('#222222').font('Helvetica-Bold').fontSize(11).text('EMPLOYER CONTRIBUTION', ml + half + 14, y);
+            doc.fill('#222222').font(FONT_BOLD).fontSize(11).text('ATTENDANCE SUMMARY', ml, y);
+            doc.fill('#222222').font(FONT_BOLD).fontSize(11).text('EMPLOYER CONTRIBUTION', ml + half + 14, y);
             y += 18;
             const attRows = [
                 ['Working Days', p.working_days || 0],
@@ -262,19 +285,19 @@ async function renderPayslipPdf(p, company) {
                 ['Employer Contribution', num(p.employer_contribution)]
             ];
             let ay = y;
-            attRows.forEach(([k, v]) => { doc.fill('#666666').font('Helvetica').fontSize(9).text(k, ml, ay); doc.fill('#222222').text(String(v), ml + 120, ay, { align: 'right', width: 90 }); ay += 15; });
+            attRows.forEach(([k, v]) => { doc.fill('#666666').font(FONT_REG).fontSize(9).text(k, ml, ay); doc.fill('#222222').text(String(v), ml + 120, ay, { align: 'right', width: 90 }); ay += 15; });
             let by = y;
-            empRows.forEach(([k, v]) => { doc.fill('#666666').font('Helvetica').fontSize(9).text(k, ml + half + 14, by); doc.fill('#222222').text(formatINR(v), ml + half + 14 + 120, by, { align: 'right', width: 90 }); by += 15; });
+            empRows.forEach(([k, v]) => { doc.fill('#666666').font(FONT_REG).fontSize(9).text(k, ml + half + 14, by); doc.fill('#222222').text(formatINR(v), ml + half + 14 + 120, by, { align: 'right', width: 90 }); by += 15; });
             by += 2;
             doc.rect(ml + half + 14 - 6, by, half, 22).fill('#F4F1FB');
-            doc.fill('#6E59A5').font('Helvetica-Bold').fontSize(9).text('Total', ml + half + 14, by + 5);
+            doc.fill('#6E59A5').font(FONT_BOLD).fontSize(9).text('Total', ml + half + 14, by + 5);
             doc.fill('#6E59A5').text(formatINR(num(p.employer_pf) + num(p.employer_esi) + num(p.employer_contribution)), ml + half + 14 + 120, by + 5, { align: 'right', width: 90 });
             y += 4 * 15 + 26;
 
             // Footer
             if (y < 780) y = 780;
             doc.rect(0, y, PW, 34).fill('#6E59A5');
-            doc.fill('#FFFFFF').font('Helvetica').fontSize(8).text('This is a system generated payslip. No signature required.', PW / 2, y + 12, { align: 'center' });
+            doc.fill('#FFFFFF').font(FONT_REG).fontSize(8).text('This is a system generated payslip. No signature required.', PW / 2, y + 12, { align: 'center' });
 
             doc.end();
         } catch (err) {

@@ -16,11 +16,11 @@ function ppEsc(str) {
 }
 
 function ppFormatINR(amount) {
-    return 'Rs. ' + Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '₹' + Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function ppFormatCurrency(amount) {
-    return 'Rs. ' + Number(amount || 0).toLocaleString('en-IN');
+    return '₹' + Number(amount || 0).toLocaleString('en-IN');
 }
 
 // Indian number -> words ("Rupees .. Lakh .. Thousand .. Hundred .. Paise Only")
