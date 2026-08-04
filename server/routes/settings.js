@@ -17,12 +17,13 @@ router.get('/company', verifyToken, async (req, res) => {
 
 router.put('/company', verifyToken, isAdmin, async (req, res) => {
     try {
-        const { name, email, phone, address, website } = req.body;
+        const { name, email, phone, address, website, logo } = req.body;
         const result = await query(
             `UPDATE companies SET name = COALESCE($1, name), email = COALESCE($2, email), 
             phone = COALESCE($3, phone), address = COALESCE($4, address), website = COALESCE($5, website),
+            logo = CASE WHEN $6::text = '' THEN NULL ELSE COALESCE($6, logo) END,
             updated_at = NOW() WHERE id = (SELECT id FROM companies LIMIT 1) RETURNING *`,
-            [name, email, phone, address, website]
+            [name, email, phone, address, website, logo]
         );
         res.json({ success: true, company: result.rows[0] });
     } catch (error) {

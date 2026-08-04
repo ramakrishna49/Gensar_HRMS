@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Payslip - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6E59A5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/payroll.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-app">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/admin/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">Employee Management</div>
+            <a href="/pages/admin/employees.html" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
+            <a href="/pages/admin/departments.html" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
+            <a href="/pages/admin/designations.html" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
+            <div class="nav-section-title">Time & Leave</div>
+            <a href="/pages/admin/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/admin/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <div class="nav-section-title">Finance</div>
+            <a href="/pages/admin/payroll.html" class="nav-item active"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
+            <div class="nav-section-title">Communication</div>
+            <a href="/pages/admin/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <div class="nav-section-title">Analytics</div>
+            <a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 id="pageTitle" style="font-size:1.25rem;font-weight:600;">Generate Payslip</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/admin/settings.html" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-body payroll-module">
+            <div class="pp-page">
+
+                <div class="pp-topbar">
+                    <div>
+                        <a href="payroll.html" style="font-size:0.8rem;color:#6E59A5;text-decoration:none;font-weight:600;"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
+                        <h1 id="headingTitle" style="margin-top:6px;">Generate Payslip</h1>
+                        <div class="pp-sub" id="headingSub">Auto-fetches employee profile &amp; company details. Totals calculate live. Emails the PDF automatically.</div>
+                    </div>
+                    <div class="pp-actions">
+                        <button class="pp-btn pp-btn-blue" id="btnPrint" onclick="onPrint()"><i class="fas fa-print"></i> Print</button>
+                        <button class="pp-btn pp-btn-light" id="btnDownload" onclick="onDownload()"><i class="fas fa-download"></i> Download PDF</button>
+                        <button class="pp-btn pp-btn-green" id="btnGenerate" onclick="onGenerate()"><i class="fas fa-paper-plane"></i> <span id="btnGenerateLabel">Generate &amp; Email</span></button>
+                    </div>
+                </div>
+
+                <!-- Single mode: employee + period -->
+                <div class="pp-card" id="singlePanel">
+                    <div class="pp-card-title"><i class="fas fa-user-tie"></i> Employee &amp; Period</div>
+                    <div class="pp-form-grid">
+                        <div class="pp-field">
+                            <label>Employee <span class="pp-req">*</span></label>
+                            <select id="ppEmployee" class="pp-select" onchange="onEmployeeChange()">
+                                <option value="">Select Employee...</option>
+                            </select>
+                        </div>
+                        <div class="pp-form-grid" style="grid-template-columns:1fr 1fr;gap:14px;">
+                            <div class="pp-field">
+                                <label>Month <span class="pp-req">*</span></label>
+                                <select id="ppMonth" class="pp-select" onchange="refreshPreview()">
+                                    <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                                    <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                                    <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                                    <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                                </select>
+                            </div>
+                            <div class="pp-field">
+                                <label>Year <span class="pp-req">*</span></label>
+                                <input type="number" id="ppYear" class="pp-input" onchange="refreshPreview()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pp-banner" id="profileBanner" style="display:none;">
+                        <div class="pp-banner-col">
+                            <h4><i class="fas fa-user" style="margin-right:4px;"></i> Employee Profile (auto)</h4>
+                            <div class="pp-chip-grid" id="profileChips"></div>
+                        </div>
+                        <div class="pp-banner-col">
+                            <h4><i class="fas fa-building" style="margin-right:4px;"></i> Payslip Email To</h4>
+                            <div class="pp-chip-grid" id="emailChips"></div>
+                        </div>
+                    </div>
+                    <div class="pp-banner" id="companyBanner" style="display:none;">
+                        <div class="pp-banner-col">
+                            <h4><i class="fas fa-landmark" style="margin-right:4px;"></i> Company (auto)</h4>
+                            <div class="pp-chip-grid" id="companyChips"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk mode -->
+                <div class="pp-card" id="bulkPanel" style="display:none;">
+                    <div class="pp-card-title"><i class="fas fa-users"></i> Bulk Payroll
+                        <span class="pp-chip-note">Tick employees, set Basic / days, Generate All &amp; Email.</span>
+                    </div>
+                    <div class="pp-form-grid" style="margin-bottom:16px;">
+                        <div class="pp-field">
+                            <label>Month <span class="pp-req">*</span></label>
+                            <select id="bulkMonth" class="pp-select">
+                                <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                                <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                                <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                                <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                            </select>
+                        </div>
+                        <div class="pp-field">
+                            <label>Year <span class="pp-req">*</span></label>
+                            <input type="number" id="bulkYear" class="pp-input">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+                        <button class="pp-btn pp-btn-sm" onclick="bulkSelectAll()"><i class="fas fa-check-double"></i> Select All</button>
+                        <button class="pp-btn pp-btn-sm pp-btn-light" onclick="bulkSelectNone()">Select None</button>
+                        <input type="text" id="bulkSearch" class="pp-input" placeholder="Search employees..." style="max-width:240px;" oninput="bulkRender()">
+                    </div>
+                    <div class="pp-table-wrap">
+                        <table class="pp-table">
+                            <thead>
+                                <tr><th style="width:40px;"></th><th>Employee</th><th style="width:130px;">Basic (Rs.)</th><th style="width:90px;">Working</th><th style="width:90px;">Present</th><th style="width:90px;">LOP</th><th class="pp-num">Net (est.)</th></tr>
+                            </thead>
+                            <tbody id="bulkBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="bulkProgress" style="margin-top:14px;display:none;"></div>
+                    <div id="bulkResult" style="margin-top:14px;display:none;"></div>
+                </div>
+
+                <!-- Entry form -->
+                <div class="pp-card" id="formCard" style="display:none;">
+                    <div class="pp-card-title"><i class="fas fa-pen-square"></i> Monthly Values <span class="pp-chip-note">Basic auto-filled from employee salary - edit as needed.</span></div>
+                    <div class="pp-form-grid" oninput="onFormInput()">
+
+                        <div class="pp-section-head"><i class="fas fa-calendar-day" style="margin-right:6px;"></i>Attendance</div>
+                        <div class="pp-field"><label>Working Days</label><input type="number" id="working_days" class="pp-input" value="30" min="0"></div>
+                        <div class="pp-field"><label>Present Days</label><input type="number" id="present_days" class="pp-input" value="30" min="0"></div>
+                        <div class="pp-field"><label>Leave Days</label><input type="number" id="leave_days" class="pp-input" value="0" min="0"></div>
+                        <div class="pp-field"><label>LOP Days</label><input type="number" id="lop_days" class="pp-input" value="0" min="0"></div>
+
+                        <div class="pp-section-head"><i class="fas fa-plus-circle" style="margin-right:6px;"></i>Earnings</div>
+                        <div class="pp-field"><label>Basic Salary <span class="pp-req">*</span></label><input type="number" id="basic_salary" class="pp-input" step="0.01" min="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>HRA</label><input type="number" id="hra" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Conveyance</label><input type="number" id="conveyance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Medical Allowance</label><input type="number" id="medical" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Special Allowance</label><input type="number" id="special_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Bonus</label><input type="number" id="bonus" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Incentive</label><input type="number" id="incentive" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Other Allowance</label><input type="number" id="other_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+
+                        <div class="pp-section-head"><i class="fas fa-minus-circle" style="margin-right:6px;"></i>Deductions</div>
+                        <div class="pp-field"><label>Employee PF</label><input type="number" id="pf" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Employee ESI</label><input type="number" id="esi" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Professional Tax</label><input type="number" id="professional_tax" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Income Tax</label><input type="number" id="income_tax" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Loan Deduction</label><input type="number" id="loan_deduction" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Advance Salary</label><input type="number" id="advance_salary" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Other Deduction</label><input type="number" id="other_deduction" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+
+                        <div class="pp-section-head"><i class="fas fa-hand-holding-usd" style="margin-right:6px;"></i>Employer Contributions</div>
+                        <div class="pp-field"><label>Employer PF</label><input type="number" id="employer_pf" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Employer ESI</label><input type="number" id="employer_esi" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Employer Contribution</label><input type="number" id="employer_contribution" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+
+                    </div>
+
+                    <div class="pp-summary-strip">
+                        <div class="pp-sum-box gross"><div class="pp-sum-label">Gross Salary</div><div class="pp-sum-value" id="sumGross">Rs. 0.00</div></div>
+                        <div class="pp-sum-box deductions"><div class="pp-sum-label">Total Deductions</div><div class="pp-sum-value" id="sumDed">Rs. 0.00</div></div>
+                        <div class="pp-sum-box net"><div class="pp-sum-label">Net Payable</div><div class="pp-sum-value" id="sumNet">Rs. 0.00</div></div>
+                        <div class="pp-sum-box employer"><div class="pp-sum-label">Employer Total</div><div class="pp-sum-value" id="sumEmployer">Rs. 0.00</div></div>
+                    </div>
+                    <div class="pp-words" id="sumWords">Rupees Zero Only</div>
+                </div>
+
+                <!-- Live preview -->
+                <div class="pp-card" id="previewCard" style="display:none;">
+                    <div class="pp-card-title"><i class="fas fa-file-invoice"></i> Payslip Preview <span class="pp-chip-note">Live - what the employee receives.</span></div>
+                    <div class="pp-preview-frame" id="previewFrame">
+                        <div class="pp-empty"><i class="fas fa-user-tie"></i><h3>Select an employee</h3><p>Profile and payslip preview appear here.</p></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/payroll-core.js"></script>
+    <script>
+        if (!requireAdmin()) throw new Error('Not authenticated');
+
+        const params = new URLSearchParams(window.location.search);
+        const isBulk = params.get('bulk') === '1';
+        const editId = params.get('id');
+        const preselectEmp = params.get('emp');
+        const currentYear = new Date().getFullYear();
+
+        let employees = [];
+        let company = null;
+        let selectedProfile = null;
+        let bulkEmployees = [];
+        let editingPayslip = null;
+        let previewTimer = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('ppYear').value = currentYear;
+            document.getElementById('bulkYear').value = currentYear;
+            document.getElementById('ppMonth').value = new Date().getMonth() + 1;
+            document.getElementById('bulkMonth').value = new Date().getMonth() + 1;
+
+            await loadCompany();
+            await loadEmployees();
+
+            if (isBulk) {
+                enableBulkMode();
+            } else if (editId) {
+                await loadEditPayslip(editId, preselectEmp);
+            } else {
+                enableSingleMode();
+                if (preselectEmp) {
+                    const opt = document.querySelector('#ppEmployee option[value="' + preselectEmp + '"]');
+                    if (opt) {
+                        document.getElementById('ppEmployee').value = preselectEmp;
+                        onEmployeeChange();
+                    }
+                }
+            }
+        });
+
+        async function loadCompany() {
+            const d = await apiCall('/settings/company');
+            if (d && d.success && d.company) {
+                company = {
+                    name: d.company.name || 'Gensar IT Solutions',
+                    logo: d.company.logo || null,
+                    address: d.company.address || '',
+                    phone: d.company.phone || '',
+                    email: d.company.email || '',
+                    website: d.company.website || ''
+                };
+                const chips = [];
+                chips.push('<span class="pp-chip"><b>' + ppEsc(company.name) + '</b></span>');
+                if (company.address) chips.push('<span class="pp-chip">' + ppEsc(company.address) + '</span>');
+                if (company.phone) chips.push('<span class="pp-chip">' + ppEsc(company.phone) + '</span>');
+                if (company.email) chips.push('<span class="pp-chip">' + ppEsc(company.email) + '</span>');
+                if (company.website) chips.push('<span class="pp-chip">' + ppEsc(company.website) + '</span>');
+                document.getElementById('companyChips').innerHTML = chips.join('');
+                document.getElementById('companyBanner').style.display = 'flex';
+            }
+        }
+
+        async function loadEmployees() {
+            const d = await apiCall('/employees?limit=1000');
+            if (!d || !d.success) { showToast('Failed to load employees', 'error'); return; }
+            employees = d.employees;
+            const sel = document.getElementById('ppEmployee');
+            sel.innerHTML = '<option value="">Select Employee...</option>' + employees
+                .filter(e => e.status === 'active')
+                .map(e => '<option value="' + e.id + '" data-salary="' + (e.salary || 0) + '">' + ppEsc(e.first_name + ' ' + e.last_name) + ' (' + ppEsc(e.employee_id) + ')</option>')
+                .join('');
+        }
+
+        function onEmployeeChange() {
+            const id = document.getElementById('ppEmployee').value;
+            if (!id) {
+                selectedProfile = null;
+                document.getElementById('profileBanner').style.display = 'none';
+                document.getElementById('formCard').style.display = 'none';
+                document.getElementById('previewCard').style.display = 'none';
+                return;
+            }
+            selectedProfile = employees.find(e => String(e.id) === String(id)) || null;
+            if (!selectedProfile) return;
+            showProfileBanner(selectedProfile);
+            document.getElementById('basic_salary').value = selectedProfile.salary || 0;
+            document.getElementById('formCard').style.display = 'block';
+            document.getElementById('previewCard').style.display = 'block';
+            refreshPreview();
+        }
+
+        function showProfileBanner(emp) {
+            const chip = (label, val) => '<span class="pp-chip">' + ppEsc(label) + ': <b>' + ppEsc(val) + '</b></span>';
+            const chips = [
+                chip('ID', emp.employee_id),
+                chip('Designation', emp.designation_name || '-'),
+                chip('Department', emp.department_name || '-'),
+                chip('DOJ', emp.joining_date ? String(emp.joining_date).substring(0, 10) : '-'),
+                chip('PAN', emp.pan_number || '-'),
+                chip('UAN', emp.uan_number || '-'),
+                chip('PF', emp.pf_number || '-'),
+                chip('ESI', emp.esi_number || '-'),
+                chip('Bank', (emp.bank_name || '') + ' ' + (emp.bank_account || '')),
+                chip('IFSC', emp.bank_ifsc || '-')
+            ];
+            document.getElementById('profileChips').innerHTML = chips.join('');
+            document.getElementById('emailChips').innerHTML = '<span class="pp-chip"><b>' + ppEsc(emp.email || 'No email on profile') + '</b></span>';
+            document.getElementById('profileBanner').style.display = 'flex';
+        }
+
+        // ---- Live calculation ----
+        function onFormInput() {
+            updateSummary();
+            clearTimeout(previewTimer);
+            previewTimer = setTimeout(refreshPreview, 350);
+        }
+
+        function currentFormValues() {
+            const get = (id) => {
+                const el = document.getElementById(id);
+                return el ? el.value : 0;
+            };
+            const v = {
+                employee_id: selectedProfile ? selectedProfile.id : null,
+                month: parseInt(document.getElementById('ppMonth').value, 10),
+                year: parseInt(document.getElementById('ppYear').value, 10),
+                working_days: get('working_days'), present_days: get('present_days'),
+                leave_days: get('leave_days'), lop_days: get('lop_days'),
+                basic_salary: get('basic_salary'), hra: get('hra'), conveyance: get('conveyance'),
+                medical: get('medical'), special_allowance: get('special_allowance'),
+                bonus: get('bonus'), incentive: get('incentive'), other_allowance: get('other_allowance'),
+                pf: get('pf'), esi: get('esi'), professional_tax: get('professional_tax'),
+                income_tax: get('income_tax'), loan_deduction: get('loan_deduction'),
+                advance_salary: get('advance_salary'), other_deduction: get('other_deduction'),
+                employer_pf: get('employer_pf'), employer_esi: get('employer_esi'), employer_contribution: get('employer_contribution')
+            };
+            return v;
+        }
+
+        function updateSummary() {
+            const t = ppCompute(currentFormValues());
+            document.getElementById('sumGross').textContent = ppFormatINR(t.gross);
+            document.getElementById('sumDed').textContent = ppFormatINR(t.totalDeductions);
+            document.getElementById('sumNet').textContent = ppFormatINR(t.net);
+            document.getElementById('sumEmployer').textContent = ppFormatINR(t.employerTotal);
+            document.getElementById('sumWords').textContent = ppAmountInWords(t.net);
+        }
+
+        function buildDisplayPayload(profile, v) {
+            const t = ppCompute(v);
+            return {
+                first_name: profile.first_name, last_name: profile.last_name,
+                emp_id: profile.employee_id, designation_name: profile.designation_name,
+                department_name: profile.department_name, joining_date: profile.joining_date,
+                pan_number: profile.pan_number, uan_number: profile.uan_number,
+                pf_number: profile.pf_number, esi_number: profile.esi_number,
+                bank_name: profile.bank_name, bank_account: profile.bank_account,
+                bank_ifsc: profile.bank_ifsc, employee_email: profile.email,
+                month: v.month, year: v.year,
+                working_days: v.working_days, present_days: v.present_days,
+                leave_days: v.leave_days, lop_days: v.lop_days,
+                basic_salary: v.basic_salary, hra: v.hra, conveyance: v.conveyance,
+                medical: v.medical, special_allowance: v.special_allowance,
+                bonus: v.bonus, incentive: v.incentive, other_allowance: v.other_allowance,
+                pf: v.pf, esi: v.esi, professional_tax: v.professional_tax,
+                income_tax: v.income_tax, loan_deduction: v.loan_deduction,
+                advance_salary: v.advance_salary, other_deduction: v.other_deduction,
+                employer_pf: v.employer_pf, employer_esi: v.employer_esi, employer_contribution: v.employer_contribution,
+                gross_salary: t.gross, total_deductions: t.totalDeductions, net_salary: t.net,
+                company: company || { name: 'Gensar IT Solutions' }
+            };
+        }
+
+        function refreshPreview() {
+            if (!selectedProfile) return;
+            const v = currentFormValues();
+            const payload = buildDisplayPayload(selectedProfile, v);
+            renderPayslipPreview(payload, document.getElementById('previewFrame'));
+        }
+
+        // ---- Actions ----
+        async function onDownload() {
+            if (!selectedProfile) { showToast('Select an employee first', 'warning'); return; }
+            const payload = buildDisplayPayload(selectedProfile, currentFormValues());
+            try {
+                await downloadPayslip(payload);
+                showToast('PDF downloaded', 'success');
+            } catch (e) {
+                showToast('Failed to generate PDF', 'error');
+            }
+        }
+
+        function onPrint() {
+            if (!selectedProfile) { showToast('Select an employee first', 'warning'); return; }
+            printPayslip(buildDisplayPayload(selectedProfile, currentFormValues()));
+        }
+
+        async function onGenerate() {
+            if (!selectedProfile) { showToast('Select an employee first', 'warning'); return; }
+            const v = currentFormValues();
+            if (!v.month || !v.year) { showToast('Select month and year', 'warning'); return; }
+            if (!ppNum(v.basic_salary)) { showToast('Enter Basic Salary', 'warning'); return; }
+
+            const btn = document.getElementById('btnGenerate');
+            const label = document.getElementById('btnGenerateLabel');
+            const original = label.textContent;
+            btn.disabled = true;
+            label.textContent = 'Preparing PDF & sending email...';
+            try {
+                const payload = buildDisplayPayload(selectedProfile, v);
+                const pdfBase64 = await payslipToDataUrl(payload);
+                label.textContent = 'Saving & emailing...';
+                const body = { ...v, pdfBase64 };
+                const r = await apiCall('/payroll/generate', 'POST', body);
+                if (r && r.success) {
+                    const emailMsg = r.email_sent && r.email_sent.success
+                        ? 'Payslip generated and emailed to ' + (r.email_sent.to || selectedProfile.email)
+                        : 'Payslip generated. Email skipped (' + ((r.email_sent && r.email_sent.reason) || 'no email configured') + ')';
+                    showToast(emailMsg, r.email_sent && r.email_sent.success ? 'success' : 'warning');
+                    setTimeout(() => { window.location.href = 'payroll.html'; }, 1800);
+                } else {
+                    showToast(r && r.message ? r.message : 'Error generating payslip', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                label.textContent = original;
+            }
+        }
+
+        // ---- Edit mode ----
+        async function loadEditPayslip(id, empId) {
+            document.getElementById('headingTitle').textContent = 'Edit Payslip';
+            document.getElementById('headingSub').textContent = 'Loaded existing payslip. Re-generating sends a fresh PDF email.';
+            document.getElementById('pageTitle').textContent = 'Edit Payslip';
+            document.getElementById('btnGenerateLabel').textContent = 'Update & Re-Email';
+
+            const d = await apiCall('/payroll/' + id);
+            if (!d || !d.success) {
+                showToast('Payslip not found', 'error');
+                setTimeout(() => { window.location.href = 'payroll.html'; }, 1200);
+                return;
+            }
+            editingPayslip = d.payslip;
+            selectedProfile = {
+                id: editingPayslip.employee_id,
+                first_name: editingPayslip.first_name, last_name: editingPayslip.last_name,
+                employee_id: editingPayslip.emp_id, designation_name: editingPayslip.designation_name,
+                department_name: editingPayslip.department_name, joining_date: editingPayslip.joining_date,
+                pan_number: editingPayslip.pan_number, uan_number: editingPayslip.uan_number,
+                pf_number: editingPayslip.pf_number, esi_number: editingPayslip.esi_number,
+                bank_name: editingPayslip.bank_name, bank_account: editingPayslip.bank_account,
+                bank_ifsc: editingPayslip.bank_ifsc, email: editingPayslip.employee_email
+            };
+            company = editingPayslip.company || company;
+
+            const sel = document.getElementById('ppEmployee');
+            sel.innerHTML = '<option value="' + editingPayslip.employee_id + '">' + ppEsc(selectedProfile.first_name + ' ' + selectedProfile.last_name) + ' (' + ppEsc(selectedProfile.employee_id) + ')</option>';
+            sel.value = String(editingPayslip.employee_id);
+            document.getElementById('ppMonth').value = editingPayslip.month;
+            document.getElementById('ppYear').value = editingPayslip.year;
+
+            const set = (k, val) => { const el = document.getElementById(k); if (el) el.value = (val === null || val === undefined) ? 0 : val; };
+            set('working_days', editingPayslip.working_days); set('present_days', editingPayslip.present_days);
+            set('leave_days', editingPayslip.leave_days); set('lop_days', editingPayslip.lop_days);
+            set('basic_salary', editingPayslip.basic_salary); set('hra', editingPayslip.hra);
+            set('conveyance', editingPayslip.conveyance); set('medical', editingPayslip.medical);
+            set('special_allowance', editingPayslip.special_allowance); set('bonus', editingPayslip.bonus);
+            set('incentive', editingPayslip.incentive); set('other_allowance', editingPayslip.other_allowance);
+            set('pf', editingPayslip.pf); set('esi', editingPayslip.esi);
+            set('professional_tax', editingPayslip.professional_tax); set('income_tax', editingPayslip.income_tax);
+            set('loan_deduction', editingPayslip.loan_deduction); set('advance_salary', editingPayslip.advance_salary);
+            set('other_deduction', editingPayslip.other_deduction);
+            set('employer_pf', editingPayslip.employer_pf); set('employer_esi', editingPayslip.employer_esi);
+            set('employer_contribution', editingPayslip.employer_contribution);
+
+            document.getElementById('singlePanel').style.display = 'block';
+            document.getElementById('formCard').style.display = 'block';
+            document.getElementById('previewCard').style.display = 'block';
+            showProfileBanner(selectedProfile);
+            updateSummary();
+            refreshPreview();
+        }
+
+        function enableSingleMode() {
+            document.getElementById('singlePanel').style.display = 'block';
+        }
+
+        // ---- Bulk mode ----
+        function enableBulkMode() {
+            document.getElementById('headingTitle').textContent = 'Bulk Payroll';
+            document.getElementById('headingSub').textContent = 'Generate payslips for multiple employees and email each PDF automatically.';
+            document.getElementById('pageTitle').textContent = 'Bulk Payroll';
+            document.getElementById('btnGenerateLabel').textContent = 'Generate All & Email';
+            document.getElementById('singlePanel').style.display = 'none';
+            document.getElementById('formCard').style.display = 'none';
+            document.getElementById('previewCard').style.display = 'none';
+            document.getElementById('bulkPanel').style.display = 'block';
+            bulkEmployees = employees.filter(e => e.status === 'active' && e.role !== 'admin');
+            bulkRender();
+        }
+
+        function bulkRender() {
+            const q = (document.getElementById('bulkSearch').value || '').toLowerCase();
+            const list = bulkEmployees.filter(e => !q || (e.first_name + ' ' + e.last_name + ' ' + e.employee_id).toLowerCase().includes(q));
+            const body = document.getElementById('bulkBody');
+            if (!list.length) {
+                body.innerHTML = '<tr><td colspan="7"><div class="pp-empty"><i class="fas fa-users-slash"></i><h3>No Employees</h3><p>No active employees found.</p></div></td></tr>';
+                return;
+            }
+            body.innerHTML = list.map(e => {
+                const t = ppCompute({ basic_salary: e.salary || 0, working_days: 30, present_days: 30, leave_days: 0, lop_days: 0 });
+                return '<tr data-emp="' + e.id + '">' +
+                    '<td><input type="checkbox" class="bulk-check" checked style="width:16px;height:16px;accent-color:#6E59A5;"></td>' +
+                    '<td><div class="pp-emp"><div class="pp-emp-avatar">' + ppEsc(getInitials(e.first_name, e.last_name)) + '</div>' +
+                        '<div><b>' + ppEsc(e.first_name) + ' ' + ppEsc(e.last_name) + '</b><small>' + ppEsc(e.employee_id) + (e.department_name ? ' &middot; ' + ppEsc(e.department_name) : '') + '</small></div></div></td>' +
+                    '<td><input type="number" class="pp-input bulk-basic" value="' + (e.salary || 0) + '" step="0.01" min="0" data-salary="' + (e.salary || 0) + '" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-work" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-pres" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-lop" value="0" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td class="pp-num bulk-net">' + ppFormatINR(t.net) + '</td>' +
+                '</tr>';
+            }).join('');
+            bulkRowCalc(null);
+        }
+
+        function bulkRowCalc(input) {
+            const row = input ? input.closest('tr') : null;
+            document.querySelectorAll('#bulkBody tr').forEach(r => {
+                const basic = parseFloat(r.querySelector('.bulk-basic').value) || 0;
+                const work = parseFloat(r.querySelector('.bulk-work').value) || 0;
+                const pres = parseFloat(r.querySelector('.bulk-pres').value) || 0;
+                const lop = parseFloat(r.querySelector('.bulk-lop').value) || 0;
+                const leave = Math.max(0, work - pres - lop);
+                const t = ppCompute({ basic_salary: basic, working_days: work, present_days: pres, leave_days: leave, lop_days: lop });
+                r.querySelector('.bulk-net').textContent = ppFormatINR(t.net);
+            });
+        }
+
+        function bulkSelectAll() {
+            document.querySelectorAll('.bulk-check').forEach(c => c.checked = true);
+        }
+        function bulkSelectNone() {
+            document.querySelectorAll('.bulk-check').forEach(c => c.checked = false);
+        }
+
+        async function onGenerateBulk() {
+            const month = parseInt(document.getElementById('bulkMonth').value, 10);
+            const year = parseInt(document.getElementById('bulkYear').value, 10);
+            if (!month || !year) { showToast('Select month and year', 'warning'); return; }
+
+            const items = [];
+            document.querySelectorAll('#bulkBody tr').forEach(r => {
+                const check = r.querySelector('.bulk-check');
+                if (!check || !check.checked) return;
+                const empId = r.getAttribute('data-emp');
+                const emp = bulkEmployees.find(e => String(e.id) === empId);
+                if (!emp) return;
+                const basic = parseFloat(r.querySelector('.bulk-basic').value) || 0;
+                const work = parseFloat(r.querySelector('.bulk-work').value) || 0;
+                const pres = parseFloat(r.querySelector('.bulk-pres').value) || 0;
+                const lop = parseFloat(r.querySelector('.bulk-lop').value) || 0;
+                const leave = Math.max(0, work - pres - lop);
+                items.push({
+                    profile: emp,
+                    v: {
+                        employee_id: emp.id, month, year,
+                        working_days: work, present_days: pres, leave_days: leave, lop_days: lop,
+                        basic_salary: basic,
+                        hra: 0, conveyance: 0, medical: 0, special_allowance: 0, bonus: 0, incentive: 0, other_allowance: 0,
+                        pf: 0, esi: 0, professional_tax: 0, income_tax: 0, loan_deduction: 0, advance_salary: 0, other_deduction: 0,
+                        employer_pf: 0, employer_esi: 0, employer_contribution: 0
+                    }
+                });
+            });
+
+            if (!items.length) { showToast('No employees selected', 'warning'); return; }
+
+            const btn = document.getElementById('btnGenerate');
+            btn.disabled = true;
+            document.getElementById('bulkProgress').style.display = 'block';
+            document.getElementById('bulkProgress').innerHTML = '<div class="pp-loading"><i class="fas fa-spinner fa-spin"></i>Generating PDFs (0/' + items.length + ')...</div>';
+
+            try {
+                const requestItems = [];
+                for (let i = 0; i < items.length; i++) {
+                    document.getElementById('bulkProgress').innerHTML = '<div class="pp-loading"><i class="fas fa-spinner fa-spin"></i>Generating PDFs (' + (i + 1) + '/' + items.length + ') - ' + ppEsc(items[i].profile.first_name) + '...</div>';
+                    const payload = buildDisplayPayload(items[i].profile, items[i].v);
+                    items[i].payload = payload;
+                    const pdfBase64 = await payslipToDataUrl(payload);
+                    requestItems.push({ ...items[i].v, pdfBase64 });
+                }
+                document.getElementById('bulkProgress').innerHTML = '<div class="pp-loading"><i class="fas fa-spinner fa-spin"></i>Sending emails...</div>';
+                const r = await apiCall('/payroll/generate-bulk', 'POST', { items: requestItems });
+                if (r && r.success) {
+                    let html = '<div style="background:#E7F6E7;border:1px solid #C8E6C9;border-radius:10px;padding:14px 16px;">' +
+                        '<div style="font-weight:700;color:#2E7D32;margin-bottom:6px;"><i class="fas fa-check-circle"></i> Bulk generation complete</div>' +
+                        '<div style="font-size:0.85rem;color:#444;">Created: <b>' + r.created + '</b> &nbsp; Emailed: <b>' + r.emailed + '</b> &nbsp; Failed: <b>' + r.failed + '</b></div>' +
+                        '</div>';
+                    const okItems = items.filter(it => it.ok !== false).map(it => it.payload);
+                    if (okItems.length) {
+                        html += '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
+                            '<button class="pp-btn pp-btn-sm pp-btn-blue" onclick="bulkZip()"><i class="fas fa-file-archive"></i> Download ZIP</button>' +
+                            '<a class="pp-btn pp-btn-sm pp-btn-light" style="text-decoration:none;" href="payroll.html"><i class="fas fa-receipt"></i> View Records</a></div>';
+                    }
+                    document.getElementById('bulkResult').innerHTML = html;
+                    document.getElementById('bulkResult').style.display = 'block';
+                    window._bulkPayloads = okItems;
+                    showToast('Generated ' + r.created + ', emailed ' + r.emailed, r.failed > 0 ? 'warning' : 'success');
+                } else {
+                    showToast(r && r.message ? r.message : 'Bulk generation failed', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                document.getElementById('bulkProgress').style.display = 'none';
+            }
+        }
+
+        async function bulkZip() {
+            const payloads = window._bulkPayloads || [];
+            if (!payloads.length) { showToast('Nothing to download', 'warning'); return; }
+            try {
+                await zipPayslips(payloads, 'payslips_' + document.getElementById('bulkMonth').value + '_' + document.getElementById('bulkYear').value + '.zip');
+                showToast('ZIP downloaded', 'success');
+            } catch (e) {
+                showToast('Failed to create ZIP', 'error');
+            }
+        }
+
+        document.getElementById('btnGenerate').onclick = isBulk ? onGenerateBulk : onGenerate;
+    </script>
+</body>
+</html>

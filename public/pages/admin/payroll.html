@@ -6,13 +6,15 @@
     <title>Payroll - Gensar HRMS</title>
     <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#4F46E5">
+    <meta name="theme-color" content="#6E59A5">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
     <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/payroll.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="admin-app">
     <aside class="sidebar" id="sidebar">
@@ -51,8 +53,6 @@
                 <h2 style="font-size:1.25rem;font-weight:600;">Payroll Management</h2>
             </div>
             <div class="header-right">
-                <button class="btn btn-primary" onclick="openGenerateModal()"><i class="fas fa-plus"></i> <span class="btn-label">Generate Payslip</span></button>
-                <button class="btn btn-success" onclick="generateForAll()"><i class="fas fa-users-cog"></i> <span class="btn-label">Generate for All</span></button>
                 <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
                 <div style="position:relative">
@@ -70,268 +70,273 @@
             </div>
         </header>
 
-        <div class="page-body">
-            <div class="card" style="margin-bottom:24px;">
-                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-                    <div class="form-group" style="margin:0;">
-                        <label style="margin-bottom:4px;">Month</label>
-                        <select id="filterMonth" class="form-control" onchange="loadPayroll()">
-                            <option value="">All Months</option>
-                            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
-                            <option value="4">April</option><option value="5">May</option><option value="6">June</option>
-                            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
-                            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-                        </select>
+        <div class="page-body payroll-module">
+            <div class="pp-page">
+
+                <!-- Topbar -->
+                <div class="pp-topbar">
+                    <div>
+                        <h1>Payroll</h1>
+                        <div class="pp-sub">Generate A4 payslips, auto-calculate earnings &amp; deductions, and email each employee instantly.</div>
                     </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="margin-bottom:4px;">Year</label>
-                        <input type="number" id="filterYear" class="form-control" style="width:100px;" onchange="loadPayroll()">
+                    <div class="pp-actions">
+                        <button class="pp-btn pp-btn-blue" onclick="downloadMonthZip()"><i class="fas fa-file-archive"></i> Download Month ZIP</button>
+                        <button class="pp-btn pp-btn-green" onclick="window.location.href='payroll-generate.html?bulk=1'"><i class="fas fa-users-cog"></i> Bulk Generate</button>
+                        <button class="pp-btn" onclick="window.location.href='payroll-generate.html'"><i class="fas fa-plus"></i> Generate Payslip</button>
                     </div>
                 </div>
-            </div>
 
-            <div class="grid grid-3" style="margin-bottom:24px;">
-                <div class="stat-card slide-up stagger-1">
-                    <div class="stat-icon green"><i class="fas fa-indian-rupee-sign"></i></div>
-                    <div class="stat-info"><h3 id="totalPayroll">--</h3><p>Total Payroll</p></div>
-                </div>
-                <div class="stat-card slide-up stagger-2">
-                    <div class="stat-icon blue"><i class="fas fa-calculator"></i></div>
-                    <div class="stat-info"><h3 id="avgSalary">--</h3><p>Average Salary</p></div>
-                </div>
-                <div class="stat-card slide-up stagger-3">
-                    <div class="stat-icon purple"><i class="fas fa-users"></i></div>
-                    <div class="stat-info"><h3 id="processedCount">--</h3><p>Employees Processed</p></div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr><th>Employee</th><th>Month</th><th>Year</th><th>Basic</th><th>Allowances</th><th>Deductions</th><th>Net Pay</th><th>Status</th><th>Action</th></tr>
-                        </thead>
-                        <tbody id="tableBody">
-                            <tr><td colspan="8" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <div class="modal" id="generateModal">
-        <div class="modal-content" style="max-width:550px;">
-            <div class="modal-header">
-                <h2>Generate Payslip</h2>
-                <button onclick="closeModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="generateForm" onsubmit="generate(event)">
-                    <div class="form-group">
-                        <label>Employee *</label>
-                        <select class="form-control" id="empSelect" required>
-                            <option value="">Select Employee</option>
-                        </select>
-                    </div>
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label>Month *</label>
-                            <select class="form-control" id="payMonth" required>
+                <!-- Filters -->
+                <div class="pp-card">
+                    <div class="pp-form-grid">
+                        <div class="pp-field">
+                            <label>Month</label>
+                            <select id="filterMonth" class="pp-select" onchange="loadPayroll()">
+                                <option value="">All Months</option>
                                 <option value="1">January</option><option value="2">February</option><option value="3">March</option>
                                 <option value="4">April</option><option value="5">May</option><option value="6">June</option>
                                 <option value="7">July</option><option value="8">August</option><option value="9">September</option>
                                 <option value="10">October</option><option value="11">November</option><option value="12">December</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>Year *</label>
-                            <input type="number" class="form-control" id="payYear" required>
+                        <div class="pp-field">
+                            <label>Year</label>
+                            <input type="number" id="filterYear" class="pp-input" onchange="loadPayroll()">
+                        </div>
+                        <div class="pp-field">
+                            <label>Status</label>
+                            <select id="filterStatus" class="pp-select" onchange="loadPayroll()">
+                                <option value="">All Status</option>
+                                <option value="processed">Processed</option>
+                                <option value="draft">Draft</option>
+                            </select>
+                        </div>
+                        <div class="pp-field">
+                            <label>Search</label>
+                            <input type="text" id="filterSearch" class="pp-input" placeholder="Name or Employee ID" oninput="debouncedLoad()">
                         </div>
                     </div>
-                    <div class="divider"></div>
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label>Basic Salary</label>
-                            <input type="number" class="form-control" id="basicSalary" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Allowances</label>
-                            <input type="number" class="form-control" id="allowances" value="0" step="0.01" oninput="calcNet()">
-                        </div>
-                        <div class="form-group">
-                            <label>Deductions</label>
-                            <input type="number" class="form-control" id="deductions" value="0" step="0.01" oninput="calcNet()">
-                        </div>
-                        <div class="form-group">
-                            <label>Net Pay</label>
-                            <input type="text" class="form-control" id="netPayPreview" readonly style="font-weight:700;color:var(--success);background:var(--bg-light);">
-                        </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="pp-stat-grid">
+                    <div class="pp-stat">
+                        <div class="pp-stat-icon"><i class="fas fa-indian-rupee-sign"></i></div>
+                        <div><h3 id="statNet">--</h3><p>Net Payable</p></div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-indian-rupee-sign"></i> Generate Payslip</button>
+                    <div class="pp-stat">
+                        <div class="pp-stat-icon blue"><i class="fas fa-arrow-up"></i></div>
+                        <div><h3 id="statGross">--</h3><p>Total Gross</p></div>
                     </div>
-                </form>
+                    <div class="pp-stat">
+                        <div class="pp-stat-icon orange"><i class="fas fa-arrow-down"></i></div>
+                        <div><h3 id="statDed">--</h3><p>Total Deductions</p></div>
+                    </div>
+                    <div class="pp-stat">
+                        <div class="pp-stat-icon green"><i class="fas fa-users"></i></div>
+                        <div><h3 id="statCount">--</h3><p>Payslips</p></div>
+                    </div>
+                </div>
+
+                <!-- Records -->
+                <div class="pp-card">
+                    <div class="pp-card-title"><i class="fas fa-receipt"></i> Payslip Records
+                        <span class="pp-chip-note">Emails are sent automatically when a payslip is generated.</span>
+                    </div>
+                    <div class="pp-table-wrap">
+                        <table class="pp-table">
+                            <thead>
+                                <tr><th>Employee</th><th>Period</th><th class="pp-num">Gross</th><th class="pp-num">Deductions</th><th class="pp-num">Net Pay</th><th>Status</th><th style="text-align:right;">Action</th></tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr><td colspan="7"><div class="pp-loading"><i class="fas fa-spinner fa-spin"></i>Loading payroll...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- View modal -->
+    <div class="modal" id="viewModal">
+        <div class="modal-content" style="max-width:920px;max-height:94vh;overflow-y:auto;">
+            <div class="modal-header">
+                <h2><i class="fas fa-file-invoice" style="color:var(--primary);margin-right:8px;"></i>Payslip Preview</h2>
+                <button onclick="closeViewModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body payroll-module">
+                <div class="pp-preview-toolbar" id="viewActions" style="display:none;">
+                    <button class="pp-btn" onclick="viewDownload()"><i class="fas fa-download"></i> Download PDF</button>
+                    <button class="pp-btn pp-btn-blue" onclick="viewPrint()"><i class="fas fa-print"></i> Print</button>
+                    <span class="pp-note" id="viewNote"></span>
+                </div>
+                <div class="pp-preview-frame" id="viewFrame"><div class="pp-loading"><i class="fas fa-spinner fa-spin"></i>Loading payslip...</div></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeViewModal()">Close</button>
             </div>
         </div>
     </div>
 
     <script src="../../js/auth.js"></script>
     <script src="../../js/dashboard.js"></script>
+    <script src="../../js/payroll-core.js"></script>
     <script>
         if (!requireAdmin()) throw new Error('Not authenticated');
-        const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
         const currentYear = new Date().getFullYear();
         let payrollData = [];
+        let currentViewPayslip = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('filterYear').value = currentYear;
-            document.getElementById('payYear').value = currentYear;
-            document.getElementById('payMonth').value = new Date().getMonth() + 1;
-            loadEmployees();
             loadPayroll();
         });
 
-        async function loadEmployees() {
-            const d = await apiCall('/employees?limit=1000');
-            const s = document.getElementById('empSelect');
-            if (d && d.success) {
-                s.innerHTML = '<option value="">Select Employee</option>' + d.employees.filter(e => e.status === 'active').map(x => `<option value="${x.id}" data-salary="${x.salary || 0}">${escapeHtml(x.first_name)} ${escapeHtml(x.last_name)} (${escapeHtml(x.employee_id)})</option>`).join('');
-                s.addEventListener('change', function() {
-                    const opt = this.options[this.selectedIndex];
-                    document.getElementById('basicSalary').value = opt.dataset.salary || 0;
-                    calcNet();
-                });
-            }
-        }
-
-        function calcNet() {
-            const basic = parseFloat(document.getElementById('basicSalary').value) || 0;
-            const allow = parseFloat(document.getElementById('allowances').value) || 0;
-            const ded = parseFloat(document.getElementById('deductions').value) || 0;
-            document.getElementById('netPayPreview').value = formatCurrency(basic + allow - ded);
+        function debouncedLoad() {
+            clearTimeout(window._payrollDebounce);
+            window._payrollDebounce = setTimeout(loadPayroll, 350);
         }
 
         async function loadPayroll() {
             const month = document.getElementById('filterMonth').value;
             const year = document.getElementById('filterYear').value;
-            let url = '/payroll/all?';
-            if (month) url += `month=${month}&`;
-            if (year) url += `year=${year}&`;
+            const status = document.getElementById('filterStatus').value;
+            const search = document.getElementById('filterSearch').value.trim();
+            let url = '/payroll/all?limit=1000';
+            if (month) url += '&month=' + month;
+            if (year) url += '&year=' + year;
+            if (status) url += '&status=' + status;
+            if (search) url += '&search=' + encodeURIComponent(search);
+
             const d = await apiCall(url);
             const t = document.getElementById('tableBody');
-            if (d && d.success) {
-                const payroll = d.payroll;
-                payrollData = payroll;
-                const total = payroll.reduce((s, p) => s + (parseFloat(p.net_salary) || 0), 0);
-                const avg = payroll.length > 0 ? total / payroll.length : 0;
-                document.getElementById('totalPayroll').textContent = formatCurrency(total);
-                document.getElementById('avgSalary').textContent = formatCurrency(avg);
-                document.getElementById('processedCount').textContent = payroll.length;
+            if (!d || !d.success) {
+                t.innerHTML = '<tr><td colspan="7"><div class="pp-empty"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load payroll data.</p></div></td></tr>';
+                return;
+            }
+            const payroll = d.payroll || [];
+            payrollData = payroll;
 
-                if (payroll.length === 0) {
-                    payrollData = [];
-                    t.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-indian-rupee-sign"></i><h3>No Payroll Records</h3><p>No payslips generated for this period.</p></div></td></tr>';
-                    return;
-                }
-                t.innerHTML = payroll.map(p => `
-                    <tr>
-                        <td>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;flex-shrink:0;">${escapeHtml(getInitials(p.first_name, p.last_name))}</div>
-                                <div>
-                                    <div style="font-weight:500;">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</div>
-                                    <small style="color:var(--text-secondary);">${escapeHtml(p.emp_id)}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>${escapeHtml(months[p.month] || '')}</td>
-                        <td>${escapeHtml(String(p.year))}</td>
-                        <td>${formatCurrency(p.basic_salary)}</td>
-                        <td>${formatCurrency(p.allowances)}</td>
-                        <td>${formatCurrency(p.deductions)}</td>
-                        <td><strong style="color:var(--success);">${formatCurrency(p.net_salary)}</strong></td>
-                        <td><span class="badge badge-${getStatusBadge(p.status)}">${escapeHtml(p.status)}</span></td>
-                        <td>
-                            <div style="display:flex;gap:4px;">
-                                <button class="btn btn-sm btn-info" onclick="downloadPayslipPdf(${p.id})" title="Download PDF"><i class="fas fa-download"></i> PDF</button>
-                                <button class="btn btn-sm btn-danger" onclick="deletePayslip(${p.id})" title="Delete Payslip"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                t.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load payroll data.</p></div></td></tr>';
+            const net = payroll.reduce((s, p) => s + (parseFloat(p.net_salary) || 0), 0);
+            const gross = payroll.reduce((s, p) => s + (parseFloat(p.gross_salary) || 0), 0);
+            const ded = payroll.reduce((s, p) => s + (parseFloat(p.total_deductions) || 0), 0);
+            document.getElementById('statNet').textContent = ppFormatCurrency(net);
+            document.getElementById('statGross').textContent = ppFormatCurrency(gross);
+            document.getElementById('statDed').textContent = ppFormatCurrency(ded);
+            document.getElementById('statCount').textContent = payroll.length;
+
+            if (payroll.length === 0) {
+                t.innerHTML = '<tr><td colspan="7"><div class="pp-empty"><i class="fas fa-file-invoice"></i><h3>No Payslips</h3><p>No payroll records found for this period. Click "Generate Payslip" to create one.</p></div></td></tr>';
+                return;
+            }
+
+            t.innerHTML = payroll.map(p => {
+                const period = PP_MONTHS[p.month] + ' ' + p.year;
+                return '<tr>' +
+                    '<td><div class="pp-emp"><div class="pp-emp-avatar">' + ppEsc(getInitials(p.first_name, p.last_name)) + '</div>' +
+                        '<div><b>' + ppEsc(p.first_name) + ' ' + ppEsc(p.last_name) + '</b><small>' + ppEsc(p.emp_id) + '</small></div></div></td>' +
+                    '<td style="white-space:nowrap;">' + ppEsc(period) + '</td>' +
+                    '<td class="pp-num">' + ppFormatINR(p.gross_salary) + '</td>' +
+                    '<td class="pp-num">' + ppFormatINR(p.total_deductions) + '</td>' +
+                    '<td class="pp-num"><b style="color:#4CAF50;">' + ppFormatINR(p.net_salary) + '</b></td>' +
+                    '<td><span class="pp-badge ' + (p.status === 'processed' ? 'green' : 'muted') + '">' + ppEsc(p.status || '-') + '</span></td>' +
+                    '<td><div style="display:flex;gap:6px;justify-content:flex-end;">' +
+                        '<button class="pp-btn pp-btn-sm pp-btn-light" onclick="viewPayslip(' + p.id + ')"><i class="fas fa-eye"></i> View</button>' +
+                        '<button class="pp-btn pp-btn-sm pp-btn-blue" onclick="editPayslip(' + p.id + ')"><i class="fas fa-edit"></i> Edit</button>' +
+                        '<button class="pp-btn pp-btn-sm pp-btn-danger" onclick="deletePayslip(' + p.id + ')"><i class="fas fa-trash"></i></button>' +
+                    '</div></td></tr>';
+            }).join('');
+        }
+
+        async function viewPayslip(id) {
+            const modal = document.getElementById('viewModal');
+            modal.classList.add('active');
+            document.getElementById('viewActions').style.display = 'none';
+            document.getElementById('viewNote').textContent = '';
+            document.getElementById('viewFrame').innerHTML = '<div class="pp-loading"><i class="fas fa-spinner fa-spin"></i>Loading payslip...</div>';
+            const d = await apiCall('/payroll/' + id);
+            if (!d || !d.success) {
+                document.getElementById('viewFrame').innerHTML = '<div class="pp-empty"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load payslip.</p></div>';
+                return;
+            }
+            currentViewPayslip = d.payslip;
+            document.getElementById('viewActions').style.display = 'flex';
+            document.getElementById('viewNote').textContent = 'Email: ' + (d.payslip.employee_email || 'not set');
+            renderPayslipPreview(d.payslip, document.getElementById('viewFrame'));
+        }
+
+        async function viewDownload() {
+            if (!currentViewPayslip) return;
+            document.getElementById('viewNote').textContent = 'Preparing PDF...';
+            try {
+                await downloadPayslip(currentViewPayslip);
+                document.getElementById('viewNote').textContent = 'Email: ' + (currentViewPayslip.employee_email || 'not set');
+            } catch (e) {
+                showToast('Failed to generate PDF', 'error');
             }
         }
 
-        function openGenerateModal() { document.getElementById('generateModal').classList.add('active'); }
-        function closeModal() { document.getElementById('generateModal').classList.remove('active'); document.getElementById('generateForm').reset(); document.getElementById('netPayPreview').value = ''; }
+        function viewPrint() {
+            if (currentViewPayslip) printPayslip(currentViewPayslip);
+        }
 
-        async function generate(e) {
-            e.preventDefault();
-            const data = {
-                employee_id: document.getElementById('empSelect').value,
-                month: document.getElementById('payMonth').value,
-                year: document.getElementById('payYear').value,
-                basic_salary: document.getElementById('basicSalary').value,
-                allowances: document.getElementById('allowances').value,
-                deductions: document.getElementById('deductions').value
-            };
-            const r = await apiCall('/payroll/generate', 'POST', data);
-            if (r && r.success) {
-                showToast('Payslip generated successfully!', 'success');
-                closeModal();
-                loadPayroll();
-            } else {
-                showToast(r?.message || 'Error generating payslip', 'error');
-            }
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('active');
+            currentViewPayslip = null;
+        }
+
+        function editPayslip(id) {
+            const p = payrollData.find(x => x.id === id);
+            window.location.href = 'payroll-generate.html?id=' + id + '&emp=' + p.employee_id;
         }
 
         async function deletePayslip(id) {
             const row = payrollData.find(p => p.id === id);
-            const name = row ? `${row.first_name} ${row.last_name}` : 'this employee';
-            const period = row ? `${months[row.month] || ''} ${row.year}` : '';
+            const name = row ? (row.first_name + ' ' + row.last_name) : 'this employee';
+            const period = row ? (PP_MONTHS[row.month] + ' ' + row.year) : '';
             showConfirmDialog(
                 'Delete Payslip',
-                `Are you sure you want to delete the payslip for <strong>${escapeHtml(name)}</strong>${period ? ` (${escapeHtml(period)})` : ''}?<br><br>This will permanently remove the payslip for both Admin and Employee views. This action cannot be undone.`,
-                'Delete',
-                'btn-danger',
-                async function() {
+                'Are you sure you want to delete the payslip for <strong>' + ppEsc(name) + '</strong>' + (period ? ' (' + ppEsc(period) + ')' : '') + '?<br><br>This will permanently remove the payslip for both Admin and Employee views. This action cannot be undone.',
+                'Delete', 'btn-danger',
+                async function () {
                     const r = await apiCall('/payroll/' + id, 'DELETE');
                     if (r && r.success) {
                         showToast('Payslip deleted successfully', 'success');
                         loadPayroll();
                     } else {
-                        showToast(r?.message || 'Error deleting payslip', 'error');
+                        showToast(r && r.message ? r.message : 'Error deleting payslip', 'error');
                     }
                 }
             );
         }
 
-        async function generateForAll() {
-            const month = document.getElementById('filterMonth').value || (new Date().getMonth() + 1);
-            const year = document.getElementById('filterYear').value || new Date().getFullYear();
-            showConfirmDialog('Generate for All Employees', `Generate payslips for ALL active employees for ${months[month]} ${year}? Existing payslips for this period will be updated.`, 'Generate', 'btn-success', async function() {
-                const d = await apiCall('/employees');
-                if (!d || !d.success) { showToast('Could not load employees', 'error'); return; }
-                const active = d.employees.filter(e => e.status === 'active' && e.role !== 'admin');
-                if (active.length === 0) { showToast('No active employees found', 'warning'); return; }
-                let done = 0, failed = 0;
-                for (const emp of active) {
-                    const r = await apiCall('/payroll/generate', 'POST', {
-                        employee_id: emp.id,
-                        month, year,
-                        basic_salary: emp.salary || 0,
-                        allowances: 0,
-                        deductions: 0
-                    });
-                    if (r && r.success) done++; else failed++;
+        async function downloadMonthZip() {
+            const month = document.getElementById('filterMonth').value;
+            const year = document.getElementById('filterYear').value;
+            if (!month || !year) {
+                showToast('Select a specific Month and Year first', 'warning');
+                return;
+            }
+            const d = await apiCall('/payroll/all?month=' + month + '&year=' + year + '&limit=1000');
+            if (!d || !d.success || !d.payroll.length) {
+                showToast('No payslips for this period', 'warning');
+                return;
+            }
+            showToast('Fetching payslips (' + d.payroll.length + ')...', 'info');
+            try {
+                const full = [];
+                for (const p of d.payroll) {
+                    const det = await apiCall('/payroll/' + p.id);
+                    if (det && det.success) full.push(det.payslip);
                 }
-                showToast(`Generated payslips for ${done} employee(s)${failed ? ', ' + failed + ' failed' : ''}`, done > 0 ? 'success' : 'error');
-                loadPayroll();
-            });
+                if (!full.length) { showToast('Could not load payslips', 'error'); return; }
+                await zipPayslips(full, 'payslips_' + month + '_' + year + '.zip');
+                showToast('ZIP downloaded', 'success');
+            } catch (e) {
+                showToast('Failed to create ZIP', 'error');
+            }
         }
     </script>
 </body>

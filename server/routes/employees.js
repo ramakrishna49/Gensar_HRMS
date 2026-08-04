@@ -169,6 +169,7 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
             salary, role, address, date_of_birth, gender,
             permanent_address, languages_spoken, marital_status, personal_email,
             qualification, specialization, pan_number, aadhaar_number, passport_number,
+            uan_number, pf_number, esi_number,
             bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id
         } = req.body;
 
@@ -195,9 +196,11 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
              date_of_birth, gender, must_change_password,
              permanent_address, languages_spoken, marital_status, personal_email,
              qualification, specialization, pan_number, aadhaar_number, passport_number,
+             uan_number, pf_number, esi_number,
              bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id) 
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1,
-             $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28) 
+             $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
+             $28, $29, $30, $31) 
             RETURNING id, employee_id, first_name, last_name, email, role`,
             [
                 employee_id, first_name, last_name, email, phone, password_hash,
@@ -206,6 +209,7 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
                 date_of_birth || null, gender || null,
                 permanent_address || null, languages_spoken || null, marital_status || null, personal_email || null,
                 qualification || null, specialization || null, pan_number || null, aadhaar_number || null, passport_number || null,
+                uan_number || null, pf_number || null, esi_number || null,
                 bank_name || null, bank_branch || null, bank_account || null, bank_ifsc || null,
                 reporting_manager_id || null
             ]
@@ -235,6 +239,7 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
             emergency_contact, emergency_contact_name,
             permanent_address, languages_spoken, marital_status, personal_email,
             qualification, specialization, pan_number, aadhaar_number, passport_number,
+            uan_number, pf_number, esi_number,
             bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id
         } = req.body;
 
@@ -306,19 +311,23 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
             pan_number = COALESCE($23, pan_number),
             aadhaar_number = COALESCE($24, aadhaar_number),
             passport_number = COALESCE($25, passport_number),
-            bank_name = COALESCE($26, bank_name),
-            bank_branch = COALESCE($27, bank_branch),
-            bank_account = COALESCE($28, bank_account),
-            bank_ifsc = COALESCE($29, bank_ifsc),
-            reporting_manager_id = CASE WHEN $30::text = '' THEN NULL ELSE COALESCE($30::int, reporting_manager_id) END,
+            uan_number = COALESCE($26, uan_number),
+            pf_number = COALESCE($27, pf_number),
+            esi_number = COALESCE($28, esi_number),
+            bank_name = COALESCE($29, bank_name),
+            bank_branch = COALESCE($30, bank_branch),
+            bank_account = COALESCE($31, bank_account),
+            bank_ifsc = COALESCE($32, bank_ifsc),
+            reporting_manager_id = CASE WHEN $33::text = '' THEN NULL ELSE COALESCE($33::int, reporting_manager_id) END,
             updated_at = NOW()
-            WHERE id = $31
+            WHERE id = $34
             RETURNING id, employee_id, first_name, last_name, email, role`,
             [first_name, last_name, email, phone, department_id, designation_id, 
              salary, role, status, address, joining_date, gender, date_of_birth,
              blood_group, emergency_contact, emergency_contact_name,
              permanent_address, languages_spoken, marital_status, personal_email,
              qualification, specialization, pan_number, aadhaar_number, passport_number,
+             uan_number, pf_number, esi_number,
              bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id, req.params.id]
         );
         

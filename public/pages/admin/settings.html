@@ -85,6 +85,7 @@
                         <div class="form-group"><label>Email</label><input type="email" class="form-control" id="companyEmail"></div>
                         <div class="form-group"><label>Phone</label><input type="tel" class="form-control" id="companyPhone"></div>
                         <div class="form-group"><label>Website</label><input type="url" class="form-control" id="companyWebsite"></div>
+                        <div class="form-group"><label>Company Logo URL (shown on payslips)</label><input type="url" class="form-control" id="companyLogo" placeholder="https://example.com/logo.png"><small style="color:var(--text-secondary);">Paste a public image URL. Used on the payslip header.</small></div>
                         <div class="form-group"><label>Address</label><textarea class="form-control" id="companyAddress" rows="3"></textarea></div>
                         <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Company Info</button>
                     </form>
@@ -262,6 +263,7 @@
                     document.getElementById('companyEmail').value = d.company.email || '';
                     document.getElementById('companyPhone').value = d.company.phone || '';
                     document.getElementById('companyWebsite').value = d.company.website || '';
+                    document.getElementById('companyLogo').value = d.company.logo || '';
                     document.getElementById('companyAddress').value = d.company.address || '';
                 }
                 if (d.settings) {
@@ -282,6 +284,7 @@
                 email: document.getElementById('companyEmail').value,
                 phone: document.getElementById('companyPhone').value,
                 website: document.getElementById('companyWebsite').value,
+                logo: document.getElementById('companyLogo').value,
                 address: document.getElementById('companyAddress').value
             };
             const r = await apiCall('/settings/company', 'PUT', data);

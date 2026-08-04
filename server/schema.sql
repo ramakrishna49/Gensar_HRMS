@@ -404,3 +404,47 @@ UPDATE leave_types SET is_active = 0 WHERE name = 'Earned Leave';
 -- Add team_lead role (idempotent: drop + recreate the role check constraint).
 ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_role_check;
 ALTER TABLE employees ADD CONSTRAINT employees_role_check CHECK (role IN ('admin', 'hr', 'manager', 'team_lead', 'employee'));
+
+-- ============================================
+-- PAYROLL MODULE MIGRATIONS (idempotent)
+-- ============================================
+
+-- Employee master: statutory / compliance identifiers shown on the payslip.
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS uan_number TEXT;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS pf_number TEXT;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS esi_number TEXT;
+
+-- Payroll: attendance summary for the pay period.
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS working_days INT DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS present_days INT DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS leave_days INT DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS lop_days INT DEFAULT 0;
+
+-- Payroll: granular earnings (kept separate from the legacy `allowances` column).
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS hra DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS conveyance DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS medical DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS special_allowance DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS bonus DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS incentive DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS other_allowance DECIMAL(10,2) DEFAULT 0;
+
+-- Payroll: employee deductions (kept separate from the legacy `deductions` column).
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS pf DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS esi DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS professional_tax DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS income_tax DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS loan_deduction DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS advance_salary DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS other_deduction DECIMAL(10,2) DEFAULT 0;
+
+-- Payroll: employer contributions.
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS employer_pf DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS employer_esi DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS employer_contribution DECIMAL(10,2) DEFAULT 0;
+
+-- Payroll: computed values (stored for fast reporting / history).
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS gross_salary DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS total_deductions DECIMAL(10,2) DEFAULT 0;
+
+CREATE INDEX IF NOT EXISTS idx_payroll_status ON payroll(status);
