@@ -18,15 +18,23 @@ router.get('/company', verifyToken, async (req, res) => {
 router.put('/company', verifyToken, isAdmin, async (req, res) => {
     try {
         const { name, email, phone, address, website, logo } = req.body;
-        const result = await query(
+        let result = await query(
             `UPDATE companies SET name = COALESCE($1, name), email = COALESCE($2, email), 
             phone = COALESCE($3, phone), address = COALESCE($4, address), website = COALESCE($5, website),
             logo = CASE WHEN $6::text = '' THEN NULL ELSE COALESCE($6, logo) END,
             updated_at = NOW() WHERE id = (SELECT id FROM companies LIMIT 1) RETURNING *`,
             [name, email, phone, address, website, logo]
         );
+        if (result.rows.length === 0) {
+            result = await query(
+                `INSERT INTO companies (name, email, phone, address, website, logo, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NOW(), NOW()) RETURNING *`,
+                [name || null, email || null, phone || null, address || null, website || null, logo || null]
+            );
+        }
         res.json({ success: true, company: result.rows[0] });
     } catch (error) {
+        console.error('Update company error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

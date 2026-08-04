@@ -164,15 +164,37 @@ async function renderPayslipPdf(p, company) {
             // Header band
             doc.rect(0, 0, PW, 118).fill('#4F46E5');
             doc.rect(0, 112, PW, 6).fill('#818CF8');
-            doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(20).text(p.company_name || company.name, ml, 24);
+            let nameX = ml, nameY = 34;
+            if (company.logo) {
+                try {
+                    const logoPath = path.isAbsolute(company.logo)
+                        ? company.logo
+                        : path.join(__dirname, '../../public', company.logo.replace(/^\/+/, ''));
+                    if (fs.existsSync(logoPath)) {
+                        doc.image(logoPath, ml, 16, { height: 56 });
+                        nameX = ml + 64;
+                        nameY = 40;
+                    }
+                } catch (e) { /* logo is optional - fall back to text only */ }
+            }
+            doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(20).text(p.company_name || company.name, nameX, nameY);
             doc.font(FONT_REG).fontSize(9);
             let hy = 48;
-            const hlines = [];
-            if (company.address) hlines.push(company.address);
-            if (company.phone) hlines.push(`Phone: ${company.phone}`);
-            if (company.email) hlines.push(`Email: ${company.email}`);
-            if (company.website) hlines.push(`Web: ${company.website}`);
-            hlines.forEach(l => { doc.fill('#E0E7FF').text(l, ml, hy); hy += 12; });
+            if (company.logo) {
+                const hlines0 = [];
+                if (company.address) hlines0.push(company.address);
+                if (company.phone) hlines0.push(`Phone: ${company.phone}`);
+                if (company.email) hlines0.push(`Email: ${company.email}`);
+                if (company.website) hlines0.push(`Web: ${company.website}`);
+                hlines0.forEach(l => { doc.fill('#E0E7FF').text(l, ml + 64, hy); hy += 12; });
+            } else {
+                const hlines = [];
+                if (company.address) hlines.push(company.address);
+                if (company.phone) hlines.push(`Phone: ${company.phone}`);
+                if (company.email) hlines.push(`Email: ${company.email}`);
+                if (company.website) hlines.push(`Web: ${company.website}`);
+                hlines.forEach(l => { doc.fill('#E0E7FF').text(l, ml, hy); hy += 12; });
+            }
             doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(15).text('PAYSLIP', mr, 40, { align: 'right' });
             doc.font(FONT_REG).fontSize(11).text(`${MONTHS[p.month] || ''} ${p.year}`, mr, 62, { align: 'right' });
             doc.fill('#000000');
@@ -180,7 +202,7 @@ async function renderPayslipPdf(p, company) {
             let y = 140;
 
             // Employee details card
-            doc.roundedRect(ml, y, PW - 100, 132, 8).fill('#EEF2FF');
+            doc.roundedRect(ml, y, PW - 100, 150, 8).fill('#EEF2FF');
             doc.fill('#4F46E5').font(FONT_BOLD).fontSize(11).text('EMPLOYEE DETAILS', ml + 14, y + 12);
             doc.fill('#1F2937').font(FONT_REG).fontSize(9);
             const empLeft = [
@@ -189,7 +211,8 @@ async function renderPayslipPdf(p, company) {
                 ['Designation', p.designation_name || '-'],
                 ['Department', p.department_name || '-'],
                 ['Date of Joining', formatDateOnly(p.joining_date)],
-                ['PAN Number', p.pan_number || '-']
+                ['PAN Number', p.pan_number || '-'],
+                ['UAN Number', p.uan_number || '-']
             ];
             const empRight = [
                 ['Pay Period', `${MONTHS[p.month] || ''} ${p.year}`],
@@ -197,13 +220,14 @@ async function renderPayslipPdf(p, company) {
                 ['Present Days', p.present_days || 0],
                 ['Leave Days', p.leave_days || 0],
                 ['LOP Days', p.lop_days || 0],
+                ['PF Number', p.pf_number || '-'],
                 ['Bank Account', p.bank_account || '-']
             ];
             let ex = ml + 14, ey = y + 30;
             empLeft.forEach(([k, v]) => { doc.fill('#6B7280').text(k, ex, ey); doc.fill('#1F2937').text(String(v), ex + 95, ey); ey += 16; });
             let fx = ml + 14 + (PW - 100) / 2, fy = y + 30;
             empRight.forEach(([k, v]) => { doc.fill('#6B7280').text(k, fx, fy); doc.fill('#1F2937').text(String(v), fx + 95, fy); fy += 16; });
-            y += 132 + 18;
+            y += 150 + 18;
 
             // Earnings / Deductions tables
             const half = (PW - 100) / 2;

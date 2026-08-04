@@ -198,6 +198,7 @@ function buildPayslipHTML(p) {
                     ppKv('Department', ppEsc(p.department_name || '-')) +
                     ppKv('Date of Joining', ppEsc(p.joining_date ? String(p.joining_date).substring(0, 10) : '-')) +
                     ppKv('PAN Number', ppEsc(p.pan_number || '-')) +
+                    ppKv('UAN Number', ppEsc(p.uan_number || '-')) +
                 '</div>' +
                 '<div style="flex:1;min-width:0;">' +
                     ppKv('Pay Period', ppEsc(period)) +
@@ -205,6 +206,7 @@ function buildPayslipHTML(p) {
                     ppKv('Present Days', ppNum(p.present_days)) +
                     ppKv('Leave Days', ppNum(p.leave_days)) +
                     ppKv('LOP Days', ppNum(p.lop_days)) +
+                    ppKv('PF Number', ppEsc(p.pf_number || '-')) +
                     ppKv('Bank Account', ppEsc(p.bank_account || '-')) +
                 '</div>' +
             '</div>' +

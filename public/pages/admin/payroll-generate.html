@@ -334,7 +334,9 @@
                 chip('IFSC', emp.bank_ifsc || '-')
             ];
             document.getElementById('profileChips').innerHTML = chips.join('');
-            document.getElementById('emailChips').innerHTML = '<span class="pp-chip"><b>' + ppEsc(emp.email || 'No email on profile') + '</b></span>';
+            document.getElementById('emailChips').innerHTML = emp.personal_email
+                ? '<span class="pp-chip"><b>' + ppEsc(emp.personal_email) + '</b></span>'
+                : '<span class="pp-chip" style="color:var(--pp-danger);border-color:var(--pp-danger);"><b>No personal email set - email will be skipped</b></span>';
             document.getElementById('profileBanner').style.display = 'flex';
         }
 
@@ -385,7 +387,7 @@
                 pan_number: profile.pan_number, uan_number: profile.uan_number,
                 pf_number: profile.pf_number, esi_number: profile.esi_number,
                 bank_name: profile.bank_name, bank_account: profile.bank_account,
-                bank_ifsc: profile.bank_ifsc, employee_email: profile.email,
+                bank_ifsc: profile.bank_ifsc, employee_email: profile.personal_email,
                 month: v.month, year: v.year,
                 working_days: v.working_days, present_days: v.present_days,
                 leave_days: v.leave_days, lop_days: v.lop_days,
@@ -444,8 +446,8 @@
                 const r = await apiCall('/payroll/generate', 'POST', body);
                 if (r && r.success) {
                     const emailMsg = r.email_sent && r.email_sent.success
-                        ? 'Payslip generated and emailed to ' + (r.email_sent.to || selectedProfile.email)
-                        : 'Payslip generated. Email skipped (' + ((r.email_sent && r.email_sent.reason) || 'no email configured') + ')';
+                        ? 'Payslip generated and emailed to ' + (r.email_sent.to || selectedProfile.personal_email || 'personal email')
+                        : 'Payslip generated. ' + (((r.email_sent && r.email_sent.reason) || 'No personal email set on employee profile - email skipped'));
                     showToast(emailMsg, r.email_sent && r.email_sent.success ? 'success' : 'warning');
                     setTimeout(() => { window.location.href = 'payroll.html'; }, 1800);
                 } else {

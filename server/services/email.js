@@ -50,7 +50,7 @@ async function sendPayslipEmail(email, filename, pdfBuffer) {
                 contentType: 'application/pdf'
             }]
         });
-        return { success: true };
+        return { success: true, to: email };
     } catch (error) {
         console.error('Failed to send payslip email:', error.message);
         return { success: false, reason: error.message };
