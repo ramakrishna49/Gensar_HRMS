@@ -160,36 +160,37 @@ function buildPayslipHTML(p) {
     const totalBonus = totals.bonus;
     const totalEmployer = totals.employerTotal;
     const logoHtml = company.logo
-        ? '<img src="' + ppEsc(company.logo) + '" alt="logo" style="width:175px;max-width:175px;object-fit:contain;vertical-align:middle;" onerror="this.style.display=\'none\';">'
+        ? '<img src="' + ppEsc(company.logo) + '" alt="logo" style="width:175px;max-width:175px;height:auto;object-fit:contain;flex-shrink:0;vertical-align:middle;" onerror="this.style.display=\'none\';">'
         : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
     return '<div class="pp-sheet ppslip" style="width:820px;min-height:1123px;margin:0 auto;background:#FFFFFF;color:#222222;font-family:Arial,\'Helvetica Neue\',Helvetica,sans-serif;position:relative;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
         '.ppslip *{box-sizing:border-box;}' +
         '.ppslip table{border-collapse:collapse;width:100%;}' +
-        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;letter-spacing:0.5px;padding:6px 10px;border-left:4px solid #7c6ca8;border:1px solid #d5cee6;border-bottom:none;}' +
+        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;padding:6px 10px;border-left:4px solid #7c6ca8;border:1px solid #d5cee6;margin-bottom:8px;display:flex;align-items:center;gap:6px;}' +
         '.ppslip .pp-lbl{color:#333333;font-size:11.5px;font-weight:400;white-space:nowrap;padding:5.5px 10px;}' +
         '.ppslip .pp-val{font-size:11.5px;font-weight:700;color:#111111;padding:5.5px 10px;text-align:right;}' +
         '.ppslip .pp-val-left{font-size:11.5px;font-weight:700;color:#111111;padding:5.5px 10px;text-align:left;}' +
         '.ppslip .total-row td{background-color:#efeafb;font-weight:700;color:#38286b;}' +
-        '.ppslip .pp-emp td{width:25%;}' +
+        '.ppslip .pp-emp td{width:25%;font-size:11.5px;}' +
         '.ppslip .pp-emp td:nth-child(odd){background-color:#fbf9fc;color:#333333;}' +
         '.ppslip .pp-emp td:nth-child(even){color:#111111;font-weight:600;}' +
         '.ppslip .pp-fin th{background-color:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;border:1px solid #d5cee6;padding:5.5px 10px;text-align:left;}' +
         '.ppslip .pp-fin td{border:1px solid #d5cee6;padding:5.5px 10px;font-size:11.5px;}' +
         '.ppslip .pp-fin .text-right{text-align:right;}' +
+        '.ppslip .pp-fin{margin-bottom:12px;}' +
         '</style>' +
         '<!-- HEADER -->' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #7c6ca8;padding-bottom:16px;margin-bottom:16px;">' +
             '<div style="display:flex;align-items:center;gap:15px;">' +
                 '<div style="flex-shrink:0;">' + logoHtml + '</div>' +
-                '<div style="width:1px;height:95px;background:#7c6ca8;margin:0 5px;flex-shrink:0;"></div>' +
-                '<div style="flex:1;min-width:0;">' +
+                '<div style="width:1px;height:95px;background:#7c6ca8;margin:0 5px;flex-shrink:0;align-self:center;"></div>' +
+                '<div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;">' +
                     '<div style="font-size:19px;font-weight:900;color:#111111;letter-spacing:0.2px;margin-bottom:5px;">' + ppEsc(name) + '</div>' +
-                    (addrLine1 ? '<div style="font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(addrLine1) + '</div>' : '') +
-                    (addrLine2 ? '<div style="font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(addrLine2) + '</div>' : '') +
-                    '<div style="font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">Email: ' + ppEsc(company.email || 'hr@gensaritsolutions.com') + '</div>' +
-                    '<div style="font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(company.website || 'www.gensarhrms.in') + '</div>' +
-                    '<div style="font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">Phone: ' + ppEsc(company.phone || '+91 40 4855 6600') + '</div>' +
+                    (addrLine1 ? '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(addrLine1) + '</div>' : '') +
+                    (addrLine2 ? '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(addrLine2) + '</div>' : '') +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">Email: ' + ppEsc(company.email || 'hr@gensaritsolutions.com') + '</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(company.website || 'www.gensarhrms.in') + '</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">Phone: ' + ppEsc(company.phone || '+91 40 4855 6600') + '</div>' +
                 '</div>' +
             '</div>' +
             '<div style="width:150px;border:1px solid #7c6ca8;border-radius:6px;overflow:hidden;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
@@ -238,7 +239,7 @@ function buildPayslipHTML(p) {
                 '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">TOTAL DEDUCTIONS (B)</div>' +
                 '<div style="font-size:14.5px;font-weight:700;color:#d97706;">' + ppFormatINR(totalDeductions) + '</div></div>' +
             '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
-                '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">NET SALARY PAYABLE (A + C - B - D)</div>' +
+                '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">NET SALARY PAYABLE (A - B + C)</div>' +
                 '<div style="font-size:14.5px;font-weight:700;color:#2e7d32;">' + ppFormatINR(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +
