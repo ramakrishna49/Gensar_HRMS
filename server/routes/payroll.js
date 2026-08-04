@@ -146,10 +146,12 @@ async function fetchPayslipWithProfile(id, userId, isPrivileged) {
 }
 
 // Server-side A4 payslip render (used for email fallback + legacy /:id/pdf download).
-// Layout matches the designer reference: purple (#7c6ca8) header with logo + divider +
-// PAYSLIP badge, section bars, 4-col employee table, Earnings (A) / Deductions (B),
-// summary cards Gross (A) / Deductions (B) / Net, words, Attendance + Bonus (C),
-// Employer Contributions, footer with signature. Single A4 page.
+// Layout matches the designer reference exactly: 820px container, purple #7c6ca8 border,
+// header with logo+divider+badge, section bars with left purple border,
+// 4-col employee table, Earnings (A) / Deductions (B) side-by-side,
+// summary cards (white bg, border), net salary in words (single line, italic),
+// Attendance + Bonus (C) bottom row, Employer Contributions single column,
+// footer with notes + signature. Single A4 page.
 async function renderPayslipPdf(p, company) {
     return new Promise((resolve, reject) => {
         try {
@@ -160,8 +162,9 @@ async function renderPayslipPdf(p, company) {
             doc.on('error', reject);
 
             const PW = doc.page.width;
-            const ML = 40;
-            const CW = PW - 80;
+            const ML = 30;
+            const CW = PW - 60;
+            const PR = 4;
 
             if (fontsReady) {
                 doc.registerFont('Roboto', path.join(FONT_DIR, 'Roboto-Regular.ttf'));
@@ -177,19 +180,47 @@ async function renderPayslipPdf(p, company) {
             const DED = '#d97706';
             const NET = '#2e7d32';
             const BODY = '#222222';
+            const FL = FONT_REG;
+            const FB = FONT_BOLD;
 
             const sectionBar = (title, x, y, w) => {
                 doc.rect(x, y, w, 18).fill(BAR);
-                doc.fill(DARK).font(FONT_BOLD).fontSize(8).text(title, x + 8, y + 4);
+                doc.fill(DARK).font(FB).fontSize(11.5).text(title, x + 10, y + 5);
                 return y + 18;
             };
 
+            const drawMoneyTable = (x, title, rows, total, totalLabel, baseY) => {
+                const w = (CW - 12) / 2;
+                let ty = baseY;
+                doc.rect(x, ty, w, 18).fill(BAR);
+                doc.fill(DARK).font(FB).fontSize(11.5).text(title, x + 8, ty + 4);
+                doc.fill(DARK).font(FB).fontSize(11.5).text('AMOUNT (\u20B9)', x + w - 8, ty + 4, { align: 'right' });
+                ty += 18;
+                const r0 = ty;
+                rows.forEach(([k, v]) => {
+                    doc.fill(BODY).font(FL).fontSize(11.5).text(k, x + 8, ty + 3);
+                    doc.font(FB).fontSize(11.5).text(formatINR(v), x + w - 8, ty + 3, { align: 'right' });
+                    doc.strokeColor(BORDER).lineWidth(0.5).moveTo(x, ty + 14).lineTo(x + w, ty + 14).stroke();
+                    ty += 14;
+                });
+                doc.rect(x, ty, w, 18).fill(TOTAL);
+                doc.fill(DARK).font(FB).fontSize(11.5).text(totalLabel, x + 8, ty + 4);
+                doc.font(FB).fontSize(11.5).text(formatINR(total), x + w - 8, ty + 4, { align: 'right' });
+                doc.strokeColor(BORDER).lineWidth(0.8).rect(x, r0, w, (ty + 18) - r0).stroke();
+                ty += 18;
+                return ty;
+            };
+
+            // ---- Container border ----
+            doc.strokeColor(PURPLE).lineWidth(1).rect(ML, 10, CW, doc.page.height - 20).stroke();
+
+            let y = 22;
+
             // ---- Header: logo | divider | company info + PAYSLIP badge ----
-            let y = 16;
-            const badgeW = 96;
+            const badgeW = 150;
             const badgeX = PW - ML - badgeW;
-            const tx = ML + 150 + 14;
-            const infoW = badgeX - tx - 16;
+            const tx = ML + 175 + 10;
+            const infoW = badgeX - tx - 10;
 
             if (company.logo) {
                 try {
@@ -197,41 +228,45 @@ async function renderPayslipPdf(p, company) {
                         ? company.logo
                         : path.join(__dirname, '../../public', company.logo.replace(/^\/+/, ''));
                     if (fs.existsSync(logoPath)) {
-                        doc.image(logoPath, ML, y, { height: 46 });
+                        doc.image(logoPath, ML, y, { width: 175 });
                     }
-                } catch (e) { /* logo is optional - fall back to text only */ }
+                } catch (e) { /* logo is optional */ }
             }
 
-            doc.fill(DARK).font(FONT_BOLD).fontSize(12).text(p.company_name || company.name || 'Gensar IT Solutions', tx, y, { width: infoW });
+            doc.fill(DARK).font(FB).fontSize(19).text(p.company_name || company.name || 'GENSAR IT SOLUTIONS PVT. LTD.', tx, y, { width: infoW });
             const hlines = [];
-            if (company.address) hlines.push(company.address);
-            if (company.phone) hlines.push(`Phone: ${company.phone}`);
-            if (company.email) hlines.push(`Email: ${company.email}`);
-            if (company.website) hlines.push(`Web: ${company.website}`);
-            doc.font(FONT_REG).fontSize(7.5).fill('#555555');
-            let iy = y + 17;
+            if (company.address) {
+                const addr = company.address;
+                const parts = addr.split(',');
+                hlines.push(parts.slice(0, 3).join(',').trim());
+                const rest = parts.slice(3).join(',').trim();
+                if (rest) hlines.push(rest);
+            }
+            if (company.phone) hlines.push('Phone: ' + company.phone);
+            if (company.email) hlines.push('Email: ' + company.email);
+            if (company.website) hlines.push('Web: ' + company.website);
+            doc.font(FL).fontSize(10.5).fill('#222222');
+            let iy = y + 20;
             hlines.forEach(l => {
-                const h = doc.heightOfString(l, { width: infoW });
                 doc.text(l, tx, iy, { width: infoW });
-                iy += h + 2;
+                iy += 14;
             });
 
-            const divH = Math.max(iy - y, 60);
-            doc.rect(ML + 146, y, 1, divH).fill(PURPLE);
+            const divH = Math.max(iy - y, 95);
+            doc.rect(ML + 175, y, 1, divH).fill(PURPLE);
 
             doc.strokeColor(BORDER).lineWidth(1);
-            doc.roundedRect(badgeX, y, badgeW, 58, 5).stroke();
-            doc.rect(badgeX + 0.5, y + 0.5, badgeW - 1, 24).fill(PURPLE);
-            doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(13).text('PAYSLIP', badgeX, y + 6, { width: badgeW, align: 'center' });
-            doc.fill(DARK).font(FONT_BOLD).fontSize(10).text(`${MONTHS[p.month] || ''} ${p.year}`, badgeX, y + 30, { width: badgeW, align: 'center' });
+            doc.roundedRect(badgeX, y, badgeW, 56, 6).stroke();
+            doc.rect(badgeX, y, badgeW, 26).fill(PURPLE);
+            doc.fill('#FFFFFF').font(FB).fontSize(15).text('PAYSLIP', badgeX, y + 7, { width: badgeW, align: 'center' });
+            doc.fill('#111111').font(FB).fontSize(13.5).text(`${PP_MONTHS[p.month] || ''} ${p.year}`, badgeX, y + 30, { width: badgeW, align: 'center' });
 
-            doc.rect(ML, y + divH + 10, CW, 1.5).fill(PURPLE);
-            y += divH + 22;
+            y += divH + 16;
 
-            // ---- Employee details (4-col table, 7 rows) ----
+            // ---- Employee details (4-col table) ----
             y = sectionBar('EMPLOYEE DETAILS', ML, y, CW);
             const colW = CW / 2;
-            const lblW = 92;
+            const lblW = 95;
             const empLeft = [
                 ['Employee ID', p.emp_id || '-'],
                 ['Employee Name', `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-'],
@@ -242,7 +277,7 @@ async function renderPayslipPdf(p, company) {
                 ['UAN Number', p.uan_number || '-']
             ];
             const empRight = [
-                ['Pay Period', `${MONTHS[p.month] || ''} ${p.year}`],
+                ['Pay Period', `${PP_MONTHS[p.month] || ''} ${p.year}`],
                 ['Working Days', p.working_days || 0],
                 ['Present Days', p.present_days || 0],
                 ['Leave Days', p.leave_days || 0],
@@ -253,10 +288,12 @@ async function renderPayslipPdf(p, company) {
             const t0 = y;
             const rowH = 16;
             for (let i = 0; i < 7; i++) {
-                doc.fill('#666666').font(FONT_REG).fontSize(7.5).text(empLeft[i][0], ML, y + 3);
-                doc.fill(BODY).font(FONT_BOLD).text(String(empLeft[i][1]), ML + lblW, y + 3, { width: colW - lblW - 8 });
-                doc.fill('#666666').font(FONT_REG).text(empRight[i][0], ML + colW, y + 3);
-                doc.fill(BODY).font(FONT_BOLD).text(String(empRight[i][1]), ML + colW + lblW, y + 3, { width: colW - lblW - 8 });
+                const rowBg = i % 2 === 0 ? '#fbf9fc' : '#FFFFFF';
+                doc.fill(rowBg).rect(ML, y, CW, rowH).fill();
+                doc.fill('#333333').font(FL).fontSize(11.5).text(empLeft[i][0], ML + 8, y + 3);
+                doc.fill(BODY).font(FB).fontSize(11.5).text(String(empLeft[i][1]), ML + lblW, y + 3, { width: colW - lblW - 8 });
+                doc.fill('#333333').font(FL).fontSize(11.5).text(empRight[i][0], ML + colW + 8, y + 3);
+                doc.fill(BODY).font(FB).fontSize(11.5).text(String(empRight[i][1]), ML + colW + lblW, y + 3, { width: colW - lblW - 8 });
                 doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML, y + rowH).lineTo(ML + CW, y + rowH).stroke();
                 y += rowH;
             }
@@ -264,47 +301,23 @@ async function renderPayslipPdf(p, company) {
             y += 12;
 
             // ---- Earnings (A) / Deductions (B) tables ----
-            const halfW = (CW - 12) / 2;
-            const drawMoneyTable = (x, title, rows, total, totalLabel, baseY) => {
-                let ty = baseY;
-                doc.rect(x, ty, halfW, 18).fill(BAR);
-                doc.fill(DARK).font(FONT_BOLD).fontSize(8).text(title, x + 8, ty + 4);
-                doc.fill(DARK).text('AMOUNT (₹)', x + halfW - 8, ty + 4, { align: 'right' });
-                ty += 18;
-                const r0 = ty;
-                rows.forEach(([k, v]) => {
-                    doc.fill(BODY).font(FONT_REG).fontSize(7.5).text(k, x + 8, ty + 3);
-                    doc.font(FONT_BOLD).text(formatINR(v), x + halfW - 8, ty + 3, { align: 'right' });
-                    doc.strokeColor(BORDER).lineWidth(0.5).moveTo(x, ty + 14).lineTo(x + halfW, ty + 14).stroke();
-                    ty += 14;
-                });
-                doc.rect(x, ty, halfW, 18).fill(TOTAL);
-                doc.fill(DARK).font(FONT_BOLD).fontSize(8).text(totalLabel, x + 8, ty + 4);
-                doc.font(FONT_BOLD).text(formatINR(total), x + halfW - 8, ty + 4, { align: 'right' });
-                doc.strokeColor(BORDER).lineWidth(0.8).rect(x, r0, halfW, (ty + 18) - r0).stroke();
-                ty += 18;
-                return ty;
-            };
-
             const earningsRows = [
                 ['Basic Salary', num(p.basic_salary)],
                 ['HRA', num(p.hra)],
-                ['Conveyance', num(p.conveyance)],
+                ['Conveyance Allowance', num(p.conveyance)],
                 ['Medical Allowance', num(p.medical)],
                 ['Special Allowance', num(p.special_allowance)],
                 ['Other Allowance', num(p.other_allowance)]
             ];
             const deductionRows = [
-                ['Employee PF', num(p.pf)],
-                ['Employee ESI', num(p.esi)],
-                ['Professional Tax', num(p.professional_tax)],
-                ['Income Tax', num(p.income_tax)],
-                ['Loan Deduction', num(p.loan_deduction)],
-                ['Advance Salary', num(p.advance_salary)],
-                ['Other Deduction', num(p.other_deduction)]
-            ];
+                ['PF Contribution', num(p.pf), 'PF'],
+                ['ESI Contribution', num(p.esi), 'ESI'],
+                ['Professional Tax', num(p.professional_tax), 'PT'],
+                ['Income Tax', num(p.income_tax), 'IT'],
+                ['Other Deductions', num(p.other_deduction), 'OD']
+            ].filter(r => r[1] !== 0 || r[2] === 'OD').map(r => [r[0], r[1]]);
             const eyE = drawMoneyTable(ML, 'EARNINGS (A)', earningsRows, num(p.gross_salary), 'TOTAL EARNINGS (A)', y);
-            const eyD = drawMoneyTable(ML + halfW + 12, 'DEDUCTIONS (B)', deductionRows, num(p.total_deductions), 'TOTAL DEDUCTIONS (B)', y);
+            const eyD = drawMoneyTable(ML + (CW - 12) / 2 + 12, 'DEDUCTIONS (B)', deductionRows, num(p.total_deductions), 'TOTAL DEDUCTIONS (B)', y);
             y = Math.max(eyE, eyD) + 12;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
@@ -316,21 +329,23 @@ async function renderPayslipPdf(p, company) {
             ];
             let cx = ML;
             cards.forEach(card => {
-                doc.rect(cx, y, cardW, 42).fill(CARD);
-                doc.strokeColor(BORDER).lineWidth(0.8).rect(cx, y, cardW, 42).stroke();
-                doc.fill(card.color).font(FONT_BOLD).fontSize(7).text(card.label, cx + 4, y + 5, { width: cardW - 8, align: 'center' });
-                doc.font(FONT_BOLD).fontSize(12).text(formatINR(card.value), cx + 4, y + 20, { width: cardW - 8, align: 'center' });
+                doc.rect(cx, y, cardW, 40).fill(CARD);
+                doc.strokeColor(BORDER).lineWidth(0.8).rect(cx, y, cardW, 40).stroke();
+                doc.fill('#444444').font(FB).fontSize(10).text(card.label, cx + 4, y + 5, { width: cardW - 8, align: 'center' });
+                doc.font(FB).fontSize(14.5).text(formatINR(card.value), cx + 4, y + 20, { width: cardW - 8, align: 'center' });
                 cx += cardW + 12;
             });
-            y += 42 + 12;
+            y += 40 + 12;
 
-            // ---- Net salary in words ----
-            doc.rect(ML, y, CW, 24).fill(TOTAL);
-            doc.fill(DARK).font(FONT_BOLD).fontSize(8).text('NET SALARY IN WORDS', ML + 10, y + 4);
-            doc.fill(BODY).font(FONT_REG).fontSize(8).text(amountToWords(num(p.net_salary)), ML + 10, y + 13);
-            y += 24 + 12;
+            // ---- Net salary in words (single line, italic) ----
+            doc.rect(ML, y, CW, 22).fill(CARD);
+            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, y, CW, 22).stroke();
+            doc.fill(DARK).font(FB).fontSize(11.5).text('NET SALARY IN WORDS:', ML + 10, y + 5);
+            doc.fill(BODY).font(FL).fontSize(11.5).text(amountToWords(num(p.net_salary)), ML + 10, y + 5);
+            y += 22 + 12;
 
-            // ---- Attendance summary + Bonus (C) ----
+            // ---- Attendance summary + Bonus (C) bottom row ----
+            const halfW = (CW - 12) / 2;
             y = sectionBar('ATTENDANCE SUMMARY', ML, y, halfW);
             sectionBar('BONUS (C)', ML + halfW + 12, y, halfW);
             const attRows = [
@@ -343,13 +358,13 @@ async function renderPayslipPdf(p, company) {
                 ['Incentive', num(p.incentive)],
                 ['Attendance Incentive', num(p.bonus)],
                 ['Extra Work', num(p.extra_work)]
-            ];
+            ].filter(r => r[1] !== 0);
             const totalBonus = num(p.bonus) + num(p.incentive) + num(p.extra_work);
             let ay = y;
             const a0 = ay;
             attRows.forEach(([k, v]) => {
-                doc.fill(BODY).font(FONT_REG).fontSize(7.5).text(k, ML + 8, ay + 3);
-                doc.font(FONT_BOLD).text(String(v), ML + halfW - 8, ay + 3, { align: 'right' });
+                doc.fill(BODY).font(FL).fontSize(11.5).text(k, ML + 8, ay + 3);
+                doc.font(FB).fontSize(11.5).text(String(v), ML + halfW - 8, ay + 3, { align: 'right' });
                 doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML, ay + 14).lineTo(ML + halfW, ay + 14).stroke();
                 ay += 14;
             });
@@ -357,46 +372,56 @@ async function renderPayslipPdf(p, company) {
             let by = y;
             const b0 = by;
             bonusRows.forEach(([k, v]) => {
-                doc.fill(BODY).font(FONT_REG).fontSize(7.5).text(k, ML + halfW + 20, by + 3);
-                doc.font(FONT_BOLD).text(formatINR(v), ML + CW - 8, by + 3, { align: 'right' });
+                doc.fill(BODY).font(FL).fontSize(11.5).text(k, ML + halfW + 20, by + 3);
+                doc.font(FB).fontSize(11.5).text(formatINR(v), ML + CW - 8, by + 3, { align: 'right' });
                 doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML + halfW + 12, by + 14).lineTo(ML + CW, by + 14).stroke();
                 by += 14;
             });
             doc.rect(ML + halfW + 12, by, halfW, 18).fill(TOTAL);
-            doc.fill(DARK).font(FONT_BOLD).fontSize(8).text('TOTAL (C)', ML + halfW + 20, by + 4);
-            doc.font(FONT_BOLD).text(formatINR(totalBonus), ML + CW - 8, by + 4, { align: 'right' });
+            doc.fill(DARK).font(FB).fontSize(11.5).text('TOTAL (C)', ML + halfW + 20, by + 4);
+            doc.font(FB).fontSize(11.5).text(formatINR(totalBonus), ML + CW - 8, by + 4, { align: 'right' });
             doc.strokeColor(BORDER).lineWidth(0.8).rect(ML + halfW + 12, b0, halfW, (by + 18) - b0).stroke();
             y = Math.max(ay, by + 18) + 12;
 
-            // ---- Employer contributions (4 columns) ----
+            // ---- Employer Contributions (single column) ----
             y = sectionBar('EMPLOYER CONTRIBUTIONS', ML, y, CW);
-            const ecol = CW / 4;
-            const eheads = ['EMPLOYER PF', 'EMPLOYER ESI', 'EMPLOYER OTHER', 'TOTAL'];
-            doc.rect(ML, y, CW, 16).fill(BAR);
-            eheads.forEach((h, i) => { doc.fill(DARK).font(FONT_BOLD).fontSize(7).text(h, ML + i * ecol + 8, y + 4); });
-            y += 16;
             const empTotal = num(p.employer_pf) + num(p.employer_esi) + num(p.employer_contribution);
-            const evals = [
-                formatINR(num(p.employer_pf)),
-                formatINR(num(p.employer_esi)),
-                formatINR(num(p.employer_contribution)),
-                formatINR(empTotal)
+            const eRows = [
+                ['Employer PF Contribution', num(p.employer_pf)],
+                ['Employer ESI Contribution', num(p.employer_esi)],
+                ['Employer Other Contribution', num(p.employer_contribution)]
             ];
-            doc.rect(ML, y, CW, 18).fill(CARD);
-            doc.rect(ML + 3 * ecol, y, ecol, 18).fill(TOTAL);
-            evals.forEach((v, i) => { doc.fill(BODY).font(FONT_BOLD).fontSize(8).text(v, ML + i * ecol + 8, y + 5); });
-            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, y - 16, CW, 34).stroke();
+            const er0 = y;
+            eRows.forEach(([k, v]) => {
+                doc.fill(BODY).font(FL).fontSize(11.5).text(k, ML + 8, y + 3);
+                doc.font(FB).fontSize(11.5).text(formatINR(v), ML + CW - 8, y + 3, { align: 'right' });
+                doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML, y + 14).lineTo(ML + CW, y + 14).stroke();
+                y += 14;
+            });
+            doc.rect(ML, y, CW, 18).fill(TOTAL);
+            doc.fill(DARK).font(FB).fontSize(11.5).text('TOTAL EMPLOYER CONTRIBUTION', ML + 8, y + 4);
+            doc.font(FB).fontSize(11.5).text(formatINR(empTotal), ML + CW - 8, y + 4, { align: 'right' });
+            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, er0, CW, (y + 18) - er0).stroke();
             y += 18 + 12;
 
             // ---- Footer: notes + signature ----
-            y = Math.max(y, 760);
-            doc.fill('#666666').font(FONT_REG).fontSize(7).text('This is a system generated payslip. No signature required.', ML, y);
-            doc.fill('#999999').font(FONT_REG).fontSize(7).text(`Generated on ${new Date().toLocaleDateString('en-IN')}`, ML, y + 9);
-            doc.fill(DARK).font(FONT_BOLD).fontSize(8).text('For ' + String(p.company_name || company.name || 'Gensar IT Solutions').toUpperCase(), PW - ML, y, { align: 'right' });
-            doc.fill('#666666').font(FONT_REG).fontSize(7).text('Authorised Signatory', PW - ML, y + 9, { align: 'right' });
+            y = Math.max(y, 700);
+            doc.strokeColor(BORDER).lineWidth(1).moveTo(ML, y).lineTo(ML + CW, y).stroke();
+            y += 10;
+            doc.fill('#555555').font(FL).fontSize(10.5).text('Note:', ML, y);
+            doc.fill('#555555').font(FL).fontSize(10.5).text('\u2022 This is a computer generated payslip.', ML + 15, y);
+            y += 13;
+            doc.fill('#555555').font(FL).fontSize(10.5).text('\u2022 No signature is required.', ML + 15, y);
+            y += 13;
+            doc.fill('#555555').font(FL).fontSize(10.5).text('\u2022 Please contact HR for any discrepancies.', ML + 15, y);
+
+            const sigX = ML + CW - 160;
+            doc.fill(DARK).font(FB).fontSize(10.5).text('For ' + String(p.company_name || company.name || 'GENSAR IT SOLUTIONS PVT. LTD.').toUpperCase(), sigX, y - 28);
+            doc.fill('#555555').font(FL).fontSize(10.5).text('This is a system generated document and does not require signature.', sigX, y - 16);
 
             doc.end();
         } catch (err) {
+            console.error('Render payslip PDF error:', err);
             reject(err);
         }
     });
