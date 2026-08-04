@@ -125,7 +125,7 @@ async function getCompanyData() {
 async function fetchPayslipWithProfile(id, userId, isPrivileged) {
     const result = await query(
         `SELECT p.*, e.first_name, e.last_name, e.employee_id as emp_id,
-            COALESCE(NULLIF(e.personal_email, ''), e.email) as employee_email, e.joining_date, e.profile_photo,
+            e.personal_email as employee_email, e.joining_date, e.profile_photo,
             e.pan_number, e.uan_number, e.pf_number, e.esi_number,
             e.bank_name, e.bank_account, e.bank_ifsc,
             d.name as department_name, des.name as designation_name
@@ -471,14 +471,14 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
 
         const payslip = result.rows[0];
 
-        // Auto-email the employee using their personal email (fallback: official email), with the rendered PDF attached.
+        // Auto-email the employee using their personal email ONLY (never the official/work email).
         let email_sent = null;
         const empResult = await query(
-            "SELECT COALESCE(NULLIF(personal_email, ''), email) AS email FROM employees WHERE id = $1",
+            'SELECT personal_email FROM employees WHERE id = $1',
             [employee_id]
         );
-        if (empResult.rows.length > 0) {
-            const empEmail = empResult.rows[0].email;
+        if (empResult.rows.length > 0 && empResult.rows[0].personal_email) {
+            const empEmail = empResult.rows[0].personal_email;
             let pdfBuffer = pdfFromBase64(v.pdfBase64);
             if (!pdfBuffer) {
                 const row = await fetchPayslipWithProfile(payslip.id, req.user.id, true);
@@ -564,13 +564,13 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                 );
                 created++;
 
-                // Email each employee using their personal email (fallback: official email).
+                // Email each employee using their personal email ONLY (never the official/work email).
                 let email_sent = false;
                 const empResult = await query(
-                    "SELECT COALESCE(NULLIF(personal_email, ''), email) AS email FROM employees WHERE id = $1",
+                    'SELECT personal_email FROM employees WHERE id = $1',
                     [employee_id]
                 );
-                if (empResult.rows.length > 0) {
+                if (empResult.rows.length > 0 && empResult.rows[0].personal_email) {
                     let pdfBuffer = pdfFromBase64(v.pdfBase64);
                     if (!pdfBuffer) {
                         const row = await fetchPayslipWithProfile(result.rows[0].id, req.user.id, true);
