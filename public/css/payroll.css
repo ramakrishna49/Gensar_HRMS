@@ -23,9 +23,13 @@
 }
 
 .pp-page {
-    padding: 28px 30px;
-    max-width: 1200px;
-    margin: 0 auto;
+    padding: 24px 0;
+    max-width: none;
+    margin: 0;
+}
+
+body:not(.admin-app) .pp-page {
+    padding: 24px 30px;
 }
 
 .pp-topbar {
@@ -369,7 +373,8 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 760px) {
-    .pp-page { padding: 18px 14px; }
+    .pp-page { padding: 18px 0; }
+    body:not(.admin-app) .pp-page { padding: 18px 14px; }
     .pp-form-grid { grid-template-columns: 1fr; }
     .pp-topbar { flex-direction: column; align-items: stretch; }
     .pp-actions { width: 100%; }
