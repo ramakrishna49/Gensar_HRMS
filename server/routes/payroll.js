@@ -125,7 +125,7 @@ async function getCompanyData() {
 async function fetchPayslipWithProfile(id, userId, isPrivileged) {
     const result = await query(
         `SELECT p.*, e.first_name, e.last_name, e.employee_id as emp_id,
-            e.email as employee_email, e.joining_date, e.profile_photo,
+            COALESCE(NULLIF(e.personal_email, ''), e.email) as employee_email, e.joining_date, e.profile_photo,
             e.pan_number, e.uan_number, e.pf_number, e.esi_number,
             e.bank_name, e.bank_account, e.bank_ifsc,
             d.name as department_name, des.name as designation_name
@@ -162,8 +162,8 @@ async function renderPayslipPdf(p, company) {
             }
 
             // Header band
-            doc.rect(0, 0, PW, 118).fill('#6E59A5');
-            doc.rect(0, 112, PW, 6).fill('#8B78C6');
+            doc.rect(0, 0, PW, 118).fill('#4F46E5');
+            doc.rect(0, 112, PW, 6).fill('#818CF8');
             doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(20).text(p.company_name || company.name, ml, 24);
             doc.font(FONT_REG).fontSize(9);
             let hy = 48;
@@ -172,7 +172,7 @@ async function renderPayslipPdf(p, company) {
             if (company.phone) hlines.push(`Phone: ${company.phone}`);
             if (company.email) hlines.push(`Email: ${company.email}`);
             if (company.website) hlines.push(`Web: ${company.website}`);
-            hlines.forEach(l => { doc.fill('#EDE9F8').text(l, ml, hy); hy += 12; });
+            hlines.forEach(l => { doc.fill('#E0E7FF').text(l, ml, hy); hy += 12; });
             doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(15).text('PAYSLIP', mr, 40, { align: 'right' });
             doc.font(FONT_REG).fontSize(11).text(`${MONTHS[p.month] || ''} ${p.year}`, mr, 62, { align: 'right' });
             doc.fill('#000000');
@@ -180,9 +180,9 @@ async function renderPayslipPdf(p, company) {
             let y = 140;
 
             // Employee details card
-            doc.roundedRect(ml, y, PW - 100, 132, 8).fill('#F5F2FC');
-            doc.fill('#6E59A5').font(FONT_BOLD).fontSize(11).text('EMPLOYEE DETAILS', ml + 14, y + 12);
-            doc.fill('#222222').font(FONT_REG).fontSize(9);
+            doc.roundedRect(ml, y, PW - 100, 132, 8).fill('#EEF2FF');
+            doc.fill('#4F46E5').font(FONT_BOLD).fontSize(11).text('EMPLOYEE DETAILS', ml + 14, y + 12);
+            doc.fill('#1F2937').font(FONT_REG).fontSize(9);
             const empLeft = [
                 ['Employee ID', p.emp_id || '-'],
                 ['Employee Name', `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-'],
@@ -200,15 +200,15 @@ async function renderPayslipPdf(p, company) {
                 ['Bank Account', p.bank_account || '-']
             ];
             let ex = ml + 14, ey = y + 30;
-            empLeft.forEach(([k, v]) => { doc.fill('#666666').text(k, ex, ey); doc.fill('#222222').text(String(v), ex + 95, ey); ey += 16; });
+            empLeft.forEach(([k, v]) => { doc.fill('#6B7280').text(k, ex, ey); doc.fill('#1F2937').text(String(v), ex + 95, ey); ey += 16; });
             let fx = ml + 14 + (PW - 100) / 2, fy = y + 30;
-            empRight.forEach(([k, v]) => { doc.fill('#666666').text(k, fx, fy); doc.fill('#222222').text(String(v), fx + 95, fy); fy += 16; });
+            empRight.forEach(([k, v]) => { doc.fill('#6B7280').text(k, fx, fy); doc.fill('#1F2937').text(String(v), fx + 95, fy); fy += 16; });
             y += 132 + 18;
 
             // Earnings / Deductions tables
             const half = (PW - 100) / 2;
-            doc.fill('#222222').font(FONT_BOLD).fontSize(11).text('EARNINGS', ml, y);
-            doc.fill('#222222').font(FONT_BOLD).fontSize(11).text('DEDUCTIONS', ml + half + 14, y);
+            doc.fill('#1F2937').font(FONT_BOLD).fontSize(11).text('EARNINGS', ml, y);
+            doc.fill('#1F2937').font(FONT_BOLD).fontSize(11).text('DEDUCTIONS', ml + half + 14, y);
             y += 18;
 
             const earnings = [
@@ -234,13 +234,13 @@ async function renderPayslipPdf(p, company) {
             const drawMoneyTable = (x, rows, total, totalLabel) => {
                 let ty = y;
                 rows.forEach(([k, v]) => {
-                    doc.fill('#666666').font(FONT_REG).fontSize(9).text(k, x, ty);
-                    doc.fill('#222222').text(formatINR(v), x + 120, ty, { align: 'right', width: 90 });
+                    doc.fill('#6B7280').font(FONT_REG).fontSize(9).text(k, x, ty);
+                    doc.fill('#1F2937').text(formatINR(v), x + 120, ty, { align: 'right', width: 90 });
                     ty += 15;
                 });
-                doc.rect(x - 6, ty, half, 22).fill('#F4F1FB');
-                doc.fill('#6E59A5').font(FONT_BOLD).fontSize(9).text(totalLabel, x, ty + 5);
-                doc.fill('#6E59A5').text(formatINR(total), x + 120, ty + 5, { align: 'right', width: 90 });
+                doc.rect(x - 6, ty, half, 22).fill('#EEF2FF');
+                doc.fill('#4F46E5').font(FONT_BOLD).fontSize(9).text(totalLabel, x, ty + 5);
+                doc.fill('#4F46E5').text(formatINR(total), x + 120, ty + 5, { align: 'right', width: 90 });
             };
 
             drawMoneyTable(ml, earnings, num(p.gross_salary), 'Total Earnings');
@@ -250,9 +250,9 @@ async function renderPayslipPdf(p, company) {
             // Summary cards
             const cardW = (PW - 100 - 28) / 3;
             const cards = [
-                { label: 'Gross Salary', value: num(p.gross_salary), color: '#6E59A5' },
-                { label: 'Total Deductions', value: num(p.total_deductions), color: '#F57C00' },
-                { label: 'Net Salary Payable', value: num(p.net_salary), color: '#4CAF50' }
+                { label: 'Gross Salary', value: num(p.gross_salary), color: '#4F46E5' },
+                { label: 'Total Deductions', value: num(p.total_deductions), color: '#F59E0B' },
+                { label: 'Net Salary Payable', value: num(p.net_salary), color: '#10B981' }
             ];
             let cx = ml;
             cards.forEach(card => {
@@ -264,14 +264,14 @@ async function renderPayslipPdf(p, company) {
             y += 58 + 18;
 
             // Net in words
-            doc.roundedRect(ml, y, PW - 100, 30, 8).fill('#F5F2FC');
-            doc.fill('#6E59A5').font(FONT_BOLD).fontSize(9).text('NET SALARY IN WORDS', ml + 14, y + 4);
-            doc.fill('#222222').font(FONT_REG).fontSize(9).text(amountToWords(p.net_salary), ml + 14, y + 15);
+            doc.roundedRect(ml, y, PW - 100, 30, 8).fill('#EEF2FF');
+            doc.fill('#4F46E5').font(FONT_BOLD).fontSize(9).text('NET SALARY IN WORDS', ml + 14, y + 4);
+            doc.fill('#1F2937').font(FONT_REG).fontSize(9).text(amountToWords(p.net_salary), ml + 14, y + 15);
             y += 30 + 16;
 
             // Attendance summary + Employer contribution
-            doc.fill('#222222').font(FONT_BOLD).fontSize(11).text('ATTENDANCE SUMMARY', ml, y);
-            doc.fill('#222222').font(FONT_BOLD).fontSize(11).text('EMPLOYER CONTRIBUTION', ml + half + 14, y);
+            doc.fill('#1F2937').font(FONT_BOLD).fontSize(11).text('ATTENDANCE SUMMARY', ml, y);
+            doc.fill('#1F2937').font(FONT_BOLD).fontSize(11).text('EMPLOYER CONTRIBUTION', ml + half + 14, y);
             y += 18;
             const attRows = [
                 ['Working Days', p.working_days || 0],
@@ -285,18 +285,18 @@ async function renderPayslipPdf(p, company) {
                 ['Employer Contribution', num(p.employer_contribution)]
             ];
             let ay = y;
-            attRows.forEach(([k, v]) => { doc.fill('#666666').font(FONT_REG).fontSize(9).text(k, ml, ay); doc.fill('#222222').text(String(v), ml + 120, ay, { align: 'right', width: 90 }); ay += 15; });
+            attRows.forEach(([k, v]) => { doc.fill('#6B7280').font(FONT_REG).fontSize(9).text(k, ml, ay); doc.fill('#1F2937').text(String(v), ml + 120, ay, { align: 'right', width: 90 }); ay += 15; });
             let by = y;
-            empRows.forEach(([k, v]) => { doc.fill('#666666').font(FONT_REG).fontSize(9).text(k, ml + half + 14, by); doc.fill('#222222').text(formatINR(v), ml + half + 14 + 120, by, { align: 'right', width: 90 }); by += 15; });
+            empRows.forEach(([k, v]) => { doc.fill('#6B7280').font(FONT_REG).fontSize(9).text(k, ml + half + 14, by); doc.fill('#1F2937').text(formatINR(v), ml + half + 14 + 120, by, { align: 'right', width: 90 }); by += 15; });
             by += 2;
-            doc.rect(ml + half + 14 - 6, by, half, 22).fill('#F4F1FB');
-            doc.fill('#6E59A5').font(FONT_BOLD).fontSize(9).text('Total', ml + half + 14, by + 5);
-            doc.fill('#6E59A5').text(formatINR(num(p.employer_pf) + num(p.employer_esi) + num(p.employer_contribution)), ml + half + 14 + 120, by + 5, { align: 'right', width: 90 });
+            doc.rect(ml + half + 14 - 6, by, half, 22).fill('#EEF2FF');
+            doc.fill('#4F46E5').font(FONT_BOLD).fontSize(9).text('Total', ml + half + 14, by + 5);
+            doc.fill('#4F46E5').text(formatINR(num(p.employer_pf) + num(p.employer_esi) + num(p.employer_contribution)), ml + half + 14 + 120, by + 5, { align: 'right', width: 90 });
             y += 4 * 15 + 26;
 
             // Footer
             if (y < 780) y = 780;
-            doc.rect(0, y, PW, 34).fill('#6E59A5');
+            doc.rect(0, y, PW, 34).fill('#4F46E5');
             doc.fill('#FFFFFF').font(FONT_REG).fontSize(8).text('This is a system generated payslip. No signature required.', PW / 2, y + 12, { align: 'center' });
 
             doc.end();
@@ -471,10 +471,10 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
 
         const payslip = result.rows[0];
 
-        // Auto-email the employee using their profile email, with the rendered PDF attached.
+        // Auto-email the employee using their personal email (fallback: official email), with the rendered PDF attached.
         let email_sent = null;
         const empResult = await query(
-            'SELECT email FROM employees WHERE id = $1',
+            "SELECT COALESCE(NULLIF(personal_email, ''), email) AS email FROM employees WHERE id = $1",
             [employee_id]
         );
         if (empResult.rows.length > 0) {
@@ -564,9 +564,12 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                 );
                 created++;
 
-                // Email each employee using their profile email.
+                // Email each employee using their personal email (fallback: official email).
                 let email_sent = false;
-                const empResult = await query('SELECT email FROM employees WHERE id = $1', [employee_id]);
+                const empResult = await query(
+                    "SELECT COALESCE(NULLIF(personal_email, ''), email) AS email FROM employees WHERE id = $1",
+                    [employee_id]
+                );
                 if (empResult.rows.length > 0) {
                     let pdfBuffer = pdfFromBase64(v.pdfBase64);
                     if (!pdfBuffer) {

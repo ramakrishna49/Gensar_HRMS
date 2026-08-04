@@ -6,7 +6,7 @@
     <title>Generate Payslip - Gensar HRMS</title>
     <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#6E59A5">
+    <meta name="theme-color" content="#4F46E5">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="../../css/main.css">
     <link rel="stylesheet" href="../../css/payroll.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="admin-app">
     <aside class="sidebar" id="sidebar">
@@ -75,7 +74,7 @@
 
                 <div class="pp-topbar">
                     <div>
-                        <a href="payroll.html" style="font-size:0.8rem;color:#6E59A5;text-decoration:none;font-weight:600;"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
+                        <a href="payroll.html" style="font-size:0.8rem;color:var(--primary);text-decoration:none;font-weight:600;"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
                         <h1 id="headingTitle" style="margin-top:6px;">Generate Payslip</h1>
                         <div class="pp-sub" id="headingSub">Auto-fetches employee profile &amp; company details. Totals calculate live. Emails the PDF automatically.</div>
                     </div>
@@ -543,7 +542,7 @@
             body.innerHTML = list.map(e => {
                 const t = ppCompute({ basic_salary: e.salary || 0, working_days: 30, present_days: 30, leave_days: 0, lop_days: 0 });
                 return '<tr data-emp="' + e.id + '">' +
-                    '<td><input type="checkbox" class="bulk-check" checked style="width:16px;height:16px;accent-color:#6E59A5;"></td>' +
+                    '<td><input type="checkbox" class="bulk-check" checked style="width:16px;height:16px;accent-color:#4F46E5;"></td>' +
                     '<td><div class="pp-emp"><div class="pp-emp-avatar">' + ppEsc(getInitials(e.first_name, e.last_name)) + '</div>' +
                         '<div><b>' + ppEsc(e.first_name) + ' ' + ppEsc(e.last_name) + '</b><small>' + ppEsc(e.employee_id) + (e.department_name ? ' &middot; ' + ppEsc(e.department_name) : '') + '</small></div></div></td>' +
                     '<td><input type="number" class="pp-input bulk-basic" value="' + (e.salary || 0) + '" step="0.01" min="0" data-salary="' + (e.salary || 0) + '" oninput="bulkRowCalc(this)"></td>' +

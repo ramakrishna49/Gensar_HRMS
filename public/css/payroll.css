@@ -1,18 +1,20 @@
 /* ============================================================
-   Payroll Module - Purple theme (scoped under .payroll-module)
+   Payroll Module - HRMS design tokens (scoped under .payroll-module)
+   Matches main.css indigo theme + Inter font for full consistency.
    ============================================================ */
 .payroll-module {
-    --pp-primary: #6E59A5;
-    --pp-secondary: #8B78C6;
-    --pp-light: #F5F2FC;
-    --pp-blue: #355E9B;
-    --pp-green: #4CAF50;
-    --pp-orange: #F57C00;
-    --pp-text: #222222;
-    --pp-muted: #666666;
-    --pp-border: #D9D9E6;
-    --pp-head: #F4F1FB;
-    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    --pp-primary: #4F46E5;
+    --pp-secondary: #818CF8;
+    --pp-light: #EEF2FF;
+    --pp-blue: #3B82F6;
+    --pp-green: #10B981;
+    --pp-orange: #F59E0B;
+    --pp-danger: #EF4444;
+    --pp-text: #1F2937;
+    --pp-muted: #6B7280;
+    --pp-border: #E5E7EB;
+    --pp-head: #EEF2FF;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: var(--pp-text);
 }
 
@@ -69,17 +71,17 @@
     transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
     color: #FFFFFF;
     background: var(--pp-primary);
-    box-shadow: 0 3px 10px rgba(110, 89, 165, 0.25);
+    box-shadow: 0 3px 10px rgba(79, 70, 229, 0.25);
 }
 
 .pp-btn:hover { transform: translateY(-1px); }
 .pp-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-.pp-btn-green { background: var(--pp-green); box-shadow: 0 3px 10px rgba(76, 175, 80, 0.28); }
-.pp-btn-blue { background: var(--pp-blue); box-shadow: 0 3px 10px rgba(53, 94, 155, 0.28); }
-.pp-btn-orange { background: var(--pp-orange); box-shadow: 0 3px 10px rgba(245, 124, 0, 0.28); }
+.pp-btn-green { background: var(--pp-green); box-shadow: 0 3px 10px rgba(16, 185, 129, 0.28); }
+.pp-btn-blue { background: var(--pp-blue); box-shadow: 0 3px 10px rgba(59, 130, 246, 0.28); }
+.pp-btn-orange { background: var(--pp-orange); box-shadow: 0 3px 10px rgba(245, 158, 11, 0.28); }
 .pp-btn-light { background: var(--pp-light); color: var(--pp-primary); box-shadow: none; border: 1px solid var(--pp-border); }
-.pp-btn-danger { background: #E5484D; box-shadow: 0 3px 10px rgba(229, 72, 77, 0.25); }
+.pp-btn-danger { background: var(--pp-danger); box-shadow: 0 3px 10px rgba(239, 68, 68, 0.25); }
 
 .pp-btn-sm { padding: 7px 12px; font-size: 0.76rem; border-radius: 7px; }
 
@@ -99,7 +101,7 @@
     border: 1px solid var(--pp-border);
     border-radius: 14px;
     padding: 18px;
-    box-shadow: 0 6px 18px rgba(110, 89, 165, 0.08);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.08);
 }
 
 .pp-stat .pp-stat-icon {
@@ -116,9 +118,9 @@
     flex-shrink: 0;
 }
 
-.pp-stat .pp-stat-icon.green { background: linear-gradient(135deg, #4CAF50, #81C784); }
-.pp-stat .pp-stat-icon.blue { background: linear-gradient(135deg, #355E9B, #5B8BD4); }
-.pp-stat .pp-stat-icon.orange { background: linear-gradient(135deg, #F57C00, #FFB74D); }
+.pp-stat .pp-stat-icon.green { background: linear-gradient(135deg, #10B981, #34D399); }
+.pp-stat .pp-stat-icon.blue { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
+.pp-stat .pp-stat-icon.orange { background: linear-gradient(135deg, #F59E0B, #FBBF24); }
 
 .pp-stat h3 { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--pp-text); }
 .pp-stat p { margin: 2px 0 0; font-size: 0.75rem; color: var(--pp-muted); }
@@ -128,7 +130,7 @@
     background: #FFFFFF;
     border: 1px solid var(--pp-border);
     border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(110, 89, 165, 0.08);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.08);
     padding: 22px;
     margin-bottom: 22px;
 }
@@ -195,7 +197,7 @@
     color: var(--pp-muted);
 }
 
-.pp-field label .pp-req { color: #E5484D; }
+.pp-field label .pp-req { color: var(--pp-danger); }
 
 .pp-input, .pp-select {
     width: 100%;
@@ -212,7 +214,7 @@
 .pp-input:focus, .pp-select:focus {
     outline: none;
     border-color: var(--pp-primary);
-    box-shadow: 0 0 0 3px rgba(110, 89, 165, 0.15);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
 .pp-input[readonly] {
@@ -248,14 +250,14 @@
 }
 .pp-sum-box .pp-sum-label { font-size: 0.68rem; letter-spacing: 0.6px; opacity: 0.92; text-transform: uppercase; }
 .pp-sum-box .pp-sum-value { font-size: 1.12rem; font-weight: 700; margin-top: 3px; }
-.pp-sum-box.gross { background: linear-gradient(135deg, #6E59A5, #8B78C6); }
-.pp-sum-box.deductions { background: linear-gradient(135deg, #F57C00, #FFA726); }
-.pp-sum-box.net { background: linear-gradient(135deg, #4CAF50, #81C784); }
-.pp-sum-box.employer { background: linear-gradient(135deg, #355E9B, #5B8BD4); }
+.pp-sum-box.gross { background: linear-gradient(135deg, #4F46E5, #818CF8); }
+.pp-sum-box.deductions { background: linear-gradient(135deg, #F59E0B, #FBBF24); }
+.pp-sum-box.net { background: linear-gradient(135deg, #10B981, #34D399); }
+.pp-sum-box.employer { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
 
 .pp-words {
     background: var(--pp-light);
-    border: 1px solid #E3DCF6;
+    border: 1px solid #E0E7FF;
     border-radius: 10px;
     padding: 12px 16px;
     font-size: 0.85rem;
@@ -283,12 +285,12 @@
 
 .pp-table tbody td {
     padding: 10px 12px;
-    border-bottom: 1px solid #F1EDF9;
+    border-bottom: 1px solid #F3F4F6;
     color: var(--pp-text);
     vertical-align: middle;
 }
 
-.pp-table tbody tr:hover { background: #FAF8FE; }
+.pp-table tbody tr:hover { background: #F9FAFB; }
 .pp-table tbody tr:last-child td { border-bottom: none; }
 
 .pp-table .pp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -300,7 +302,7 @@
 }
 .pp-table .pp-emp-avatar {
     width: 34px; height: 34px; border-radius: 50%;
-    background: linear-gradient(135deg, #6E59A5, #8B78C6);
+    background: linear-gradient(135deg, #4F46E5, #818CF8);
     color: #FFFFFF; display: flex; align-items: center; justify-content: center;
     font-size: 0.7rem; font-weight: 700; flex-shrink: 0;
 }
@@ -317,20 +319,20 @@
     letter-spacing: 0.4px;
     text-transform: uppercase;
     background: #EEF2FF;
-    color: #355E9B;
+    color: #4F46E5;
 }
-.pp-badge.green { background: #E7F6E7; color: #2E7D32; }
-.pp-badge.orange { background: #FFF1E0; color: #B26A00; }
-.pp-badge.red { background: #FDE8E8; color: #C62828; }
+.pp-badge.green { background: #D1FAE5; color: #047857; }
+.pp-badge.orange { background: #FEF3C7; color: #B45309; }
+.pp-badge.red { background: #FEE2E2; color: #B91C1C; }
 .pp-badge.purple { background: var(--pp-head); color: var(--pp-primary); }
-.pp-badge.muted { background: #EEEEEE; color: #666666; }
+.pp-badge.muted { background: #F3F4F6; color: #6B7280; }
 
 /* ---------- Payroll meta list ---------- */
 .pp-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 
 /* ---------- Payslip preview ---------- */
 .pp-preview-frame {
-    background: #EAE6F2;
+    background: #E0E7FF;
     border-radius: 14px;
     padding: 22px;
     overflow: auto;
@@ -352,7 +354,7 @@
     min-height: 1123px;
     margin: 0 auto;
     background: #FFFFFF;
-    box-shadow: 0 10px 30px rgba(34, 34, 34, 0.25);
+    box-shadow: 0 10px 30px rgba(31, 41, 55, 0.25);
     position: relative;
 }
 

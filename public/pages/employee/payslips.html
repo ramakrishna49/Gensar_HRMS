@@ -6,7 +6,7 @@
     <title>My Payslips - Gensar HRMS</title>
     <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#6E59A5">
+    <meta name="theme-color" content="#4F46E5">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="../../css/main.css">
     <link rel="stylesheet" href="../../css/payroll.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <aside class="sidebar" id="sidebar">
@@ -198,7 +197,7 @@
                     '<td style="font-weight:600;">' + ppEsc(period) + '</td>' +
                     '<td class="pp-num">' + ppFormatINR(p.gross_salary) + '</td>' +
                     '<td class="pp-num">' + ppFormatINR(p.total_deductions) + '</td>' +
-                    '<td class="pp-num"><b style="color:#4CAF50;">' + ppFormatINR(p.net_salary) + '</b></td>' +
+                    '<td class="pp-num"><b style="color:#10B981;">' + ppFormatINR(p.net_salary) + '</b></td>' +
                     '<td><span class="pp-badge ' + (p.status === 'processed' ? 'green' : 'muted') + '">' + ppEsc(p.status || '-') + '</span></td>' +
                     '<td><div style="display:flex;gap:6px;justify-content:flex-end;">' +
                         '<button class="pp-btn pp-btn-sm pp-btn-light" onclick="viewPayslip(' + p.id + ')"><i class="fas fa-eye"></i> View</button>' +

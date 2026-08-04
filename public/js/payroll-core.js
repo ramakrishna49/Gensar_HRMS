@@ -107,14 +107,14 @@ function ppEnsureLibs() {
 function ppKv(label, value, labelWidth) {
     return '<div style="display:flex;margin-bottom:7px;font-size:10px;line-height:1.5;">' +
         '<div style="width:' + (labelWidth || 96) + 'px;color:#666666;flex-shrink:0;">' + label + '</div>' +
-        '<div style="color:#222222;font-weight:600;word-break:break-word;">' + value + '</div></div>';
+        '<div style="color:#1F2937;font-weight:600;word-break:break-word;">' + value + '</div></div>';
 }
 
 function ppMoneyRow(label, value, last) {
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 13px;font-size:10px;' +
         (last ? '' : 'border-bottom:1px solid #F1EDF9;') + '">' +
         '<div style="color:#666666;">' + label + '</div>' +
-        '<div style="color:#222222;font-weight:600;">' + value + '</div></div>';
+        '<div style="color:#1F2937;font-weight:600;">' + value + '</div></div>';
 }
 
 function buildPayslipHTML(p) {
@@ -167,14 +167,14 @@ function buildPayslipHTML(p) {
         ['Employer Contribution', ppFormatINR(p.employer_contribution)]
     ];
 
-    return '<div class="pp-sheet" style="width:794px;min-height:1123px;margin:0 auto;background:#FFFFFF;color:#222222;font-family:Poppins,\'Segoe UI\',Arial,sans-serif;position:relative;">' +
+    return '<div class="pp-sheet" style="width:794px;min-height:1123px;margin:0 auto;background:#FFFFFF;color:#1F2937;font-family:Inter,-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;position:relative;">' +
 
         '<!-- HEADER -->' +
-        '<div style="background:linear-gradient(135deg,#6E59A5,#8B78C6);color:#FFFFFF;padding:26px 40px 20px;">' +
+        '<div style="background:linear-gradient(135deg,#4F46E5,#818CF8);color:#FFFFFF;padding:26px 40px 20px;">' +
             '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">' +
                 '<div style="min-width:0;">' +
                     '<div style="font-size:20px;font-weight:700;line-height:1.3;">' + logoHtml + ppEsc(name) + '</div>' +
-                    '<div style="font-size:10px;color:#EDE9F8;margin-top:6px;line-height:1.6;">' +
+                    '<div style="font-size:10px;color:#E0E7FF;margin-top:6px;line-height:1.6;">' +
                         headerLines.join('<br/>') +
                         (headerLines.length && meta.length ? '<br/>' : '') +
                         meta.join(' &nbsp;|&nbsp; ') +
@@ -182,14 +182,14 @@ function buildPayslipHTML(p) {
                 '</div>' +
                 '<div style="text-align:right;flex-shrink:0;">' +
                     '<div style="font-size:17px;font-weight:700;letter-spacing:3px;">PAYSLIP</div>' +
-                    '<div style="font-size:12px;color:#EDE9F8;margin-top:3px;font-weight:600;">' + ppEsc(period) + '</div>' +
+                    '<div style="font-size:12px;color:#E0E7FF;margin-top:3px;font-weight:600;">' + ppEsc(period) + '</div>' +
                 '</div>' +
             '</div>' +
         '</div>' +
 
         '<!-- EMPLOYEE CARD -->' +
-        '<div style="margin:22px 40px 0;background:#F5F2FC;border:1px solid #E3DCF6;border-radius:8px;padding:14px 18px;">' +
-            '<div style="font-size:10px;font-weight:700;color:#6E59A5;letter-spacing:1.2px;margin-bottom:10px;">EMPLOYEE DETAILS</div>' +
+        '<div style="margin:22px 40px 0;background:#EEF2FF;border:1px solid #E0E7FF;border-radius:8px;padding:14px 18px;">' +
+            '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;margin-bottom:10px;">EMPLOYEE DETAILS</div>' +
             '<div style="display:flex;gap:18px;">' +
                 '<div style="flex:1;min-width:0;">' +
                     ppKv('Employee ID', ppEsc(p.emp_id || '-')) +
@@ -213,19 +213,19 @@ function buildPayslipHTML(p) {
         '<!-- EARNINGS / DEDUCTIONS -->' +
         '<div style="margin:22px 40px 0;display:flex;gap:24px;">' +
             '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:10px;font-weight:700;color:#6E59A5;letter-spacing:1.2px;">EARNINGS</div>' +
-                '<div style="border:1px solid #D9D9E6;border-radius:6px;margin-top:8px;overflow:hidden;">' +
+                '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">EARNINGS</div>' +
+                '<div style="border:1px solid #E5E7EB;border-radius:6px;margin-top:8px;overflow:hidden;">' +
                     earnings.map((r, i) => ppMoneyRow(r[0], r[1], false)).join('') +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#F4F1FB;font-size:10px;font-weight:700;color:#6E59A5;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#EEF2FF;font-size:10px;font-weight:700;color:#4F46E5;">' +
                         '<div>Total Earnings</div><div>' + ppFormatINR(totals.gross) + '</div>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
             '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:10px;font-weight:700;color:#6E59A5;letter-spacing:1.2px;">DEDUCTIONS</div>' +
-                '<div style="border:1px solid #D9D9E6;border-radius:6px;margin-top:8px;overflow:hidden;">' +
+                '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">DEDUCTIONS</div>' +
+                '<div style="border:1px solid #E5E7EB;border-radius:6px;margin-top:8px;overflow:hidden;">' +
                     deductions.map((r, i) => ppMoneyRow(r[0], r[1], false)).join('') +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#F4F1FB;font-size:10px;font-weight:700;color:#6E59A5;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#EEF2FF;font-size:10px;font-weight:700;color:#4F46E5;">' +
                         '<div>Total Deductions</div><div>' + ppFormatINR(totals.totalDeductions) + '</div>' +
                     '</div>' +
                 '</div>' +
@@ -234,39 +234,39 @@ function buildPayslipHTML(p) {
 
         '<!-- SUMMARY CARDS -->' +
         '<div style="margin:22px 40px 0;display:flex;gap:14px;">' +
-            '<div style="flex:1;background:linear-gradient(135deg,#6E59A5,#8B78C6);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
+            '<div style="flex:1;background:linear-gradient(135deg,#4F46E5,#818CF8);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
                 '<div style="font-size:9px;letter-spacing:1px;opacity:0.92;">GROSS SALARY</div>' +
                 '<div style="font-size:16px;font-weight:700;margin-top:5px;">' + ppFormatINR(totals.gross) + '</div>' +
             '</div>' +
-            '<div style="flex:1;background:linear-gradient(135deg,#F57C00,#FFA726);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
+            '<div style="flex:1;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
                 '<div style="font-size:9px;letter-spacing:1px;opacity:0.92;">TOTAL DEDUCTIONS</div>' +
                 '<div style="font-size:16px;font-weight:700;margin-top:5px;">' + ppFormatINR(totals.totalDeductions) + '</div>' +
             '</div>' +
-            '<div style="flex:1;background:linear-gradient(135deg,#4CAF50,#81C784);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
+            '<div style="flex:1;background:linear-gradient(135deg,#10B981,#34D399);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
                 '<div style="font-size:9px;letter-spacing:1px;opacity:0.92;">NET SALARY PAYABLE</div>' +
                 '<div style="font-size:16px;font-weight:700;margin-top:5px;">' + ppFormatINR(totals.net) + '</div>' +
             '</div>' +
         '</div>' +
 
         '<!-- NET IN WORDS -->' +
-        '<div style="margin:18px 40px 0;background:#F5F2FC;border:1px solid #E3DCF6;border-radius:8px;padding:10px 18px;">' +
-            '<div style="font-size:9px;font-weight:700;color:#6E59A5;letter-spacing:1.2px;">NET SALARY IN WORDS</div>' +
-            '<div style="font-size:11px;color:#222222;margin-top:5px;font-weight:600;line-height:1.5;">' + ppEsc(ppAmountInWords(totals.net)) + '</div>' +
+        '<div style="margin:18px 40px 0;background:#EEF2FF;border:1px solid #E0E7FF;border-radius:8px;padding:10px 18px;">' +
+            '<div style="font-size:9px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">NET SALARY IN WORDS</div>' +
+            '<div style="font-size:11px;color:#1F2937;margin-top:5px;font-weight:600;line-height:1.5;">' + ppEsc(ppAmountInWords(totals.net)) + '</div>' +
         '</div>' +
 
         '<!-- ATTENDANCE + EMPLOYER -->' +
         '<div style="margin:22px 40px 0;display:flex;gap:24px;">' +
             '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:10px;font-weight:700;color:#6E59A5;letter-spacing:1.2px;">ATTENDANCE SUMMARY</div>' +
-                '<div style="border:1px solid #D9D9E6;border-radius:6px;margin-top:8px;overflow:hidden;">' +
+                '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">ATTENDANCE SUMMARY</div>' +
+                '<div style="border:1px solid #E5E7EB;border-radius:6px;margin-top:8px;overflow:hidden;">' +
                     attendance.map((r, i) => ppMoneyRow(r[0], String(r[1]), i === attendance.length - 1)).join('') +
                 '</div>' +
             '</div>' +
             '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:10px;font-weight:700;color:#6E59A5;letter-spacing:1.2px;">EMPLOYER CONTRIBUTION</div>' +
-                '<div style="border:1px solid #D9D9E6;border-radius:6px;margin-top:8px;overflow:hidden;">' +
+                '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">EMPLOYER CONTRIBUTION</div>' +
+                '<div style="border:1px solid #E5E7EB;border-radius:6px;margin-top:8px;overflow:hidden;">' +
                     employer.map((r, i) => ppMoneyRow(r[0], r[1], false)).join('') +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#F4F1FB;font-size:10px;font-weight:700;color:#6E59A5;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#EEF2FF;font-size:10px;font-weight:700;color:#4F46E5;">' +
                         '<div>Total Employer</div><div>' + ppFormatINR(totals.employerTotal) + '</div>' +
                     '</div>' +
                 '</div>' +
@@ -274,7 +274,7 @@ function buildPayslipHTML(p) {
         '</div>' +
 
         '<!-- FOOTER -->' +
-        '<div style="position:absolute;bottom:0;left:0;right:0;background:#6E59A5;color:#FFFFFF;text-align:center;padding:10px 16px;font-size:9px;">' +
+        '<div style="position:absolute;bottom:0;left:0;right:0;background:#4F46E5;color:#FFFFFF;text-align:center;padding:10px 16px;font-size:9px;">' +
             'This is a system generated payslip. No signature required.' +
         '</div>' +
     '</div>';
@@ -351,7 +351,7 @@ function printPayslip(p) {
     if (!w) { showToast('Popup blocked. Allow popups to print.', 'error'); return; }
     w.document.write(
         '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Payslip</title>' +
-        '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">' +
+        '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">' +
         '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">' +
         '<style>html,body{margin:0;padding:0;background:#FFFFFF;}@page{size:A4;margin:0;}' +
         '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
