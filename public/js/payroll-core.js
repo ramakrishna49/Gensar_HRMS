@@ -162,7 +162,7 @@ function buildPayslipHTML(p) {
     const logoHtml = company.logo
         ? '<img src="' + ppEsc(company.logo) + '" alt="logo" style="width:175px;max-width:175px;height:auto;object-fit:contain;flex-shrink:0;vertical-align:middle;" onerror="this.style.display=\'none\';">'
         : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
-    return '<div class="pp-sheet ppslip" style="width:820px;min-height:1123px;margin:0 auto;background:#FFFFFF;color:#222222;font-family:Arial,\'Helvetica Neue\',Helvetica,sans-serif;position:relative;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
+    return '<div class="pp-sheet ppslip" style="width:820px;margin:0 auto;background:#FFFFFF;color:#222222;font-family:Arial,\'Helvetica Neue\',Helvetica,sans-serif;position:relative;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
         '.ppslip *{box-sizing:border-box;}' +
         '.ppslip table{border-collapse:collapse;width:100%;}' +
@@ -171,7 +171,7 @@ function buildPayslipHTML(p) {
         '.ppslip .pp-val{font-size:11.5px;font-weight:700;color:#111111;padding:5.5px 10px;text-align:right;}' +
         '.ppslip .pp-val-left{font-size:11.5px;font-weight:700;color:#111111;padding:5.5px 10px;text-align:left;}' +
         '.ppslip .total-row td{background-color:#efeafb;font-weight:700;color:#38286b;}' +
-        '.ppslip .pp-emp td{width:25%;font-size:11.5px;}' +
+        '.ppslip .pp-emp td{width:25%;font-size:11.5px;border:1px solid #d5cee6;padding:5.5px 10px;}' +
         '.ppslip .pp-emp td:nth-child(odd){background-color:#fbf9fc;color:#333333;}' +
         '.ppslip .pp-emp td:nth-child(even){color:#111111;font-weight:600;}' +
         '.ppslip .pp-fin th{background-color:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;border:1px solid #d5cee6;padding:5.5px 10px;text-align:left;}' +
@@ -200,7 +200,7 @@ function buildPayslipHTML(p) {
         '</div>' +
         '<!-- EMPLOYEE DETAILS -->' +
         '<div class="pp-sec">EMPLOYEE DETAILS</div>' +
-        '<table class="pp-emp" style="border:1px solid #d5cee6;margin-bottom:12px;">' +
+        '<table class="pp-emp" style="margin-bottom:12px;">' +
             ppEmpRow('Employee ID', ppEsc(p.emp_id || '-'), 'Pay Period', ppEsc(period)) +
             ppEmpRow('Employee Name', ppEsc(empName), 'Working Days', ppNum(p.working_days)) +
             ppEmpRow('Designation', ppEsc(p.designation_name || '-'), 'Present Days', ppNum(p.present_days)) +
