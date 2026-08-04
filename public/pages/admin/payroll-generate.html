@@ -185,6 +185,7 @@
                         <div class="pp-field"><label>Special Allowance</label><input type="number" id="special_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
                         <div class="pp-field"><label>Bonus</label><input type="number" id="bonus" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
                         <div class="pp-field"><label>Incentive</label><input type="number" id="incentive" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Extra Work</label><input type="number" id="extra_work" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
                         <div class="pp-field"><label>Other Allowance</label><input type="number" id="other_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
 
                         <div class="pp-section-head"><i class="fas fa-minus-circle" style="margin-right:6px;"></i>Deductions</div>
@@ -204,10 +205,11 @@
                     </div>
 
                     <div class="pp-summary-strip">
-                        <div class="pp-sum-box gross"><div class="pp-sum-label">Gross Salary</div><div class="pp-sum-value" id="sumGross">₹0.00</div></div>
-                        <div class="pp-sum-box deductions"><div class="pp-sum-label">Total Deductions</div><div class="pp-sum-value" id="sumDed">₹0.00</div></div>
+                        <div class="pp-sum-box gross"><div class="pp-sum-label">Gross Earnings (A)</div><div class="pp-sum-value" id="sumGross">₹0.00</div></div>
+                        <div class="pp-sum-box bonus"><div class="pp-sum-label">Bonus (C)</div><div class="pp-sum-value" id="sumBonus">₹0.00</div></div>
+                        <div class="pp-sum-box deductions"><div class="pp-sum-label">Total Deductions (B)</div><div class="pp-sum-value" id="sumDed">₹0.00</div></div>
+                        <div class="pp-sum-box employer"><div class="pp-sum-label">Employer (D)</div><div class="pp-sum-value" id="sumEmployer">₹0.00</div></div>
                         <div class="pp-sum-box net"><div class="pp-sum-label">Net Payable</div><div class="pp-sum-value" id="sumNet">₹0.00</div></div>
-                        <div class="pp-sum-box employer"><div class="pp-sum-label">Employer Total</div><div class="pp-sum-value" id="sumEmployer">₹0.00</div></div>
                     </div>
                     <div class="pp-words" id="sumWords">Rupees Zero Only</div>
                 </div>
@@ -360,7 +362,7 @@
                 leave_days: get('leave_days'), lop_days: get('lop_days'),
                 basic_salary: get('basic_salary'), hra: get('hra'), conveyance: get('conveyance'),
                 medical: get('medical'), special_allowance: get('special_allowance'),
-                bonus: get('bonus'), incentive: get('incentive'), other_allowance: get('other_allowance'),
+                bonus: get('bonus'), incentive: get('incentive'), extra_work: get('extra_work'), other_allowance: get('other_allowance'),
                 pf: get('pf'), esi: get('esi'), professional_tax: get('professional_tax'),
                 income_tax: get('income_tax'), loan_deduction: get('loan_deduction'),
                 advance_salary: get('advance_salary'), other_deduction: get('other_deduction'),
@@ -372,6 +374,7 @@
         function updateSummary() {
             const t = ppCompute(currentFormValues());
             document.getElementById('sumGross').textContent = ppFormatINR(t.gross);
+            document.getElementById('sumBonus').textContent = ppFormatINR(t.bonus);
             document.getElementById('sumDed').textContent = ppFormatINR(t.totalDeductions);
             document.getElementById('sumNet').textContent = ppFormatINR(t.net);
             document.getElementById('sumEmployer').textContent = ppFormatINR(t.employerTotal);
@@ -393,7 +396,7 @@
                 leave_days: v.leave_days, lop_days: v.lop_days,
                 basic_salary: v.basic_salary, hra: v.hra, conveyance: v.conveyance,
                 medical: v.medical, special_allowance: v.special_allowance,
-                bonus: v.bonus, incentive: v.incentive, other_allowance: v.other_allowance,
+                bonus: v.bonus, incentive: v.incentive, extra_work: v.extra_work, other_allowance: v.other_allowance,
                 pf: v.pf, esi: v.esi, professional_tax: v.professional_tax,
                 income_tax: v.income_tax, loan_deduction: v.loan_deduction,
                 advance_salary: v.advance_salary, other_deduction: v.other_deduction,
@@ -499,7 +502,7 @@
             set('basic_salary', editingPayslip.basic_salary); set('hra', editingPayslip.hra);
             set('conveyance', editingPayslip.conveyance); set('medical', editingPayslip.medical);
             set('special_allowance', editingPayslip.special_allowance); set('bonus', editingPayslip.bonus);
-            set('incentive', editingPayslip.incentive); set('other_allowance', editingPayslip.other_allowance);
+            set('incentive', editingPayslip.incentive); set('extra_work', editingPayslip.extra_work); set('other_allowance', editingPayslip.other_allowance);
             set('pf', editingPayslip.pf); set('esi', editingPayslip.esi);
             set('professional_tax', editingPayslip.professional_tax); set('income_tax', editingPayslip.income_tax);
             set('loan_deduction', editingPayslip.loan_deduction); set('advance_salary', editingPayslip.advance_salary);
@@ -600,7 +603,7 @@
                         employee_id: emp.id, month, year,
                         working_days: work, present_days: pres, leave_days: leave, lop_days: lop,
                         basic_salary: basic,
-                        hra: 0, conveyance: 0, medical: 0, special_allowance: 0, bonus: 0, incentive: 0, other_allowance: 0,
+                        hra: 0, conveyance: 0, medical: 0, special_allowance: 0, bonus: 0, incentive: 0, extra_work: 0, other_allowance: 0,
                         pf: 0, esi: 0, professional_tax: 0, income_tax: 0, loan_deduction: 0, advance_salary: 0, other_deduction: 0,
                         employer_pf: 0, employer_esi: 0, employer_contribution: 0
                     }

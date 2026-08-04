@@ -93,15 +93,18 @@ function amountToWords(amount) {
     return result;
 }
 
-// Compute gross / total deductions / net / employer total.
+// Compute totals matching the payslip layout:
+//   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
+//   D = Employer contributions, Net = A + C - B - D.
 function computeTotals(v) {
     const gross = num(v.basic_salary) + num(v.hra) + num(v.conveyance) + num(v.medical)
-        + num(v.special_allowance) + num(v.bonus) + num(v.incentive) + num(v.other_allowance);
+        + num(v.special_allowance) + num(v.other_allowance);
     const totalDeductions = num(v.pf) + num(v.esi) + num(v.professional_tax) + num(v.income_tax)
         + num(v.loan_deduction) + num(v.advance_salary) + num(v.other_deduction);
-    const net = gross - totalDeductions;
+    const bonus = num(v.bonus) + num(v.incentive) + num(v.extra_work);
     const employerTotal = num(v.employer_pf) + num(v.employer_esi) + num(v.employer_contribution);
-    return { gross, totalDeductions, net, employerTotal };
+    const net = gross + bonus - totalDeductions - employerTotal;
+    return { gross, totalDeductions, bonus, employerTotal, net };
 }
 
 // Company branding + contact block used on the payslip.
@@ -143,6 +146,10 @@ async function fetchPayslipWithProfile(id, userId, isPrivileged) {
 }
 
 // Server-side A4 payslip render (used for email fallback + legacy /:id/pdf download).
+// Layout matches the designer reference: purple (#7c6ca8) header with logo + divider +
+// PAYSLIP badge, section bars, 4-col employee table, Earnings (A) / Deductions (B),
+// summary cards Gross (A) / Deductions (B) / Net, words, Attendance + Bonus (C),
+// Employer Contributions, footer with signature. Single A4 page.
 async function renderPayslipPdf(p, company) {
     return new Promise((resolve, reject) => {
         try {
@@ -153,58 +160,78 @@ async function renderPayslipPdf(p, company) {
             doc.on('error', reject);
 
             const PW = doc.page.width;
-            const ml = 50;
-            const mr = PW - 50;
+            const ML = 40;
+            const CW = PW - 80;
 
             if (fontsReady) {
                 doc.registerFont('Roboto', path.join(FONT_DIR, 'Roboto-Regular.ttf'));
                 doc.registerFont('Roboto-Bold', path.join(FONT_DIR, 'Roboto-Bold.ttf'));
             }
 
-            // Header band
-            doc.rect(0, 0, PW, 118).fill('#4F46E5');
-            doc.rect(0, 112, PW, 6).fill('#818CF8');
-            let nameX = ml, nameY = 34;
+            const PURPLE = '#7c6ca8';
+            const DARK = '#38286b';
+            const BORDER = '#d5cee6';
+            const BAR = '#e5e0f5';
+            const CARD = '#fbfbfd';
+            const TOTAL = '#efeafb';
+            const DED = '#d97706';
+            const NET = '#2e7d32';
+            const BODY = '#222222';
+
+            const sectionBar = (title, x, y, w) => {
+                doc.rect(x, y, w, 18).fill(BAR);
+                doc.fill(DARK).font(FONT_BOLD).fontSize(8).text(title, x + 8, y + 4);
+                return y + 18;
+            };
+
+            // ---- Header: logo | divider | company info + PAYSLIP badge ----
+            let y = 16;
+            const badgeW = 96;
+            const badgeX = PW - ML - badgeW;
+            const tx = ML + 150 + 14;
+            const infoW = badgeX - tx - 16;
+
             if (company.logo) {
                 try {
                     const logoPath = path.isAbsolute(company.logo)
                         ? company.logo
                         : path.join(__dirname, '../../public', company.logo.replace(/^\/+/, ''));
                     if (fs.existsSync(logoPath)) {
-                        doc.image(logoPath, ml, 16, { height: 56 });
-                        nameX = ml + 64;
-                        nameY = 40;
+                        doc.image(logoPath, ML, y, { height: 46 });
                     }
                 } catch (e) { /* logo is optional - fall back to text only */ }
             }
-            doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(20).text(p.company_name || company.name, nameX, nameY);
-            doc.font(FONT_REG).fontSize(9);
-            let hy = 48;
-            if (company.logo) {
-                const hlines0 = [];
-                if (company.address) hlines0.push(company.address);
-                if (company.phone) hlines0.push(`Phone: ${company.phone}`);
-                if (company.email) hlines0.push(`Email: ${company.email}`);
-                if (company.website) hlines0.push(`Web: ${company.website}`);
-                hlines0.forEach(l => { doc.fill('#E0E7FF').text(l, ml + 64, hy); hy += 12; });
-            } else {
-                const hlines = [];
-                if (company.address) hlines.push(company.address);
-                if (company.phone) hlines.push(`Phone: ${company.phone}`);
-                if (company.email) hlines.push(`Email: ${company.email}`);
-                if (company.website) hlines.push(`Web: ${company.website}`);
-                hlines.forEach(l => { doc.fill('#E0E7FF').text(l, ml, hy); hy += 12; });
-            }
-            doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(15).text('PAYSLIP', mr, 40, { align: 'right' });
-            doc.font(FONT_REG).fontSize(11).text(`${MONTHS[p.month] || ''} ${p.year}`, mr, 62, { align: 'right' });
-            doc.fill('#000000');
 
-            let y = 140;
+            doc.fill(DARK).font(FONT_BOLD).fontSize(12).text(p.company_name || company.name || 'Gensar IT Solutions', tx, y, { width: infoW });
+            const hlines = [];
+            if (company.address) hlines.push(company.address);
+            if (company.phone) hlines.push(`Phone: ${company.phone}`);
+            if (company.email) hlines.push(`Email: ${company.email}`);
+            if (company.website) hlines.push(`Web: ${company.website}`);
+            doc.font(FONT_REG).fontSize(7.5).fill('#555555');
+            let iy = y + 17;
+            hlines.forEach(l => {
+                const h = doc.heightOfString(l, { width: infoW });
+                doc.text(l, tx, iy, { width: infoW });
+                iy += h + 2;
+            });
 
-            // Employee details card
-            doc.roundedRect(ml, y, PW - 100, 150, 8).fill('#EEF2FF');
-            doc.fill('#4F46E5').font(FONT_BOLD).fontSize(11).text('EMPLOYEE DETAILS', ml + 14, y + 12);
-            doc.fill('#1F2937').font(FONT_REG).fontSize(9);
+            const divH = Math.max(iy - y, 60);
+            doc.rect(ML + 146, y, 1, divH).fill(PURPLE);
+
+            doc.strokeColor(BORDER).lineWidth(1);
+            doc.roundedRect(badgeX, y, badgeW, 58, 5).stroke();
+            doc.rect(badgeX + 0.5, y + 0.5, badgeW - 1, 24).fill(PURPLE);
+            doc.fill('#FFFFFF').font(FONT_BOLD).fontSize(13).text('PAYSLIP', badgeX, y + 6, { width: badgeW, align: 'center' });
+            doc.fill(DARK).font(FONT_BOLD).fontSize(10).text(`${MONTHS[p.month] || ''} ${p.year}`, badgeX, y + 30, { width: badgeW, align: 'center' });
+
+            doc.rect(ML, y + divH + 10, CW, 1.5).fill(PURPLE);
+            y += divH + 22;
+
+            // ---- Employee details (4-col table, 7 rows) ----
+            y = sectionBar('EMPLOYEE DETAILS', ML, y, CW);
+            const colW = CW / 2;
+            const lblW = 92;
             const empLeft = [
                 ['Employee ID', p.emp_id || '-'],
                 ['Employee Name', `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-'],
@@ -220,32 +247,54 @@ async function renderPayslipPdf(p, company) {
                 ['Present Days', p.present_days || 0],
                 ['Leave Days', p.leave_days || 0],
                 ['LOP Days', p.lop_days || 0],
-                ['PF Number', p.pf_number || '-'],
-                ['Bank Account', p.bank_account || '-']
+                ['Bank Account No', p.bank_account || '-'],
+                ['Bank Name', p.bank_name || '-']
             ];
-            let ex = ml + 14, ey = y + 30;
-            empLeft.forEach(([k, v]) => { doc.fill('#6B7280').text(k, ex, ey); doc.fill('#1F2937').text(String(v), ex + 95, ey); ey += 16; });
-            let fx = ml + 14 + (PW - 100) / 2, fy = y + 30;
-            empRight.forEach(([k, v]) => { doc.fill('#6B7280').text(k, fx, fy); doc.fill('#1F2937').text(String(v), fx + 95, fy); fy += 16; });
-            y += 150 + 18;
+            const t0 = y;
+            const rowH = 16;
+            for (let i = 0; i < 7; i++) {
+                doc.fill('#666666').font(FONT_REG).fontSize(7.5).text(empLeft[i][0], ML, y + 3);
+                doc.fill(BODY).font(FONT_BOLD).text(String(empLeft[i][1]), ML + lblW, y + 3, { width: colW - lblW - 8 });
+                doc.fill('#666666').font(FONT_REG).text(empRight[i][0], ML + colW, y + 3);
+                doc.fill(BODY).font(FONT_BOLD).text(String(empRight[i][1]), ML + colW + lblW, y + 3, { width: colW - lblW - 8 });
+                doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML, y + rowH).lineTo(ML + CW, y + rowH).stroke();
+                y += rowH;
+            }
+            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, t0, CW, 7 * rowH).stroke();
+            y += 12;
 
-            // Earnings / Deductions tables
-            const half = (PW - 100) / 2;
-            doc.fill('#1F2937').font(FONT_BOLD).fontSize(11).text('EARNINGS', ml, y);
-            doc.fill('#1F2937').font(FONT_BOLD).fontSize(11).text('DEDUCTIONS', ml + half + 14, y);
-            y += 18;
+            // ---- Earnings (A) / Deductions (B) tables ----
+            const halfW = (CW - 12) / 2;
+            const drawMoneyTable = (x, title, rows, total, totalLabel, baseY) => {
+                let ty = baseY;
+                doc.rect(x, ty, halfW, 18).fill(BAR);
+                doc.fill(DARK).font(FONT_BOLD).fontSize(8).text(title, x + 8, ty + 4);
+                doc.fill(DARK).text('AMOUNT (₹)', x + halfW - 8, ty + 4, { align: 'right' });
+                ty += 18;
+                const r0 = ty;
+                rows.forEach(([k, v]) => {
+                    doc.fill(BODY).font(FONT_REG).fontSize(7.5).text(k, x + 8, ty + 3);
+                    doc.font(FONT_BOLD).text(formatINR(v), x + halfW - 8, ty + 3, { align: 'right' });
+                    doc.strokeColor(BORDER).lineWidth(0.5).moveTo(x, ty + 14).lineTo(x + halfW, ty + 14).stroke();
+                    ty += 14;
+                });
+                doc.rect(x, ty, halfW, 18).fill(TOTAL);
+                doc.fill(DARK).font(FONT_BOLD).fontSize(8).text(totalLabel, x + 8, ty + 4);
+                doc.font(FONT_BOLD).text(formatINR(total), x + halfW - 8, ty + 4, { align: 'right' });
+                doc.strokeColor(BORDER).lineWidth(0.8).rect(x, r0, halfW, (ty + 18) - r0).stroke();
+                ty += 18;
+                return ty;
+            };
 
-            const earnings = [
+            const earningsRows = [
                 ['Basic Salary', num(p.basic_salary)],
                 ['HRA', num(p.hra)],
                 ['Conveyance', num(p.conveyance)],
                 ['Medical Allowance', num(p.medical)],
                 ['Special Allowance', num(p.special_allowance)],
-                ['Bonus', num(p.bonus)],
-                ['Incentive', num(p.incentive)],
                 ['Other Allowance', num(p.other_allowance)]
             ];
-            const deductions = [
+            const deductionRows = [
                 ['Employee PF', num(p.pf)],
                 ['Employee ESI', num(p.esi)],
                 ['Professional Tax', num(p.professional_tax)],
@@ -254,74 +303,96 @@ async function renderPayslipPdf(p, company) {
                 ['Advance Salary', num(p.advance_salary)],
                 ['Other Deduction', num(p.other_deduction)]
             ];
+            const eyE = drawMoneyTable(ML, 'EARNINGS (A)', earningsRows, num(p.gross_salary), 'TOTAL EARNINGS (A)', y);
+            const eyD = drawMoneyTable(ML + halfW + 12, 'DEDUCTIONS (B)', deductionRows, num(p.total_deductions), 'TOTAL DEDUCTIONS (B)', y);
+            y = Math.max(eyE, eyD) + 12;
 
-            const drawMoneyTable = (x, rows, total, totalLabel) => {
-                let ty = y;
-                rows.forEach(([k, v]) => {
-                    doc.fill('#6B7280').font(FONT_REG).fontSize(9).text(k, x, ty);
-                    doc.fill('#1F2937').text(formatINR(v), x + 120, ty, { align: 'right', width: 90 });
-                    ty += 15;
-                });
-                doc.rect(x - 6, ty, half, 22).fill('#EEF2FF');
-                doc.fill('#4F46E5').font(FONT_BOLD).fontSize(9).text(totalLabel, x, ty + 5);
-                doc.fill('#4F46E5').text(formatINR(total), x + 120, ty + 5, { align: 'right', width: 90 });
-            };
-
-            drawMoneyTable(ml, earnings, num(p.gross_salary), 'Total Earnings');
-            drawMoneyTable(ml + half + 14, deductions, num(p.total_deductions), 'Total Deductions');
-            y += 8 * 15 + 22 + 22;
-
-            // Summary cards
-            const cardW = (PW - 100 - 28) / 3;
+            // ---- Summary cards: Gross (A) / Deductions (B) / Net ----
+            const cardW = (CW - 24) / 3;
             const cards = [
-                { label: 'Gross Salary', value: num(p.gross_salary), color: '#4F46E5' },
-                { label: 'Total Deductions', value: num(p.total_deductions), color: '#F59E0B' },
-                { label: 'Net Salary Payable', value: num(p.net_salary), color: '#10B981' }
+                { label: 'GROSS (A)', value: num(p.gross_salary), color: PURPLE },
+                { label: 'DEDUCTIONS (B)', value: num(p.total_deductions), color: DED },
+                { label: 'NET SALARY', value: num(p.net_salary), color: NET }
             ];
-            let cx = ml;
+            let cx = ML;
             cards.forEach(card => {
-                doc.roundedRect(cx, y, cardW, 58, 8).fill(card.color);
-                doc.fill('#FFFFFF').font(FONT_REG).fontSize(8).text(card.label.toUpperCase(), cx + 10, y + 10);
-                doc.font(FONT_BOLD).fontSize(13).text(formatINR(card.value), cx + 10, y + 26);
-                cx += cardW + 14;
+                doc.rect(cx, y, cardW, 40).fill(card.color);
+                doc.fill('#FFFFFF').font(FONT_REG).fontSize(7).text(card.label, cx + 10, y + 6);
+                doc.font(FONT_BOLD).fontSize(12).text(formatINR(card.value), cx + 10, y + 18);
+                cx += cardW + 12;
             });
-            y += 58 + 18;
+            y += 40 + 12;
 
-            // Net in words
-            doc.roundedRect(ml, y, PW - 100, 30, 8).fill('#EEF2FF');
-            doc.fill('#4F46E5').font(FONT_BOLD).fontSize(9).text('NET SALARY IN WORDS', ml + 14, y + 4);
-            doc.fill('#1F2937').font(FONT_REG).fontSize(9).text(amountToWords(p.net_salary), ml + 14, y + 15);
-            y += 30 + 16;
+            // ---- Net salary in words ----
+            doc.rect(ML, y, CW, 24).fill(TOTAL);
+            doc.fill(DARK).font(FONT_BOLD).fontSize(8).text('NET SALARY IN WORDS', ML + 10, y + 4);
+            doc.fill(BODY).font(FONT_REG).fontSize(8).text(amountToWords(num(p.net_salary)), ML + 10, y + 13);
+            y += 24 + 12;
 
-            // Attendance summary + Employer contribution
-            doc.fill('#1F2937').font(FONT_BOLD).fontSize(11).text('ATTENDANCE SUMMARY', ml, y);
-            doc.fill('#1F2937').font(FONT_BOLD).fontSize(11).text('EMPLOYER CONTRIBUTION', ml + half + 14, y);
-            y += 18;
+            // ---- Attendance summary + Bonus (C) ----
+            y = sectionBar('ATTENDANCE SUMMARY', ML, y, halfW);
+            sectionBar('BONUS (C)', ML + halfW + 12, y, halfW);
             const attRows = [
                 ['Working Days', p.working_days || 0],
                 ['Present Days', p.present_days || 0],
                 ['Leave Days', p.leave_days || 0],
                 ['LOP Days', p.lop_days || 0]
             ];
-            const empRows = [
-                ['Employer PF', num(p.employer_pf)],
-                ['Employer ESI', num(p.employer_esi)],
-                ['Employer Contribution', num(p.employer_contribution)]
+            const bonusRows = [
+                ['Incentive', num(p.incentive)],
+                ['Attendance Incentive', num(p.bonus)],
+                ['Extra Work', num(p.extra_work)]
             ];
+            const totalBonus = num(p.bonus) + num(p.incentive) + num(p.extra_work);
             let ay = y;
-            attRows.forEach(([k, v]) => { doc.fill('#6B7280').font(FONT_REG).fontSize(9).text(k, ml, ay); doc.fill('#1F2937').text(String(v), ml + 120, ay, { align: 'right', width: 90 }); ay += 15; });
+            const a0 = ay;
+            attRows.forEach(([k, v]) => {
+                doc.fill(BODY).font(FONT_REG).fontSize(7.5).text(k, ML + 8, ay + 3);
+                doc.font(FONT_BOLD).text(String(v), ML + halfW - 8, ay + 3, { align: 'right' });
+                doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML, ay + 14).lineTo(ML + halfW, ay + 14).stroke();
+                ay += 14;
+            });
+            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, a0, halfW, ay - a0).stroke();
             let by = y;
-            empRows.forEach(([k, v]) => { doc.fill('#6B7280').font(FONT_REG).fontSize(9).text(k, ml + half + 14, by); doc.fill('#1F2937').text(formatINR(v), ml + half + 14 + 120, by, { align: 'right', width: 90 }); by += 15; });
-            by += 2;
-            doc.rect(ml + half + 14 - 6, by, half, 22).fill('#EEF2FF');
-            doc.fill('#4F46E5').font(FONT_BOLD).fontSize(9).text('Total', ml + half + 14, by + 5);
-            doc.fill('#4F46E5').text(formatINR(num(p.employer_pf) + num(p.employer_esi) + num(p.employer_contribution)), ml + half + 14 + 120, by + 5, { align: 'right', width: 90 });
-            y += 4 * 15 + 26;
+            const b0 = by;
+            bonusRows.forEach(([k, v]) => {
+                doc.fill(BODY).font(FONT_REG).fontSize(7.5).text(k, ML + halfW + 20, by + 3);
+                doc.font(FONT_BOLD).text(formatINR(v), ML + CW - 8, by + 3, { align: 'right' });
+                doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML + halfW + 12, by + 14).lineTo(ML + CW, by + 14).stroke();
+                by += 14;
+            });
+            doc.rect(ML + halfW + 12, by, halfW, 18).fill(TOTAL);
+            doc.fill(DARK).font(FONT_BOLD).fontSize(8).text('TOTAL (C)', ML + halfW + 20, by + 4);
+            doc.font(FONT_BOLD).text(formatINR(totalBonus), ML + CW - 8, by + 4, { align: 'right' });
+            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML + halfW + 12, b0, halfW, (by + 18) - b0).stroke();
+            y = Math.max(ay, by + 18) + 12;
 
-            // Footer
-            if (y < 780) y = 780;
-            doc.rect(0, y, PW, 34).fill('#4F46E5');
-            doc.fill('#FFFFFF').font(FONT_REG).fontSize(8).text('This is a system generated payslip. No signature required.', PW / 2, y + 12, { align: 'center' });
+            // ---- Employer contributions (4 columns) ----
+            y = sectionBar('EMPLOYER CONTRIBUTIONS', ML, y, CW);
+            const ecol = CW / 4;
+            const eheads = ['EMPLOYER PF', 'EMPLOYER ESI', 'EMPLOYER OTHER', 'TOTAL'];
+            doc.rect(ML, y, CW, 16).fill(BAR);
+            eheads.forEach((h, i) => { doc.fill(DARK).font(FONT_BOLD).fontSize(7).text(h, ML + i * ecol + 8, y + 4); });
+            y += 16;
+            const empTotal = num(p.employer_pf) + num(p.employer_esi) + num(p.employer_contribution);
+            const evals = [
+                formatINR(num(p.employer_pf)),
+                formatINR(num(p.employer_esi)),
+                formatINR(num(p.employer_contribution)),
+                formatINR(empTotal)
+            ];
+            doc.rect(ML, y, CW, 18).fill(CARD);
+            doc.rect(ML + 3 * ecol, y, ecol, 18).fill(TOTAL);
+            evals.forEach((v, i) => { doc.fill(BODY).font(FONT_BOLD).fontSize(8).text(v, ML + i * ecol + 8, y + 5); });
+            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, y - 16, CW, 34).stroke();
+            y += 18 + 12;
+
+            // ---- Footer: notes + signature ----
+            y = Math.max(y, 760);
+            doc.fill('#666666').font(FONT_REG).fontSize(7).text('This is a system generated payslip. No signature required.', ML, y);
+            doc.fill('#999999').font(FONT_REG).fontSize(7).text(`Generated on ${new Date().toLocaleDateString('en-IN')}`, ML, y + 9);
+            doc.fill(DARK).font(FONT_BOLD).fontSize(8).text('For ' + String(p.company_name || company.name || 'Gensar IT Solutions').toUpperCase(), PW - ML, y, { align: 'right' });
+            doc.fill('#666666').font(FONT_REG).fontSize(7).text('Authorised Signatory', PW - ML, y + 9, { align: 'right' });
 
             doc.end();
         } catch (err) {
@@ -459,26 +530,26 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
         const result = await query(
             `INSERT INTO payroll (
                 employee_id, month, year, working_days, present_days, leave_days, lop_days,
-                basic_salary, hra, conveyance, medical, special_allowance, bonus, incentive, other_allowance,
+                basic_salary, hra, conveyance, medical, special_allowance, bonus, incentive, other_allowance, extra_work,
                 pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
                 employer_pf, employer_esi, employer_contribution,
                 gross_salary, total_deductions, allowances, deductions, net_salary, status
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7,
-                $8, $9, $10, $11, $12, $13, $14, $15,
-                $16, $17, $18, $19, $20, $21, $22,
-                $23, $24, $25,
-                $26, $27, $28, $29, $30, 'processed'
+                $8, $9, $10, $11, $12, $13, $14, $15, $16,
+                $17, $18, $19, $20, $21, $22, $23,
+                $24, $25, $26,
+                $27, $28, $29, $30, $31, 'processed'
             )
             ON CONFLICT (employee_id, month, year) DO UPDATE SET
                 working_days = $4, present_days = $5, leave_days = $6, lop_days = $7,
                 basic_salary = $8, hra = $9, conveyance = $10, medical = $11, special_allowance = $12,
-                bonus = $13, incentive = $14, other_allowance = $15,
-                pf = $16, esi = $17, professional_tax = $18, income_tax = $19, loan_deduction = $20,
-                advance_salary = $21, other_deduction = $22,
-                employer_pf = $23, employer_esi = $24, employer_contribution = $25,
-                gross_salary = $26, total_deductions = $27, allowances = $28, deductions = $29,
-                net_salary = $30, status = 'processed', updated_at = NOW()
+                bonus = $13, incentive = $14, other_allowance = $15, extra_work = $16,
+                pf = $17, esi = $18, professional_tax = $19, income_tax = $20, loan_deduction = $21,
+                advance_salary = $22, other_deduction = $23,
+                employer_pf = $24, employer_esi = $25, employer_contribution = $26,
+                gross_salary = $27, total_deductions = $28, allowances = $29, deductions = $30,
+                net_salary = $31, status = 'processed', updated_at = NOW()
             RETURNING *`,
             [
                 employee_id, month, year,
@@ -486,6 +557,7 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
                 parseInt(v.leave_days) || 0, parseInt(v.lop_days) || 0,
                 num(v.basic_salary), num(v.hra), num(v.conveyance), num(v.medical),
                 num(v.special_allowance), num(v.bonus), num(v.incentive), num(v.other_allowance),
+                num(v.extra_work),
                 num(v.pf), num(v.esi), num(v.professional_tax), num(v.income_tax),
                 num(v.loan_deduction), num(v.advance_salary), num(v.other_deduction),
                 num(v.employer_pf), num(v.employer_esi), num(v.employer_contribution),
@@ -553,26 +625,26 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                 const result = await query(
                     `INSERT INTO payroll (
                         employee_id, month, year, working_days, present_days, leave_days, lop_days,
-                        basic_salary, hra, conveyance, medical, special_allowance, bonus, incentive, other_allowance,
+                        basic_salary, hra, conveyance, medical, special_allowance, bonus, incentive, other_allowance, extra_work,
                         pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
                         employer_pf, employer_esi, employer_contribution,
                         gross_salary, total_deductions, allowances, deductions, net_salary, status
                     ) VALUES (
                         $1, $2, $3, $4, $5, $6, $7,
-                        $8, $9, $10, $11, $12, $13, $14, $15,
-                        $16, $17, $18, $19, $20, $21, $22,
-                        $23, $24, $25,
-                        $26, $27, $28, $29, $30, 'processed'
+                        $8, $9, $10, $11, $12, $13, $14, $15, $16,
+                        $17, $18, $19, $20, $21, $22, $23,
+                        $24, $25, $26,
+                        $27, $28, $29, $30, $31, 'processed'
                     )
                     ON CONFLICT (employee_id, month, year) DO UPDATE SET
                         working_days = $4, present_days = $5, leave_days = $6, lop_days = $7,
                         basic_salary = $8, hra = $9, conveyance = $10, medical = $11, special_allowance = $12,
-                        bonus = $13, incentive = $14, other_allowance = $15,
-                        pf = $16, esi = $17, professional_tax = $18, income_tax = $19, loan_deduction = $20,
-                        advance_salary = $21, other_deduction = $22,
-                        employer_pf = $23, employer_esi = $24, employer_contribution = $25,
-                        gross_salary = $26, total_deductions = $27, allowances = $28, deductions = $29,
-                        net_salary = $30, status = 'processed', updated_at = NOW()
+                        bonus = $13, incentive = $14, other_allowance = $15, extra_work = $16,
+                        pf = $17, esi = $18, professional_tax = $19, income_tax = $20, loan_deduction = $21,
+                        advance_salary = $22, other_deduction = $23,
+                        employer_pf = $24, employer_esi = $25, employer_contribution = $26,
+                        gross_salary = $27, total_deductions = $28, allowances = $29, deductions = $30,
+                        net_salary = $31, status = 'processed', updated_at = NOW()
                     RETURNING id`,
                     [
                         employee_id, month, year,
@@ -580,6 +652,7 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                         parseInt(v.leave_days) || 0, parseInt(v.lop_days) || 0,
                         num(v.basic_salary), num(v.hra), num(v.conveyance), num(v.medical),
                         num(v.special_allowance), num(v.bonus), num(v.incentive), num(v.other_allowance),
+                        num(v.extra_work),
                         num(v.pf), num(v.esi), num(v.professional_tax), num(v.income_tax),
                         num(v.loan_deduction), num(v.advance_salary), num(v.other_deduction),
                         num(v.employer_pf), num(v.employer_esi), num(v.employer_contribution),
@@ -602,7 +675,7 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                     }
                     if (pdfBuffer) {
                         const filename = `payslip_${employee_id}_${month}_${year}.pdf`;
-                        const sent = await sendPayslipEmail(empResult.rows[0].email, filename, pdfBuffer);
+                        const sent = await sendPayslipEmail(empResult.rows[0].personal_email, filename, pdfBuffer);
                         if (sent.success) { emailed++; email_sent = true; }
                     }
                 }

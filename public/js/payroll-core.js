@@ -69,14 +69,17 @@ function ppAmountInWords(amount) {
 }
 
 // Mirrors the server-side computeTotals
+//   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
+//   D = Employer contributions, Net = A + C - B - D.
 function ppCompute(v) {
     const gross = ppNum(v.basic_salary) + ppNum(v.hra) + ppNum(v.conveyance) + ppNum(v.medical)
-        + ppNum(v.special_allowance) + ppNum(v.bonus) + ppNum(v.incentive) + ppNum(v.other_allowance);
+        + ppNum(v.special_allowance) + ppNum(v.other_allowance);
     const totalDeductions = ppNum(v.pf) + ppNum(v.esi) + ppNum(v.professional_tax) + ppNum(v.income_tax)
         + ppNum(v.loan_deduction) + ppNum(v.advance_salary) + ppNum(v.other_deduction);
-    const net = gross - totalDeductions;
+    const bonus = ppNum(v.bonus) + ppNum(v.incentive) + ppNum(v.extra_work);
     const employerTotal = ppNum(v.employer_pf) + ppNum(v.employer_esi) + ppNum(v.employer_contribution);
-    return { gross, totalDeductions, net, employerTotal };
+    const net = gross + bonus - totalDeductions - employerTotal;
+    return { gross, totalDeductions, bonus, employerTotal, net };
 }
 
 // ---- Dynamic library loading (html2pdf, JSZip) ----
@@ -102,19 +105,22 @@ function ppEnsureLibs() {
     return ppLibsPromise;
 }
 
-// ---- Single-source payslip template ----
+// ---- Single-source payslip template (matches designer reference) ----
 
-function ppKv(label, value, labelWidth) {
-    return '<div style="display:flex;margin-bottom:7px;font-size:10px;line-height:1.5;">' +
-        '<div style="width:' + (labelWidth || 96) + 'px;color:#666666;flex-shrink:0;">' + label + '</div>' +
-        '<div style="color:#1F2937;font-weight:600;word-break:break-word;">' + value + '</div></div>';
+function ppSecBar(title) {
+    return '<div class="pp-sec">' + title + '</div>';
 }
 
-function ppMoneyRow(label, value, last) {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 13px;font-size:10px;' +
-        (last ? '' : 'border-bottom:1px solid #F1EDF9;') + '">' +
-        '<div style="color:#666666;">' + label + '</div>' +
-        '<div style="color:#1F2937;font-weight:600;">' + value + '</div></div>';
+function ppEmpRow(l1, v1, l2, v2) {
+    return '<tr style="border-bottom:1px solid #d5cee6;">' +
+        '<td class="pp-lbl">' + l1 + '</td><td class="pp-val">' + v1 + '</td>' +
+        '<td class="pp-lbl">' + l2 + '</td><td class="pp-val">' + v2 + '</td></tr>';
+}
+
+function ppNumRow(label, value, last) {
+    return '<tr' + (last ? '' : ' style="border-bottom:1px solid #d5cee6;"') + '>' +
+        '<td class="pp-lbl">' + label + '</td>' +
+        '<td class="pp-val" style="text-align:right;">' + value + '</td></tr>';
 }
 
 function buildPayslipHTML(p) {
@@ -128,13 +134,15 @@ function buildPayslipHTML(p) {
     const headerLines = [];
     if (company.address) headerLines.push(ppEsc(company.address));
     const meta = [];
-    if (company.phone) meta.push('Phone: ' + ppEsc(company.phone));
     if (company.email) meta.push('Email: ' + ppEsc(company.email));
-    if (company.website) meta.push('Web: ' + ppEsc(company.website));
+    if (company.website) meta.push(ppEsc(company.website));
+    if (company.phone) meta.push('Phone: ' + ppEsc(company.phone));
 
     const logoHtml = company.logo
-        ? '<img src="' + ppEsc(company.logo) + '" alt="logo" style="height:34px;max-width:150px;object-fit:contain;vertical-align:middle;margin-right:10px;background:#FFFFFF;border-radius:6px;padding:3px;" onerror="this.style.display=\'none\';">'
-        : '<i class="fas fa-building" style="margin-right:8px;font-size:18px;"></i>';
+        ? '<img src="' + ppEsc(company.logo) + '" alt="logo" style="max-height:60px;max-width:150px;object-fit:contain;vertical-align:middle;" onerror="this.style.display=\'none\';">'
+        : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
+
+    const doj = p.joining_date ? String(p.joining_date).substring(0, 10) : '-';
 
     const earnings = [
         ['Basic Salary', ppFormatINR(p.basic_salary)],
@@ -142,8 +150,6 @@ function buildPayslipHTML(p) {
         ['Conveyance', ppFormatINR(p.conveyance)],
         ['Medical Allowance', ppFormatINR(p.medical)],
         ['Special Allowance', ppFormatINR(p.special_allowance)],
-        ['Bonus', ppFormatINR(p.bonus)],
-        ['Incentive', ppFormatINR(p.incentive)],
         ['Other Allowance', ppFormatINR(p.other_allowance)]
     ];
     const deductions = [
@@ -161,123 +167,153 @@ function buildPayslipHTML(p) {
         ['Leave Days', ppNum(p.leave_days)],
         ['LOP Days', ppNum(p.lop_days)]
     ];
-    const employer = [
-        ['Employer PF', ppFormatINR(p.employer_pf)],
-        ['Employer ESI', ppFormatINR(p.employer_esi)],
-        ['Employer Contribution', ppFormatINR(p.employer_contribution)]
+    const bonusRows = [
+        ['Incentive', ppFormatINR(p.incentive)],
+        ['Attendance Incentive', ppFormatINR(p.bonus)],
+        ['Extra Work', ppFormatINR(p.extra_work)]
     ];
 
-    return '<div class="pp-sheet" style="width:794px;min-height:1123px;margin:0 auto;background:#FFFFFF;color:#1F2937;font-family:Inter,-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;position:relative;">' +
+    const genDate = new Date().toLocaleDateString('en-IN');
+
+    return '<div class="pp-sheet ppslip" style="width:794px;min-height:1123px;margin:0 auto;background:#FFFFFF;color:#222222;font-family:Arial,\'Helvetica Neue\',Helvetica,sans-serif;position:relative;padding:0 0 96px;">' +
+        '<style>' +
+        '.ppslip *{box-sizing:border-box;}' +
+        '.ppslip table{border-collapse:collapse;}' +
+        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;font-weight:700;font-size:10px;letter-spacing:1.2px;padding:6px 12px;border:1px solid #d5cee6;border-radius:3px;}' +
+        '.ppslip .pp-lbl{color:#666666;font-size:10px;font-weight:400;white-space:nowrap;padding:4px 10px;}' +
+        '.ppslip .pp-val{font-size:10px;font-weight:700;color:#222222;padding:4px 10px;word-break:break-word;}' +
+        '</style>' +
 
         '<!-- HEADER -->' +
-        '<div style="background:linear-gradient(135deg,#4F46E5,#818CF8);color:#FFFFFF;padding:26px 40px 20px;">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">' +
-                '<div style="min-width:0;">' +
-                    '<div style="font-size:20px;font-weight:700;line-height:1.3;">' + logoHtml + ppEsc(name) + '</div>' +
-                    '<div style="font-size:10px;color:#E0E7FF;margin-top:6px;line-height:1.6;">' +
+        '<div style="padding:18px 36px 0;">' +
+            '<div style="display:flex;align-items:stretch;">' +
+                '<div style="flex-shrink:0;width:150px;display:flex;align-items:center;">' + logoHtml + '</div>' +
+                '<div style="width:1px;background:#7c6ca8;margin:2px 0;flex-shrink:0;"></div>' +
+                '<div style="flex:1;min-width:0;padding-left:14px;">' +
+                    '<div style="font-size:16px;font-weight:700;color:#38286b;">' + ppEsc(name) + '</div>' +
+                    '<div style="font-size:10px;color:#555555;line-height:1.6;margin-top:4px;">' +
                         headerLines.join('<br/>') +
                         (headerLines.length && meta.length ? '<br/>' : '') +
-                        meta.join(' &nbsp;|&nbsp; ') +
+                        meta.join('  |  ') +
                     '</div>' +
                 '</div>' +
-                '<div style="text-align:right;flex-shrink:0;">' +
-                    '<div style="font-size:17px;font-weight:700;letter-spacing:3px;">PAYSLIP</div>' +
-                    '<div style="font-size:12px;color:#E0E7FF;margin-top:3px;font-weight:600;">' + ppEsc(period) + '</div>' +
+                '<div style="flex-shrink:0;width:112px;border:1px solid #d5cee6;border-radius:4px;overflow:hidden;background:#fbfbfd;text-align:center;">' +
+                    '<div style="background:#7c6ca8;color:#FFFFFF;font-weight:700;font-size:13px;letter-spacing:2px;padding:7px 0;">PAYSLIP</div>' +
+                    '<div style="color:#38286b;font-weight:700;font-size:11px;padding:9px 0;">' + ppEsc(period) + '</div>' +
                 '</div>' +
             '</div>' +
+            '<div style="height:1.5px;background:#7c6ca8;margin-top:14px;"></div>' +
         '</div>' +
 
-        '<!-- EMPLOYEE CARD -->' +
-        '<div style="margin:22px 40px 0;background:#EEF2FF;border:1px solid #E0E7FF;border-radius:8px;padding:14px 18px;">' +
-            '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;margin-bottom:10px;">EMPLOYEE DETAILS</div>' +
-            '<div style="display:flex;gap:18px;">' +
-                '<div style="flex:1;min-width:0;">' +
-                    ppKv('Employee ID', ppEsc(p.emp_id || '-')) +
-                    ppKv('Employee Name', ppEsc(empName)) +
-                    ppKv('Designation', ppEsc(p.designation_name || '-')) +
-                    ppKv('Department', ppEsc(p.department_name || '-')) +
-                    ppKv('Date of Joining', ppEsc(p.joining_date ? String(p.joining_date).substring(0, 10) : '-')) +
-                    ppKv('PAN Number', ppEsc(p.pan_number || '-')) +
-                    ppKv('UAN Number', ppEsc(p.uan_number || '-')) +
-                '</div>' +
-                '<div style="flex:1;min-width:0;">' +
-                    ppKv('Pay Period', ppEsc(period)) +
-                    ppKv('Working Days', ppNum(p.working_days)) +
-                    ppKv('Present Days', ppNum(p.present_days)) +
-                    ppKv('Leave Days', ppNum(p.leave_days)) +
-                    ppKv('LOP Days', ppNum(p.lop_days)) +
-                    ppKv('PF Number', ppEsc(p.pf_number || '-')) +
-                    ppKv('Bank Account', ppEsc(p.bank_account || '-')) +
-                '</div>' +
-            '</div>' +
+        '<!-- EMPLOYEE DETAILS -->' +
+        '<div style="margin:14px 36px 0;">' +
+            ppSecBar('EMPLOYEE DETAILS') +
+            '<table style="width:100%;border:1px solid #d5cee6;background:#fbfbfd;margin-top:8px;">' +
+                ppEmpRow('Employee ID', ppEsc(p.emp_id || '-'), 'Pay Period', ppEsc(period)) +
+                ppEmpRow('Employee Name', ppEsc(empName), 'Working Days', ppNum(p.working_days)) +
+                ppEmpRow('Designation', ppEsc(p.designation_name || '-'), 'Present Days', ppNum(p.present_days)) +
+                ppEmpRow('Department', ppEsc(p.department_name || '-'), 'Leave Days', ppNum(p.leave_days)) +
+                ppEmpRow('Date of Joining', ppEsc(doj), 'LOP Days', ppNum(p.lop_days)) +
+                ppEmpRow('PAN Number', ppEsc(p.pan_number || '-'), 'Bank Account No', ppEsc(p.bank_account || '-')) +
+                ppEmpRow('UAN Number', ppEsc(p.uan_number || '-'), 'Bank Name', ppEsc(p.bank_name || '-')) +
+            '</table>' +
         '</div>' +
 
         '<!-- EARNINGS / DEDUCTIONS -->' +
-        '<div style="margin:22px 40px 0;display:flex;gap:24px;">' +
+        '<div style="margin:14px 36px 0;display:flex;gap:18px;">' +
             '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">EARNINGS</div>' +
-                '<div style="border:1px solid #E5E7EB;border-radius:6px;margin-top:8px;overflow:hidden;">' +
-                    earnings.map((r, i) => ppMoneyRow(r[0], r[1], false)).join('') +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#EEF2FF;font-size:10px;font-weight:700;color:#4F46E5;">' +
-                        '<div>Total Earnings</div><div>' + ppFormatINR(totals.gross) + '</div>' +
-                    '</div>' +
-                '</div>' +
+                ppSecBar('EARNINGS (A)') +
+                '<table style="width:100%;border:1px solid #d5cee6;background:#fbfbfd;margin-top:8px;">' +
+                    '<tr style="background:#e5e0f5;"><td class="pp-lbl" style="color:#38286b;font-weight:700;">Particulars</td>' +
+                        '<td class="pp-lbl" style="color:#38286b;font-weight:700;text-align:right;">AMOUNT (₹)</td></tr>' +
+                    earnings.map((r) => '<tr style="border-bottom:1px solid #d5cee6;"><td class="pp-lbl">' + r[0] + '</td>' +
+                        '<td class="pp-val" style="text-align:right;">' + r[1] + '</td></tr>').join('') +
+                    '<tr style="background:#efeafb;"><td class="pp-lbl" style="color:#38286b;font-weight:700;">TOTAL EARNINGS (A)</td>' +
+                        '<td class="pp-val" style="color:#38286b;text-align:right;">' + ppFormatINR(totals.gross) + '</td></tr>' +
+                '</table>' +
             '</div>' +
             '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">DEDUCTIONS</div>' +
-                '<div style="border:1px solid #E5E7EB;border-radius:6px;margin-top:8px;overflow:hidden;">' +
-                    deductions.map((r, i) => ppMoneyRow(r[0], r[1], false)).join('') +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#EEF2FF;font-size:10px;font-weight:700;color:#4F46E5;">' +
-                        '<div>Total Deductions</div><div>' + ppFormatINR(totals.totalDeductions) + '</div>' +
-                    '</div>' +
-                '</div>' +
+                ppSecBar('DEDUCTIONS (B)') +
+                '<table style="width:100%;border:1px solid #d5cee6;background:#fbfbfd;margin-top:8px;">' +
+                    '<tr style="background:#e5e0f5;"><td class="pp-lbl" style="color:#38286b;font-weight:700;">Particulars</td>' +
+                        '<td class="pp-lbl" style="color:#38286b;font-weight:700;text-align:right;">AMOUNT (₹)</td></tr>' +
+                    deductions.map((r) => '<tr style="border-bottom:1px solid #d5cee6;"><td class="pp-lbl">' + r[0] + '</td>' +
+                        '<td class="pp-val" style="text-align:right;">' + r[1] + '</td></tr>').join('') +
+                    '<tr style="background:#efeafb;"><td class="pp-lbl" style="color:#38286b;font-weight:700;">TOTAL DEDUCTIONS (B)</td>' +
+                        '<td class="pp-val" style="color:#38286b;text-align:right;">' + ppFormatINR(totals.totalDeductions) + '</td></tr>' +
+                '</table>' +
             '</div>' +
         '</div>' +
 
         '<!-- SUMMARY CARDS -->' +
-        '<div style="margin:22px 40px 0;display:flex;gap:14px;">' +
-            '<div style="flex:1;background:linear-gradient(135deg,#4F46E5,#818CF8);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
-                '<div style="font-size:9px;letter-spacing:1px;opacity:0.92;">GROSS SALARY</div>' +
-                '<div style="font-size:16px;font-weight:700;margin-top:5px;">' + ppFormatINR(totals.gross) + '</div>' +
-            '</div>' +
-            '<div style="flex:1;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
-                '<div style="font-size:9px;letter-spacing:1px;opacity:0.92;">TOTAL DEDUCTIONS</div>' +
-                '<div style="font-size:16px;font-weight:700;margin-top:5px;">' + ppFormatINR(totals.totalDeductions) + '</div>' +
-            '</div>' +
-            '<div style="flex:1;background:linear-gradient(135deg,#10B981,#34D399);color:#FFFFFF;border-radius:8px;padding:14px 18px;">' +
-                '<div style="font-size:9px;letter-spacing:1px;opacity:0.92;">NET SALARY PAYABLE</div>' +
-                '<div style="font-size:16px;font-weight:700;margin-top:5px;">' + ppFormatINR(totals.net) + '</div>' +
-            '</div>' +
+        '<div style="margin:14px 36px 0;display:flex;gap:12px;">' +
+            '<div style="flex:1;background:#7c6ca8;color:#FFFFFF;border-radius:4px;padding:10px 14px;">' +
+                '<div style="font-size:9px;letter-spacing:1px;opacity:0.95;">GROSS (A)</div>' +
+                '<div style="font-size:16px;font-weight:700;margin-top:4px;">' + ppFormatINR(totals.gross) + '</div></div>' +
+            '<div style="flex:1;background:#d97706;color:#FFFFFF;border-radius:4px;padding:10px 14px;">' +
+                '<div style="font-size:9px;letter-spacing:1px;opacity:0.95;">DEDUCTIONS (B)</div>' +
+                '<div style="font-size:16px;font-weight:700;margin-top:4px;">' + ppFormatINR(totals.totalDeductions) + '</div></div>' +
+            '<div style="flex:1;background:#2e7d32;color:#FFFFFF;border-radius:4px;padding:10px 14px;">' +
+                '<div style="font-size:9px;letter-spacing:1px;opacity:0.95;">NET SALARY</div>' +
+                '<div style="font-size:16px;font-weight:700;margin-top:4px;">' + ppFormatINR(totals.net) + '</div></div>' +
         '</div>' +
 
         '<!-- NET IN WORDS -->' +
-        '<div style="margin:18px 40px 0;background:#EEF2FF;border:1px solid #E0E7FF;border-radius:8px;padding:10px 18px;">' +
-            '<div style="font-size:9px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">NET SALARY IN WORDS</div>' +
-            '<div style="font-size:11px;color:#1F2937;margin-top:5px;font-weight:600;line-height:1.5;">' + ppEsc(ppAmountInWords(totals.net)) + '</div>' +
+        '<div style="margin:12px 36px 0;border:1px solid #d5cee6;background:#efeafb;border-radius:4px;padding:8px 14px;">' +
+            '<div style="font-size:9px;font-weight:700;color:#38286b;letter-spacing:1.2px;">NET SALARY IN WORDS</div>' +
+            '<div style="font-size:11px;font-weight:700;color:#222222;margin-top:4px;line-height:1.5;">' + ppEsc(ppAmountInWords(totals.net)) + '</div>' +
         '</div>' +
 
-        '<!-- ATTENDANCE + EMPLOYER -->' +
-        '<div style="margin:22px 40px 0;display:flex;gap:24px;">' +
+        '<!-- ATTENDANCE + BONUS -->' +
+        '<div style="margin:14px 36px 0;display:flex;gap:18px;">' +
             '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">ATTENDANCE SUMMARY</div>' +
-                '<div style="border:1px solid #E5E7EB;border-radius:6px;margin-top:8px;overflow:hidden;">' +
-                    attendance.map((r, i) => ppMoneyRow(r[0], String(r[1]), i === attendance.length - 1)).join('') +
-                '</div>' +
+                ppSecBar('ATTENDANCE SUMMARY') +
+                '<table style="width:100%;border:1px solid #d5cee6;background:#fbfbfd;margin-top:8px;">' +
+                    attendance.map((r, i) => ppNumRow(r[0], String(r[1]), i === attendance.length - 1)).join('') +
+                '</table>' +
             '</div>' +
             '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:10px;font-weight:700;color:#4F46E5;letter-spacing:1.2px;">EMPLOYER CONTRIBUTION</div>' +
-                '<div style="border:1px solid #E5E7EB;border-radius:6px;margin-top:8px;overflow:hidden;">' +
-                    employer.map((r, i) => ppMoneyRow(r[0], r[1], false)).join('') +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;background:#EEF2FF;font-size:10px;font-weight:700;color:#4F46E5;">' +
-                        '<div>Total Employer</div><div>' + ppFormatINR(totals.employerTotal) + '</div>' +
-                    '</div>' +
-                '</div>' +
+                ppSecBar('BONUS (C)') +
+                '<table style="width:100%;border:1px solid #d5cee6;background:#fbfbfd;margin-top:8px;">' +
+                    '<tr style="background:#e5e0f5;"><td class="pp-lbl" style="color:#38286b;font-weight:700;">Particulars</td>' +
+                        '<td class="pp-lbl" style="color:#38286b;font-weight:700;text-align:right;">AMOUNT (₹)</td></tr>' +
+                    bonusRows.map((r) => '<tr style="border-bottom:1px solid #d5cee6;"><td class="pp-lbl">' + r[0] + '</td>' +
+                        '<td class="pp-val" style="text-align:right;">' + r[1] + '</td></tr>').join('') +
+                    '<tr style="background:#efeafb;"><td class="pp-lbl" style="color:#38286b;font-weight:700;">TOTAL (C)</td>' +
+                        '<td class="pp-val" style="color:#38286b;text-align:right;">' + ppFormatINR(totals.bonus) + '</td></tr>' +
+                '</table>' +
             '</div>' +
+        '</div>' +
+
+        '<!-- EMPLOYER CONTRIBUTIONS -->' +
+        '<div style="margin:14px 36px 0;">' +
+            ppSecBar('EMPLOYER CONTRIBUTIONS') +
+            '<table style="width:100%;border:1px solid #d5cee6;margin-top:8px;">' +
+                '<tr style="background:#e5e0f5;">' +
+                    '<th class="pp-lbl" style="color:#38286b;font-weight:700;text-align:left;width:25%;">EMPLOYER PF</th>' +
+                    '<th class="pp-lbl" style="color:#38286b;font-weight:700;text-align:left;width:25%;">EMPLOYER ESI</th>' +
+                    '<th class="pp-lbl" style="color:#38286b;font-weight:700;text-align:left;width:25%;">EMPLOYER OTHER</th>' +
+                    '<th class="pp-lbl" style="color:#38286b;font-weight:700;text-align:left;width:25%;">TOTAL</th>' +
+                '</tr>' +
+                '<tr style="background:#fbfbfd;">' +
+                    '<td class="pp-val">' + ppFormatINR(p.employer_pf) + '</td>' +
+                    '<td class="pp-val">' + ppFormatINR(p.employer_esi) + '</td>' +
+                    '<td class="pp-val">' + ppFormatINR(p.employer_contribution) + '</td>' +
+                    '<td class="pp-val" style="background:#efeafb;">' + ppFormatINR(totals.employerTotal) + '</td>' +
+                '</tr>' +
+            '</table>' +
         '</div>' +
 
         '<!-- FOOTER -->' +
-        '<div style="position:absolute;bottom:0;left:0;right:0;background:#4F46E5;color:#FFFFFF;text-align:center;padding:10px 16px;font-size:9px;">' +
-            'This is a system generated payslip. No signature required.' +
+        '<div style="position:absolute;left:36px;right:36px;bottom:14px;display:flex;justify-content:space-between;align-items:flex-end;">' +
+            '<div style="font-size:9px;color:#666666;line-height:1.6;">' +
+                'This is a system generated payslip. No signature required.<br/>' +
+                '<span style="color:#999999;">Generated on ' + genDate + '</span>' +
+            '</div>' +
+            '<div style="text-align:right;">' +
+                '<div style="font-weight:700;color:#38286b;font-size:10px;">For ' + ppEsc(String(name).toUpperCase()) + '</div>' +
+                '<div style="font-size:9px;color:#666666;margin-top:2px;">Authorised Signatory</div>' +
+            '</div>' +
         '</div>' +
     '</div>';
 }

@@ -427,6 +427,7 @@ ALTER TABLE payroll ADD COLUMN IF NOT EXISTS medical DECIMAL(10,2) DEFAULT 0;
 ALTER TABLE payroll ADD COLUMN IF NOT EXISTS special_allowance DECIMAL(10,2) DEFAULT 0;
 ALTER TABLE payroll ADD COLUMN IF NOT EXISTS bonus DECIMAL(10,2) DEFAULT 0;
 ALTER TABLE payroll ADD COLUMN IF NOT EXISTS incentive DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS extra_work DECIMAL(10,2) DEFAULT 0;
 ALTER TABLE payroll ADD COLUMN IF NOT EXISTS other_allowance DECIMAL(10,2) DEFAULT 0;
 
 -- Payroll: employee deductions (kept separate from the legacy `deductions` column).

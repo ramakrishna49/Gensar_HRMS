@@ -258,6 +258,7 @@ body:not(.admin-app) .pp-page {
 .pp-sum-box.deductions { background: linear-gradient(135deg, #F59E0B, #FBBF24); }
 .pp-sum-box.net { background: linear-gradient(135deg, #10B981, #34D399); }
 .pp-sum-box.employer { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
+.pp-sum-box.bonus { background: linear-gradient(135deg, #7C6CA8, #A996D8); }
 
 .pp-words {
     background: var(--pp-light);
