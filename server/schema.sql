@@ -308,7 +308,9 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_employee ON push_subscriptions
 -- SEED DATA
 -- ============================================
 
-INSERT INTO companies (name, email, phone) VALUES ('Gensar IT Solutions', 'info@gensar.com', '+91-9876543210')
+-- Company branding used on the payslip header (name + address).
+INSERT INTO companies (name, address, phone, email, website) VALUES
+('GENSAR IT SOLUTIONS PVT. LTD.', 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad – 500072, Telangana, India', '+91 40 4855 6600', 'hr@gensaritsolutions.com', 'www.gensarhrms.in')
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO leave_types (name, days_per_year, description, gender_eligibility) VALUES
@@ -404,6 +406,43 @@ UPDATE leave_types SET is_active = 0 WHERE name = 'Earned Leave';
 -- Add team_lead role (idempotent: drop + recreate the role check constraint).
 ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_role_check;
 ALTER TABLE employees ADD CONSTRAINT employees_role_check CHECK (role IN ('admin', 'hr', 'manager', 'team_lead', 'employee'));
+
+-- ============================================
+-- SALARY STRUCTURE ON EMPLOYEES
+-- Mirrors the payroll columns so payslips can be auto-filled from the
+-- employee's stored salary components when generating payroll.
+-- Admin sets these when adding/editing an employee; the employee can
+-- view them on their profile. Only Present/Leave/LOP days are entered
+-- at payroll time - everything else is auto-calculated from this.
+-- ============================================
+
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS basic_salary DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS hra DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS conveyance DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS medical DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS special_allowance DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS other_allowance DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS pf DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS esi DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS professional_tax DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS income_tax DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_deduction DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS advance_salary DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS other_deduction DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS incentive DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS bonus DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS extra_work DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS employer_pf DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS employer_esi DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS employer_contribution DECIMAL(10,2) DEFAULT 0;
+
+-- Backfill basic_salary from the legacy gross salary column where empty.
+UPDATE employees SET basic_salary = salary
+WHERE (basic_salary IS NULL OR basic_salary = 0) AND salary IS NOT NULL AND salary > 0;
+
+-- Fill the payslip header company address for existing rows (idempotent).
+UPDATE companies SET address = 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad – 500072, Telangana, India'
+WHERE address IS NULL OR address = '';
 
 -- ============================================
 -- PAYROLL MODULE MIGRATIONS (idempotent)

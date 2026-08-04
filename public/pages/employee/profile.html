@@ -123,6 +123,13 @@
                 </div>
             </div>
 
+            <div class="card slide-up stagger-4 mb-3">
+                <div class="card-header">
+                    <h3 style="font-weight:600;"><i class="fas fa-calculator" style="color:#7c6ca8;margin-right:8px;"></i>Salary Structure</h3>
+                </div>
+                <div id="salaryStructureDetails"><div style="text-align:center;padding:20px;"><div class="spinner" style="margin:0 auto;"></div></div></div>
+            </div>
+
             <div class="card slide-up stagger-4">
                 <div class="card-header">
                     <h3 style="font-weight:600;"><i class="fas fa-clipboard-list" style="color:var(--primary);margin-right:8px;"></i>My Update Requests</h3>
@@ -297,6 +304,7 @@
                 qualHtml += detailItem('fa-graduation-cap', 'Qualification', u.qualification);
                 qualHtml += detailItem('fa-book-open', 'Specialization', u.specialization);
                 qualHtml += detailItem('fa-id-card', 'PAN Number', maskId(u.pan_number, 4));
+                qualHtml += detailItem('fa-hashtag', 'UAN Number', maskId(u.uan_number, 4));
                 qualHtml += detailItem('fa-fingerprint', 'Aadhaar Number', maskId(u.aadhaar_number, 4));
                 qualHtml += detailItem('fa-passport', 'Passport Number', maskId(u.passport_number, 4));
                 qualHtml += '</div>';
@@ -309,12 +317,37 @@
                 bankHtml += detailItem('fa-barcode', 'IFSC Code', u.bank_ifsc);
                 bankHtml += '</div>';
                 document.getElementById('bankDetails').innerHTML = bankHtml;
+
+                let salHtml = '<div class="detail-grid">';
+                const salItem = (icon, label, val) => detailItem(icon, label, val != null ? formatCurrency(val) : null);
+                salHtml += salItem('fa-coins', 'Basic Salary', u.basic_salary);
+                salHtml += salItem('fa-home', 'HRA', u.hra);
+                salHtml += salItem('fa-bus', 'Conveyance', u.conveyance);
+                salHtml += salItem('fa-heartbeat', 'Medical Allowance', u.medical);
+                salHtml += salItem('fa-star', 'Special Allowance', u.special_allowance);
+                salHtml += salItem('fa-plus-circle', 'Other Allowance', u.other_allowance);
+                salHtml += salItem('fa-minus-circle', 'Employee PF', u.pf);
+                salHtml += salItem('fa-minus-circle', 'Employee ESI', u.esi);
+                salHtml += salItem('fa-file-invoice', 'Professional Tax', u.professional_tax);
+                salHtml += salItem('fa-percentage', 'Income Tax', u.income_tax);
+                salHtml += salItem('fa-hand-holding-usd', 'Loan Deduction', u.loan_deduction);
+                salHtml += salItem('fa-money-bill-wave', 'Advance Salary', u.advance_salary);
+                salHtml += salItem('fa-minus', 'Other Deduction', u.other_deduction);
+                salHtml += salItem('fa-trophy', 'Incentive', u.incentive);
+                salHtml += salItem('fa-medal', 'Attendance Incentive', u.bonus);
+                salHtml += salItem('fa-bolt', 'Extra Work', u.extra_work);
+                salHtml += salItem('fa-building', 'Employer PF', u.employer_pf);
+                salHtml += salItem('fa-building', 'Employer ESI', u.employer_esi);
+                salHtml += salItem('fa-handshake', 'Employer Contribution', u.employer_contribution);
+                salHtml += '</div>';
+                document.getElementById('salaryStructureDetails').innerHTML = salHtml;
             } else {
                 document.getElementById('profileHeader').innerHTML = '<p style="color:var(--danger);text-align:center;padding:20px;">Failed to load profile data</p>';
                 document.getElementById('personalDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
                 document.getElementById('jobDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
                 document.getElementById('qualificationDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
                 document.getElementById('bankDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
+                document.getElementById('salaryStructureDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
             }
         }
 

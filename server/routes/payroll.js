@@ -307,21 +307,22 @@ async function renderPayslipPdf(p, company) {
             const eyD = drawMoneyTable(ML + halfW + 12, 'DEDUCTIONS (B)', deductionRows, num(p.total_deductions), 'TOTAL DEDUCTIONS (B)', y);
             y = Math.max(eyE, eyD) + 12;
 
-            // ---- Summary cards: Gross (A) / Deductions (B) / Net ----
+            // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
             const cardW = (CW - 24) / 3;
             const cards = [
-                { label: 'GROSS (A)', value: num(p.gross_salary), color: PURPLE },
-                { label: 'DEDUCTIONS (B)', value: num(p.total_deductions), color: DED },
-                { label: 'NET SALARY', value: num(p.net_salary), color: NET }
+                { label: 'GROSS SALARY (A)', value: num(p.gross_salary), color: DARK },
+                { label: 'TOTAL DEDUCTIONS (B)', value: num(p.total_deductions), color: DED },
+                { label: 'NET SALARY PAYABLE (A + C - B - D)', value: num(p.net_salary), color: NET }
             ];
             let cx = ML;
             cards.forEach(card => {
-                doc.rect(cx, y, cardW, 40).fill(card.color);
-                doc.fill('#FFFFFF').font(FONT_REG).fontSize(7).text(card.label, cx + 10, y + 6);
-                doc.font(FONT_BOLD).fontSize(12).text(formatINR(card.value), cx + 10, y + 18);
+                doc.rect(cx, y, cardW, 42).fill(CARD);
+                doc.strokeColor(BORDER).lineWidth(0.8).rect(cx, y, cardW, 42).stroke();
+                doc.fill(card.color).font(FONT_BOLD).fontSize(7).text(card.label, cx + 4, y + 5, { width: cardW - 8, align: 'center' });
+                doc.font(FONT_BOLD).fontSize(12).text(formatINR(card.value), cx + 4, y + 20, { width: cardW - 8, align: 'center' });
                 cx += cardW + 12;
             });
-            y += 40 + 12;
+            y += 42 + 12;
 
             // ---- Net salary in words ----
             doc.rect(ML, y, CW, 24).fill(TOTAL);

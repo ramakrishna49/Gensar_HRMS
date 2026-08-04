@@ -70,17 +70,37 @@ async function purgeExpiredPhotos() {
     }
 }
 
-// One-time repair: recompute payroll net_salary where it does not match basic + allowances - deductions.
+// One-time repair: recompute payroll net_salary where it does not match the current
+// formula net = gross(A) + bonus(C) - deductions(B) - employer(D).
 // Fixes rows corrupted by the old string-concatenation bug (e.g. "30000" + "400" = "30000400").
 async function repairPayrollNetSalaries() {
     try {
         const rows = await query(
-            `SELECT id, basic_salary, allowances, deductions, net_salary FROM payroll
-             WHERE net_salary != COALESCE(CAST(basic_salary AS DOUBLE PRECISION), 0) + COALESCE(CAST(allowances AS DOUBLE PRECISION), 0) - COALESCE(CAST(deductions AS DOUBLE PRECISION), 0)`
+            `SELECT id,
+                COALESCE(CAST(basic_salary AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(hra AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(conveyance AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(medical AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(special_allowance AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(other_allowance AS DOUBLE PRECISION), 0) AS gross,
+                COALESCE(CAST(pf AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(esi AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(professional_tax AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(income_tax AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(loan_deduction AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(advance_salary AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(other_deduction AS DOUBLE PRECISION), 0) AS deductions,
+                COALESCE(CAST(bonus AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(incentive AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(extra_work AS DOUBLE PRECISION), 0) AS bonus,
+                COALESCE(CAST(employer_pf AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(employer_esi AS DOUBLE PRECISION), 0)
+                  + COALESCE(CAST(employer_contribution AS DOUBLE PRECISION), 0) AS employer,
+                net_salary FROM payroll`
         );
         let fixed = 0;
         for (const r of rows.rows) {
-            const net = Number(r.basic_salary || 0) + Number(r.allowances || 0) - Number(r.deductions || 0);
+            const net = Number(r.gross || 0) + Number(r.bonus || 0) - Number(r.deductions || 0) - Number(r.employer || 0);
             if (Number(r.net_salary) === net) continue;
             await query('UPDATE payroll SET net_salary = $1 WHERE id = $2', [net, r.id]);
             fixed++;

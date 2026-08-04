@@ -149,7 +149,38 @@
                             <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
                         <div class="form-group"><label>Joining Date *</label><input type="date" class="form-control" name="joining_date" required></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" name="salary"></div>
+                        <div class="form-group"><label>UAN Number</label><input type="text" class="form-control" name="uan_number" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
                         <div class="form-group"><label>Password (default: welcome123)</label><input type="password" class="form-control" name="password" value="welcome123"></div>
+                    </div>
+                    <div class="card" style="padding:14px 16px;margin-bottom:8px;background:var(--bg-light);">
+                        <p style="font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:10px;"><i class="fas fa-calculator" style="margin-right:6px;color:#7c6ca8;"></i>Salary Structure (set once here; used on every payslip)</p>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" name="basic_salary"></div>
+                            <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" name="hra"></div>
+                            <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" name="conveyance"></div>
+                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" name="medical"></div>
+                            <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" name="special_allowance"></div>
+                            <div class="form-group"><label>Other Allowance</label><input type="number" step="0.01" class="form-control" name="other_allowance"></div>
+                        </div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label>Employee PF</label><input type="number" step="0.01" class="form-control" name="pf"></div>
+                            <div class="form-group"><label>Employee ESI</label><input type="number" step="0.01" class="form-control" name="esi"></div>
+                            <div class="form-group"><label>Professional Tax</label><input type="number" step="0.01" class="form-control" name="professional_tax"></div>
+                            <div class="form-group"><label>Income Tax</label><input type="number" step="0.01" class="form-control" name="income_tax"></div>
+                            <div class="form-group"><label>Loan Deduction</label><input type="number" step="0.01" class="form-control" name="loan_deduction"></div>
+                            <div class="form-group"><label>Advance Salary</label><input type="number" step="0.01" class="form-control" name="advance_salary"></div>
+                            <div class="form-group"><label>Other Deduction</label><input type="number" step="0.01" class="form-control" name="other_deduction"></div>
+                        </div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Bonus / Employer Contributions</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label>Incentive</label><input type="number" step="0.01" class="form-control" name="incentive"></div>
+                            <div class="form-group"><label>Attendance Incentive (Bonus)</label><input type="number" step="0.01" class="form-control" name="bonus"></div>
+                            <div class="form-group"><label>Extra Work</label><input type="number" step="0.01" class="form-control" name="extra_work"></div>
+                            <div class="form-group"><label>Employer PF</label><input type="number" step="0.01" class="form-control" name="employer_pf"></div>
+                            <div class="form-group"><label>Employer ESI</label><input type="number" step="0.01" class="form-control" name="employer_esi"></div>
+                            <div class="form-group"><label>Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" name="employer_contribution"></div>
+                        </div>
                     </div>
                     <div class="card" style="padding:14px 16px;margin-bottom:8px;background:var(--bg-light);">
                         <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.5;"><i class="fas fa-info-circle" style="margin-right:6px;color:var(--info);"></i>Personal details (Date of Birth, Blood Group, Bank details, Qualifications, Address, etc.) will be completed by the employee from their profile after first login. Any fields submitted by the employee appear as <strong>pending requests</strong> for your approval.</p>
@@ -185,6 +216,7 @@
                         <div class="form-group"><label>Reporting Person</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Person</option></select>
                             <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
                         <div class="form-group"><label>Salary</label><input type="number" class="form-control" id="editSalary"></div>
+                        <div class="form-group"><label>UAN Number</label><input type="text" class="form-control" id="editUAN" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
                         <div class="form-group"><label>Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
                         <div class="form-group"><label>Gender</label><select class="form-control" id="editGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
                         <div class="form-group"><label>Blood Group</label><input type="text" class="form-control" id="editBloodGroup"></div>
@@ -214,6 +246,36 @@
                             <div class="form-group"><label>Branch</label><input type="text" class="form-control" id="editBankBranch"></div>
                             <div class="form-group"><label>Account Number</label><input type="text" class="form-control" id="editBankAccount"></div>
                             <div class="form-group"><label>IFSC Code</label><input type="text" class="form-control" id="editBankIFSC" placeholder="e.g. ABCD0123456" pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" title="Format: ABCD0123456 (4 letters, 0, 6 alphanumeric)"></div>
+                        </div>
+                    </div>
+                    <div class="card" style="padding:16px;margin-bottom:16px;">
+                        <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-calculator" style="margin-right:8px;color:#7c6ca8;"></i>Salary Structure <span style="font-weight:400;color:var(--text-secondary);font-size:0.8rem;">(used on every payslip)</span></div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" id="editBasicSalary"></div>
+                            <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" id="editHRA"></div>
+                            <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" id="editConveyance"></div>
+                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" id="editMedical"></div>
+                            <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" id="editSpecialAllowance"></div>
+                            <div class="form-group"><label>Other Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
+                        </div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label>Employee PF</label><input type="number" step="0.01" class="form-control" id="editEmployeePF"></div>
+                            <div class="form-group"><label>Employee ESI</label><input type="number" step="0.01" class="form-control" id="editEmployeeESI"></div>
+                            <div class="form-group"><label>Professional Tax</label><input type="number" step="0.01" class="form-control" id="editProfessionalTax"></div>
+                            <div class="form-group"><label>Income Tax</label><input type="number" step="0.01" class="form-control" id="editIncomeTax"></div>
+                            <div class="form-group"><label>Loan Deduction</label><input type="number" step="0.01" class="form-control" id="editLoanDeduction"></div>
+                            <div class="form-group"><label>Advance Salary</label><input type="number" step="0.01" class="form-control" id="editAdvanceSalary"></div>
+                            <div class="form-group"><label>Other Deduction</label><input type="number" step="0.01" class="form-control" id="editOtherDeduction"></div>
+                        </div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Bonus / Employer Contributions</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label>Incentive</label><input type="number" step="0.01" class="form-control" id="editIncentive"></div>
+                            <div class="form-group"><label>Attendance Incentive (Bonus)</label><input type="number" step="0.01" class="form-control" id="editBonus"></div>
+                            <div class="form-group"><label>Extra Work</label><input type="number" step="0.01" class="form-control" id="editExtraWork"></div>
+                            <div class="form-group"><label>Employer PF</label><input type="number" step="0.01" class="form-control" id="editEmployerPF"></div>
+                            <div class="form-group"><label>Employer ESI</label><input type="number" step="0.01" class="form-control" id="editEmployerESI"></div>
+                            <div class="form-group"><label>Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" id="editEmployerContribution"></div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -581,6 +643,7 @@
                 renderRMOptions(emp.role || 'employee', document.getElementById('editReportingManager'), emp.reporting_manager_id || '');
                 document.getElementById('editReportingManager').dataset.currentRm = emp.reporting_manager_id || '';
                 document.getElementById('editSalary').value = emp.salary || '';
+                document.getElementById('editUAN').value = emp.uan_number || '';
                 document.getElementById('editStatus').value = emp.status || 'active';
                 document.getElementById('editGender').value = emp.gender || '';
                 document.getElementById('editBloodGroup').value = emp.blood_group || '';
@@ -601,6 +664,17 @@
                 document.getElementById('editBankBranch').value = emp.bank_branch || '';
                 document.getElementById('editBankAccount').value = emp.bank_account || '';
                 document.getElementById('editBankIFSC').value = emp.bank_ifsc || '';
+                const setNum = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val === null || val === undefined) ? '' : val; };
+                setNum('editBasicSalary', emp.basic_salary); setNum('editHRA', emp.hra);
+                setNum('editConveyance', emp.conveyance); setNum('editMedical', emp.medical);
+                setNum('editSpecialAllowance', emp.special_allowance); setNum('editOtherAllowance', emp.other_allowance);
+                setNum('editEmployeePF', emp.pf); setNum('editEmployeeESI', emp.esi);
+                setNum('editProfessionalTax', emp.professional_tax); setNum('editIncomeTax', emp.income_tax);
+                setNum('editLoanDeduction', emp.loan_deduction); setNum('editAdvanceSalary', emp.advance_salary);
+                setNum('editOtherDeduction', emp.other_deduction);
+                setNum('editIncentive', emp.incentive); setNum('editBonus', emp.bonus); setNum('editExtraWork', emp.extra_work);
+                setNum('editEmployerPF', emp.employer_pf); setNum('editEmployerESI', emp.employer_esi);
+                setNum('editEmployerContribution', emp.employer_contribution);
                 document.getElementById('editEmployeeModal').classList.add('active');
             }
         }
@@ -618,6 +692,7 @@
                 designation_id: document.getElementById('editDesignation').value || undefined,
                 reporting_manager_id: document.getElementById('editReportingManager').value || '',
                 salary: document.getElementById('editSalary').value || undefined,
+                uan_number: document.getElementById('editUAN').value || undefined,
                 role: document.getElementById('editRole').value,
                 status: document.getElementById('editStatus').value,
                 gender: document.getElementById('editGender').value || undefined,
@@ -638,7 +713,26 @@
                 bank_name: document.getElementById('editBankName').value || undefined,
                 bank_branch: document.getElementById('editBankBranch').value || undefined,
                 bank_account: document.getElementById('editBankAccount').value || undefined,
-                bank_ifsc: document.getElementById('editBankIFSC').value || undefined
+                bank_ifsc: document.getElementById('editBankIFSC').value || undefined,
+                basic_salary: document.getElementById('editBasicSalary').value || undefined,
+                hra: document.getElementById('editHRA').value || undefined,
+                conveyance: document.getElementById('editConveyance').value || undefined,
+                medical: document.getElementById('editMedical').value || undefined,
+                special_allowance: document.getElementById('editSpecialAllowance').value || undefined,
+                other_allowance: document.getElementById('editOtherAllowance').value || undefined,
+                pf: document.getElementById('editEmployeePF').value || undefined,
+                esi: document.getElementById('editEmployeeESI').value || undefined,
+                professional_tax: document.getElementById('editProfessionalTax').value || undefined,
+                income_tax: document.getElementById('editIncomeTax').value || undefined,
+                loan_deduction: document.getElementById('editLoanDeduction').value || undefined,
+                advance_salary: document.getElementById('editAdvanceSalary').value || undefined,
+                other_deduction: document.getElementById('editOtherDeduction').value || undefined,
+                incentive: document.getElementById('editIncentive').value || undefined,
+                bonus: document.getElementById('editBonus').value || undefined,
+                extra_work: document.getElementById('editExtraWork').value || undefined,
+                employer_pf: document.getElementById('editEmployerPF').value || undefined,
+                employer_esi: document.getElementById('editEmployerESI').value || undefined,
+                employer_contribution: document.getElementById('editEmployerContribution').value || undefined
             };
             const result = await apiCall(`/employees/${id}`, 'PUT', data);
             if (result && result.success) {
@@ -907,6 +1001,7 @@
                     vRow('Specialization', emp.specialization)) +
                 vSection('Government IDs', 'fa-id-card',
                     vRow('PAN Number', emp.pan_number) +
+                    vRow('UAN Number', emp.uan_number) +
                     vRow('Aadhaar Number', emp.aadhaar_number) +
                     vRow('Passport Number', emp.passport_number));
 
@@ -926,7 +1021,28 @@
                     vRow('Joining Date', emp.joining_date ? formatDate(emp.joining_date) : null) +
                     vRow('Status', emp.status)) +
                 vSection('Compensation', 'fa-indian-rupee-sign',
-                    vRow('Salary', emp.salary ? formatCurrency(emp.salary) : null)) +
+                    vRow('Salary', emp.salary ? formatCurrency(emp.salary) : null) +
+                    vRow('UAN Number', emp.uan_number)) +
+                vSection('Salary Structure', 'fa-calculator',
+                    vRow('Basic Salary', formatCurrency(emp.basic_salary)) +
+                    vRow('HRA', formatCurrency(emp.hra)) +
+                    vRow('Conveyance', formatCurrency(emp.conveyance)) +
+                    vRow('Medical Allowance', formatCurrency(emp.medical)) +
+                    vRow('Special Allowance', formatCurrency(emp.special_allowance)) +
+                    vRow('Other Allowance', formatCurrency(emp.other_allowance)) +
+                    vRow('Employee PF', formatCurrency(emp.pf)) +
+                    vRow('Employee ESI', formatCurrency(emp.esi)) +
+                    vRow('Professional Tax', formatCurrency(emp.professional_tax)) +
+                    vRow('Income Tax', formatCurrency(emp.income_tax)) +
+                    vRow('Loan Deduction', formatCurrency(emp.loan_deduction)) +
+                    vRow('Advance Salary', formatCurrency(emp.advance_salary)) +
+                    vRow('Other Deduction', formatCurrency(emp.other_deduction)) +
+                    vRow('Incentive', formatCurrency(emp.incentive)) +
+                    vRow('Attendance Incentive', formatCurrency(emp.bonus)) +
+                    vRow('Extra Work', formatCurrency(emp.extra_work)) +
+                    vRow('Employer PF', formatCurrency(emp.employer_pf)) +
+                    vRow('Employer ESI', formatCurrency(emp.employer_esi)) +
+                    vRow('Employer Contribution', formatCurrency(emp.employer_contribution))) +
                 vSection('System Info', 'fa-clock',
                     vRow('Created', emp.created_at ? formatDate(emp.created_at) : null) +
                     vRow('Last Updated', emp.updated_at ? formatDate(emp.updated_at) : null));

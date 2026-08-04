@@ -247,15 +247,15 @@ function buildPayslipHTML(p) {
 
         '<!-- SUMMARY CARDS -->' +
         '<div style="margin:14px 36px 0;display:flex;gap:12px;">' +
-            '<div style="flex:1;background:#7c6ca8;color:#FFFFFF;border-radius:4px;padding:10px 14px;">' +
-                '<div style="font-size:9px;letter-spacing:1px;opacity:0.95;">GROSS (A)</div>' +
-                '<div style="font-size:16px;font-weight:700;margin-top:4px;">' + ppFormatINR(totals.gross) + '</div></div>' +
-            '<div style="flex:1;background:#d97706;color:#FFFFFF;border-radius:4px;padding:10px 14px;">' +
-                '<div style="font-size:9px;letter-spacing:1px;opacity:0.95;">DEDUCTIONS (B)</div>' +
-                '<div style="font-size:16px;font-weight:700;margin-top:4px;">' + ppFormatINR(totals.totalDeductions) + '</div></div>' +
-            '<div style="flex:1;background:#2e7d32;color:#FFFFFF;border-radius:4px;padding:10px 14px;">' +
-                '<div style="font-size:9px;letter-spacing:1px;opacity:0.95;">NET SALARY</div>' +
-                '<div style="font-size:16px;font-weight:700;margin-top:4px;">' + ppFormatINR(totals.net) + '</div></div>' +
+            '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
+                '<div style="font-size:10px;font-weight:700;color:#444444;letter-spacing:0.5px;">GROSS SALARY (A)</div>' +
+                '<div style="font-size:14.5px;font-weight:700;color:#38286b;margin-top:5px;">' + ppFormatINR(totals.gross) + '</div></div>' +
+            '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
+                '<div style="font-size:10px;font-weight:700;color:#444444;letter-spacing:0.5px;">TOTAL DEDUCTIONS (B)</div>' +
+                '<div style="font-size:14.5px;font-weight:700;color:#d97706;margin-top:5px;">' + ppFormatINR(totals.totalDeductions) + '</div></div>' +
+            '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
+                '<div style="font-size:10px;font-weight:700;color:#444444;letter-spacing:0.5px;">NET SALARY PAYABLE (A + C - B - D)</div>' +
+                '<div style="font-size:14.5px;font-weight:700;color:#2e7d32;margin-top:5px;">' + ppFormatINR(totals.net) + '</div></div>' +
         '</div>' +
 
         '<!-- NET IN WORDS -->' +

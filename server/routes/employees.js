@@ -142,7 +142,10 @@ router.get('/:id', verifyToken, async (req, res) => {
         // Strip sensitive PII for non-admin viewers (self/team view still gets base profile)
         if (!isAdminUser) {
             const sensitiveFields = ['salary', 'pan_number', 'aadhaar_number', 'passport_number',
-                'bank_name', 'bank_branch', 'bank_account', 'bank_ifsc'];
+                'bank_name', 'bank_branch', 'bank_account', 'bank_ifsc',
+                'basic_salary', 'hra', 'conveyance', 'medical', 'special_allowance', 'other_allowance',
+                'pf', 'esi', 'professional_tax', 'income_tax', 'loan_deduction', 'advance_salary', 'other_deduction',
+                'incentive', 'bonus', 'extra_work', 'employer_pf', 'employer_esi', 'employer_contribution'];
             sensitiveFields.forEach(f => delete employee[f]);
         }
         
@@ -170,7 +173,10 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
             permanent_address, languages_spoken, marital_status, personal_email,
             qualification, specialization, pan_number, aadhaar_number, passport_number,
             uan_number, pf_number, esi_number,
-            bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id
+            bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id,
+            basic_salary, hra, conveyance, medical, special_allowance, other_allowance,
+            pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
+            incentive, bonus, extra_work, employer_pf, employer_esi, employer_contribution
         } = req.body;
 
         // Only the main Admin can create admin accounts.
@@ -197,10 +203,16 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
              permanent_address, languages_spoken, marital_status, personal_email,
              qualification, specialization, pan_number, aadhaar_number, passport_number,
              uan_number, pf_number, esi_number,
-             bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id) 
+             bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id,
+             basic_salary, hra, conveyance, medical, special_allowance, other_allowance,
+             pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
+             incentive, bonus, extra_work, employer_pf, employer_esi, employer_contribution) 
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1,
              $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
-             $28, $29, $30, $31) 
+             $28, $29, $30, $31,
+             $32, $33, $34, $35, $36, $37,
+             $38, $39, $40, $41, $42, $43, $44,
+             $45, $46, $47, $48, $49, $50) 
             RETURNING id, employee_id, first_name, last_name, email, role`,
             [
                 employee_id, first_name, last_name, email, phone, password_hash,
@@ -211,7 +223,10 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
                 qualification || null, specialization || null, pan_number || null, aadhaar_number || null, passport_number || null,
                 uan_number || null, pf_number || null, esi_number || null,
                 bank_name || null, bank_branch || null, bank_account || null, bank_ifsc || null,
-                reporting_manager_id || null
+                reporting_manager_id || null,
+                basic_salary || 0, hra || 0, conveyance || 0, medical || 0, special_allowance || 0, other_allowance || 0,
+                pf || 0, esi || 0, professional_tax || 0, income_tax || 0, loan_deduction || 0, advance_salary || 0, other_deduction || 0,
+                incentive || 0, bonus || 0, extra_work || 0, employer_pf || 0, employer_esi || 0, employer_contribution || 0
             ]
         );
         
@@ -240,7 +255,10 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
             permanent_address, languages_spoken, marital_status, personal_email,
             qualification, specialization, pan_number, aadhaar_number, passport_number,
             uan_number, pf_number, esi_number,
-            bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id
+            bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id,
+            basic_salary, hra, conveyance, medical, special_allowance, other_allowance,
+            pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
+            incentive, bonus, extra_work, employer_pf, employer_esi, employer_contribution
         } = req.body;
 
         if (reporting_manager_id && parseInt(reporting_manager_id) === parseInt(req.params.id)) {
@@ -318,9 +336,28 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
             bank_branch = COALESCE($30, bank_branch),
             bank_account = COALESCE($31, bank_account),
             bank_ifsc = COALESCE($32, bank_ifsc),
-            reporting_manager_id = CASE WHEN $33::text = '' THEN NULL ELSE COALESCE($33::int, reporting_manager_id) END,
+            basic_salary = COALESCE($33::numeric, basic_salary),
+            hra = COALESCE($34::numeric, hra),
+            conveyance = COALESCE($35::numeric, conveyance),
+            medical = COALESCE($36::numeric, medical),
+            special_allowance = COALESCE($37::numeric, special_allowance),
+            other_allowance = COALESCE($38::numeric, other_allowance),
+            pf = COALESCE($39::numeric, pf),
+            esi = COALESCE($40::numeric, esi),
+            professional_tax = COALESCE($41::numeric, professional_tax),
+            income_tax = COALESCE($42::numeric, income_tax),
+            loan_deduction = COALESCE($43::numeric, loan_deduction),
+            advance_salary = COALESCE($44::numeric, advance_salary),
+            other_deduction = COALESCE($45::numeric, other_deduction),
+            incentive = COALESCE($46::numeric, incentive),
+            bonus = COALESCE($47::numeric, bonus),
+            extra_work = COALESCE($48::numeric, extra_work),
+            employer_pf = COALESCE($49::numeric, employer_pf),
+            employer_esi = COALESCE($50::numeric, employer_esi),
+            employer_contribution = COALESCE($51::numeric, employer_contribution),
+            reporting_manager_id = CASE WHEN $52::text = '' THEN NULL ELSE COALESCE($52::int, reporting_manager_id) END,
             updated_at = NOW()
-            WHERE id = $34
+            WHERE id = $53
             RETURNING id, employee_id, first_name, last_name, email, role`,
             [first_name, last_name, email, phone, department_id, designation_id, 
              salary, role, status, address, joining_date, gender, date_of_birth,
@@ -328,7 +365,11 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
              permanent_address, languages_spoken, marital_status, personal_email,
              qualification, specialization, pan_number, aadhaar_number, passport_number,
              uan_number, pf_number, esi_number,
-             bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id, req.params.id]
+             bank_name, bank_branch, bank_account, bank_ifsc,
+             basic_salary || 0, hra || 0, conveyance || 0, medical || 0, special_allowance || 0, other_allowance || 0,
+             pf || 0, esi || 0, professional_tax || 0, income_tax || 0, loan_deduction || 0, advance_salary || 0, other_deduction || 0,
+             incentive || 0, bonus || 0, extra_work || 0, employer_pf || 0, employer_esi || 0, employer_contribution || 0,
+             reporting_manager_id, req.params.id]
         );
         
         if (result.rows.length === 0) {

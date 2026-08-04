@@ -315,7 +315,18 @@
             selectedProfile = employees.find(e => String(e.id) === String(id)) || null;
             if (!selectedProfile) return;
             showProfileBanner(selectedProfile);
-            document.getElementById('basic_salary').value = selectedProfile.salary || 0;
+            const set = (k, val) => { const el = document.getElementById(k); if (el) el.value = (val === null || val === undefined || val === '') ? 0 : val; };
+            set('basic_salary', selectedProfile.basic_salary != null ? selectedProfile.basic_salary : selectedProfile.salary);
+            set('hra', selectedProfile.hra); set('conveyance', selectedProfile.conveyance);
+            set('medical', selectedProfile.medical); set('special_allowance', selectedProfile.special_allowance);
+            set('other_allowance', selectedProfile.other_allowance);
+            set('pf', selectedProfile.pf); set('esi', selectedProfile.esi);
+            set('professional_tax', selectedProfile.professional_tax); set('income_tax', selectedProfile.income_tax);
+            set('loan_deduction', selectedProfile.loan_deduction); set('advance_salary', selectedProfile.advance_salary);
+            set('other_deduction', selectedProfile.other_deduction);
+            set('bonus', selectedProfile.bonus); set('incentive', selectedProfile.incentive); set('extra_work', selectedProfile.extra_work);
+            set('employer_pf', selectedProfile.employer_pf); set('employer_esi', selectedProfile.employer_esi);
+            set('employer_contribution', selectedProfile.employer_contribution);
             document.getElementById('formCard').style.display = 'block';
             document.getElementById('previewCard').style.display = 'block';
             refreshPreview();
@@ -330,8 +341,6 @@
                 chip('DOJ', emp.joining_date ? String(emp.joining_date).substring(0, 10) : '-'),
                 chip('PAN', emp.pan_number || '-'),
                 chip('UAN', emp.uan_number || '-'),
-                chip('PF', emp.pf_number || '-'),
-                chip('ESI', emp.esi_number || '-'),
                 chip('Bank', (emp.bank_name || '') + ' ' + (emp.bank_account || '')),
                 chip('IFSC', emp.bank_ifsc || '-')
             ];
@@ -536,6 +545,18 @@
             bulkRender();
         }
 
+        function bulkComponents(emp, basic) {
+            return {
+                basic_salary: basic != null ? basic : (emp.basic_salary != null ? emp.basic_salary : (emp.salary || 0)),
+                hra: emp.hra, conveyance: emp.conveyance, medical: emp.medical,
+                special_allowance: emp.special_allowance, other_allowance: emp.other_allowance,
+                pf: emp.pf, esi: emp.esi, professional_tax: emp.professional_tax, income_tax: emp.income_tax,
+                loan_deduction: emp.loan_deduction, advance_salary: emp.advance_salary, other_deduction: emp.other_deduction,
+                bonus: emp.bonus, incentive: emp.incentive, extra_work: emp.extra_work,
+                employer_pf: emp.employer_pf, employer_esi: emp.employer_esi, employer_contribution: emp.employer_contribution
+            };
+        }
+
         function bulkRender() {
             const q = (document.getElementById('bulkSearch').value || '').toLowerCase();
             const list = bulkEmployees.filter(e => !q || (e.first_name + ' ' + e.last_name + ' ' + e.employee_id).toLowerCase().includes(q));
@@ -545,12 +566,13 @@
                 return;
             }
             body.innerHTML = list.map(e => {
-                const t = ppCompute({ basic_salary: e.salary || 0, working_days: 30, present_days: 30, leave_days: 0, lop_days: 0 });
+                const comps = bulkComponents(e, null);
+                const t = ppCompute({ ...comps, working_days: 30, present_days: 30, leave_days: 0, lop_days: 0 });
                 return '<tr data-emp="' + e.id + '">' +
                     '<td><input type="checkbox" class="bulk-check" checked style="width:16px;height:16px;accent-color:#4F46E5;"></td>' +
                     '<td><div class="pp-emp"><div class="pp-emp-avatar">' + ppEsc(getInitials(e.first_name, e.last_name)) + '</div>' +
                         '<div><b>' + ppEsc(e.first_name) + ' ' + ppEsc(e.last_name) + '</b><small>' + ppEsc(e.employee_id) + (e.department_name ? ' &middot; ' + ppEsc(e.department_name) : '') + '</small></div></div></td>' +
-                    '<td><input type="number" class="pp-input bulk-basic" value="' + (e.salary || 0) + '" step="0.01" min="0" data-salary="' + (e.salary || 0) + '" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-basic" value="' + (comps.basic_salary || 0) + '" step="0.01" min="0" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-work" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-pres" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-lop" value="0" min="0" oninput="bulkRowCalc(this)"></td>' +
@@ -563,12 +585,14 @@
         function bulkRowCalc(input) {
             const row = input ? input.closest('tr') : null;
             document.querySelectorAll('#bulkBody tr').forEach(r => {
+                const empId = r.getAttribute('data-emp');
+                const emp = bulkEmployees.find(e => String(e.id) === empId) || {};
                 const basic = parseFloat(r.querySelector('.bulk-basic').value) || 0;
                 const work = parseFloat(r.querySelector('.bulk-work').value) || 0;
                 const pres = parseFloat(r.querySelector('.bulk-pres').value) || 0;
                 const lop = parseFloat(r.querySelector('.bulk-lop').value) || 0;
                 const leave = Math.max(0, work - pres - lop);
-                const t = ppCompute({ basic_salary: basic, working_days: work, present_days: pres, leave_days: leave, lop_days: lop });
+                const t = ppCompute({ ...bulkComponents(emp, basic), working_days: work, present_days: pres, leave_days: leave, lop_days: lop });
                 r.querySelector('.bulk-net').textContent = ppFormatINR(t.net);
             });
         }
@@ -602,10 +626,7 @@
                     v: {
                         employee_id: emp.id, month, year,
                         working_days: work, present_days: pres, leave_days: leave, lop_days: lop,
-                        basic_salary: basic,
-                        hra: 0, conveyance: 0, medical: 0, special_allowance: 0, bonus: 0, incentive: 0, extra_work: 0, other_allowance: 0,
-                        pf: 0, esi: 0, professional_tax: 0, income_tax: 0, loan_deduction: 0, advance_salary: 0, other_deduction: 0,
-                        employer_pf: 0, employer_esi: 0, employer_contribution: 0
+                        ...bulkComponents(emp, basic)
                     }
                 });
             });
