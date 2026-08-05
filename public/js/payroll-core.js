@@ -23,6 +23,11 @@ function ppFormatCurrency(amount) {
     return '₹' + Number(amount || 0).toLocaleString('en-IN');
 }
 
+// Plain Indian-formatted number (no currency symbol) for payslip tables, matching the reference.
+function ppNumFmt(amount) {
+    return Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // Indian number -> words ("Rupees .. Lakh .. Thousand .. Hundred .. Paise Only")
 function ppAmountInWords(amount) {
     const value = Math.round(ppNum(amount) * 100) / 100;
@@ -112,83 +117,78 @@ function ppSecBar(title) {
 }
 
 function ppEmpRow(l1, v1, l2, v2) {
-    return '<tr style="border-bottom:1px solid #d5cee6;">' +
-        '<td class="pp-lbl">' + l1 + '</td><td class="pp-val-left">' + v1 + '</td>' +
-        '<td class="pp-lbl">' + l2 + '</td><td class="pp-val-left">' + v2 + '</td></tr>';
+    return '<tr>' +
+        '<td>' + l1 + '</td><td>' + v1 + '</td>' +
+        '<td>' + l2 + '</td><td>' + v2 + '</td></tr>';
 }
 
 function ppNumRow(label, value, last) {
-    return '<tr' + (last ? '' : ' style="border-bottom:1px solid #d5cee6;"') + '>' +
-        '<td class="pp-lbl">' + label + '</td>' +
-        '<td class="pp-val" style="text-align:right;">' + value + '</td></tr>';
+    return '<tr>' +
+        '<td>' + label + '</td>' +
+        '<td class="text-right">' + value + '</td></tr>';
 }
 
 function buildPayslipHTML(p) {
     if (!p) return '';
     const company = p.company || {};
-    const name = 'Gensar IT Solutions Pvt.Ltd';
-    const addrLine1 = 'Manjeera Trinity, 402, 4th floor,';
-    const addrLine2 = 'KPHB, Hyderabad \u2013 500072';
     const empName = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || '-';
     const period = (PP_MONTHS[p.month] || '') + ' ' + (p.year || '');
     const totals = ppCompute(p);
     const doj = p.joining_date ? String(p.joining_date).substring(0, 10) : '-';
-    const genDate = new Date().toLocaleDateString('en-IN');
     const earnings = [
-        ['Basic Salary', ppFormatINR(p.basic_salary)],
-        ['HRA', ppFormatINR(p.hra)],
-        ['Conveyance Allowance', ppFormatINR(p.conveyance)],
-        ['Special Allowance', ppFormatINR(p.special_allowance)],
-        ['Other Allowance', ppFormatINR(p.other_allowance)]
+        ['Basic Salary', ppNumFmt(p.basic_salary)],
+        ['HRA', ppNumFmt(p.hra)],
+        ['Conveyance Allowance', ppNumFmt(p.conveyance)],
+        ['Special Allowance', ppNumFmt(p.special_allowance)],
+        ['Other Allowance', ppNumFmt(p.other_allowance)]
     ];
     const deductions = [
-        ['PF Contribution', ppFormatINR(p.pf)],
-        ['ESI Contribution', ppFormatINR(p.esi)],
-        ['Professional Tax', ppFormatINR(p.professional_tax)],
-        ['Income Tax', ppFormatINR(p.income_tax)],
-        ['Other Deductions', ppFormatINR(p.other_deduction)]
+        ['PF Contribution', ppNumFmt(p.pf)],
+        ['ESI Contribution', ppNumFmt(p.esi)],
+        ['Professional Tax', ppNumFmt(p.professional_tax)],
+        ['Income Tax', ppNumFmt(p.income_tax)],
+        ['Other Deductions', ppNumFmt(p.other_deduction)]
     ];
     const bonusRows = [
-        ['Incentive', ppFormatINR(p.incentive)],
-        ['Attendance Incentive', ppFormatINR(p.bonus)],
-        ['Extra Work', ppFormatINR(p.extra_work)]
+        ['Incentive', ppNumFmt(p.incentive)],
+        ['Attendance Incentive', ppNumFmt(p.bonus)],
+        ['Extra Work', ppNumFmt(p.extra_work)]
     ];
-    const totalEarnings = totals.gross;
-    const totalDeductions = totals.totalDeductions;
-    const totalBonus = totals.bonus;
-    const totalEmployer = totals.employerTotal;
+    const finTable = (title, rows, totalLabel, totalValue) =>
+        '<table class="pp-fin">' +
+            '<thead><tr><th>' + title + '</th><th class="text-right">AMOUNT (\u20B9)</th></tr></thead>' +
+            '<tbody>' +
+                rows.map((r) => '<tr><td>' + r[0] + '</td><td class="text-right">' + r[1] + '</td></tr>').join('') +
+                '<tr class="total-row"><td>' + totalLabel + '</td><td class="text-right">' + ppNumFmt(totalValue) + '</td></tr>' +
+            '</tbody></table>';
     const logoHtml = (company.logo || '/assets/images/gensar_logo.png')
-        ? '<img src="' + ppEsc(company.logo || '/assets/images/gensar_logo.png') + '" alt="logo" style="width:175px;max-width:175px;height:auto;object-fit:contain;flex-shrink:0;vertical-align:middle;" onerror="this.style.display=\'none\';">'
+        ? '<img src="' + ppEsc(company.logo || '/assets/images/gensar_logo.png') + '" alt="Gensar Logo" style="width:175px;height:auto;object-fit:contain;flex-shrink:0;" onerror="this.style.display=\'none\';">'
         : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
-    return '<div class="pp-sheet ppslip" style="width:820px;margin:0 auto;background:#FFFFFF;color:#222222;font-family:Arial,\'Helvetica Neue\',Helvetica,sans-serif;position:relative;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
+    return '<div class="pp-sheet ppslip" style="width:820px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
         '.ppslip *{box-sizing:border-box;}' +
-        '.ppslip table{border-collapse:collapse;width:100%;}' +
-        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;padding:6px 10px;border-top:1px solid #d5cee6;border-right:1px solid #d5cee6;border-bottom:1px solid #d5cee6;border-left:4px solid #7c6ca8;margin-bottom:8px;display:flex;align-items:center;gap:6px;}' +
-        '.ppslip .pp-lbl{color:#333333;font-size:11.5px;font-weight:400;white-space:nowrap;padding:5.5px 10px;}' +
-        '.ppslip .pp-val{font-size:11.5px;font-weight:700;color:#111111;padding:5.5px 10px;text-align:right;}' +
-        '.ppslip .pp-val-left{font-size:11.5px;font-weight:700;color:#111111;padding:5.5px 10px;text-align:left;}' +
-        '.ppslip .total-row td{background-color:#efeafb;font-weight:700;color:#38286b;}' +
-        '.ppslip .pp-emp td{width:25%;font-size:11.5px;border:1px solid #d5cee6;padding:5.5px 10px;}' +
-        '.ppslip .pp-emp td:nth-child(odd){background-color:#fbf9fc;color:#333333;}' +
-        '.ppslip .pp-emp td:nth-child(even){color:#111111;font-weight:600;}' +
-        '.ppslip .pp-fin th{background-color:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;border:1px solid #d5cee6;padding:5.5px 10px;text-align:left;}' +
-        '.ppslip .pp-fin td{border:1px solid #d5cee6;padding:5.5px 10px;font-size:11.5px;}' +
-        '.ppslip .pp-fin .text-right{text-align:right;}' +
-        '.ppslip .pp-fin{margin-bottom:12px;}' +
+        '.ppslip table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:12px;}' +
+        '.ppslip th,.ppslip td{border:1px solid #d5cee6;padding:5.5px 10px;text-align:left;}' +
+        '.ppslip .text-right{text-align:right;}' +
+        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;padding:6px 10px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px;border-top:1px solid #d5cee6;border-right:1px solid #d5cee6;border-bottom:1px solid #d5cee6;border-left:4px solid #7c6ca8;margin-bottom:8px;}' +
+        '.ppslip .pp-emp td{width:25%;}' +
+        '.ppslip .pp-emp td:nth-child(odd){background:#fbf9fc;color:#333;}' +
+        '.ppslip .pp-emp td:nth-child(even){color:#111;font-weight:600;}' +
+        '.ppslip .pp-fin th{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;border:1px solid #d5cee6;}' +
+        '.ppslip .pp-fin td{border:1px solid #d5cee6;}' +
+        '.ppslip .total-row td{background:#efeafb;font-weight:700;color:#38286b;}' +
         '</style>' +
         '<!-- HEADER -->' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #7c6ca8;padding-bottom:16px;margin-bottom:16px;">' +
             '<div style="display:flex;align-items:center;gap:15px;">' +
                 '<div style="flex-shrink:0;">' + logoHtml + '</div>' +
                 '<div style="width:1px;height:95px;background:#7c6ca8;margin:0 5px;flex-shrink:0;align-self:center;"></div>' +
-                '<div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;">' +
-                    '<div style="font-size:19px;font-weight:900;color:#111111;letter-spacing:0.2px;margin-bottom:5px;">' + ppEsc(name) + '</div>' +
-                    (addrLine1 ? '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(addrLine1) + '</div>' : '') +
-                    (addrLine2 ? '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(addrLine2) + '</div>' : '') +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">Email: ' + ppEsc(company.email || 'hr@gensaritsolutions.com') + '</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">' + ppEsc(company.website || 'www.gensarhrms.in') + '</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222222;line-height:1.2;margin-bottom:3px;">Phone: ' + ppEsc(company.phone || '+91 40 4855 6600') + '</div>' +
+                '<div style="display:flex;flex-direction:column;justify-content:center;">' +
+                    '<div style="font-size:19px;font-weight:900;color:#111;letter-spacing:0.2px;margin-bottom:5px;">GENSAR IT SOLUTIONS PVT. LTD.</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad \u2013 500072, Telangana, India</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">hr@gensaritsolutions.com</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">www.gensarhrms.in</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">+91 40 4855 6600</div>' +
                 '</div>' +
             '</div>' +
             '<div style="width:150px;border:1px solid #7c6ca8;border-radius:6px;overflow:hidden;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
@@ -198,7 +198,7 @@ function buildPayslipHTML(p) {
         '</div>' +
         '<!-- EMPLOYEE DETAILS -->' +
         '<div class="pp-sec">EMPLOYEE DETAILS</div>' +
-        '<table class="pp-emp" style="margin-bottom:12px;">' +
+        '<table class="pp-emp">' +
             ppEmpRow('Employee ID', ppEsc(p.emp_id || '-'), 'Pay Period', ppEsc(period)) +
             ppEmpRow('Employee Name', ppEsc(empName), 'Working Days', ppNum(p.working_days)) +
             ppEmpRow('Designation', ppEsc(p.designation_name || '-'), 'Present Days', ppNum(p.present_days)) +
@@ -209,36 +209,20 @@ function buildPayslipHTML(p) {
         '</table>' +
         '<!-- EARNINGS / DEDUCTIONS -->' +
         '<div style="display:flex;gap:12px;margin-bottom:2px;">' +
-            '<div style="flex:1;min-width:0;">' +
-                '<table class="pp-fin">' +
-                    '<thead><tr><th>EARNINGS</th><th class="text-right">AMOUNT (₹)</th></tr></thead>' +
-                    '<tbody>' +
-                        earnings.map((r) => '<tr><td class="pp-lbl">' + r[0] + '</td><td class="text-right">' + r[1] + '</td></tr>').join('') +
-                        '<tr class="total-row"><td>TOTAL EARNINGS (A)</td><td class="text-right">' + ppFormatINR(totalEarnings) + '</td></tr>' +
-                    '</tbody>' +
-                '</table>' +
-            '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-                '<table class="pp-fin">' +
-                    '<thead><tr><th>DEDUCTIONS</th><th class="text-right">AMOUNT (₹)</th></tr></thead>' +
-                    '<tbody>' +
-                        deductions.map((r) => '<tr><td class="pp-lbl">' + r[0] + '</td><td class="text-right">' + r[1] + '</td></tr>').join('') +
-                        '<tr class="total-row"><td>TOTAL DEDUCTIONS (B)</td><td class="text-right">' + ppFormatINR(totalDeductions) + '</td></tr>' +
-                    '</tbody>' +
-                '</table>' +
-            '</div>' +
+            '<div style="flex:1;min-width:0;">' + finTable('EARNINGS', earnings, 'TOTAL EARNINGS (A)', totals.gross) + '</div>' +
+            '<div style="flex:1;min-width:0;">' + finTable('DEDUCTIONS', deductions, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions) + '</div>' +
         '</div>' +
         '<!-- SUMMARY CARDS -->' +
         '<div style="display:flex;gap:10px;margin-bottom:10px;">' +
             '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
-                '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">GROSS SALARY (A)</div>' +
-                '<div style="font-size:14.5px;font-weight:700;color:#38286b;">' + ppFormatINR(totalEarnings) + '</div></div>' +
+                '<div style="font-size:10px;font-weight:700;color:#444;margin-bottom:5px;">GROSS SALARY (A)</div>' +
+                '<div style="font-size:14.5px;font-weight:700;color:#38286b;">\u20B9 ' + ppNumFmt(totals.gross) + '</div></div>' +
             '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
-                '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">TOTAL DEDUCTIONS (B)</div>' +
-                '<div style="font-size:14.5px;font-weight:700;color:#d97706;">' + ppFormatINR(totalDeductions) + '</div></div>' +
+                '<div style="font-size:10px;font-weight:700;color:#444;margin-bottom:5px;">TOTAL DEDUCTIONS (B)</div>' +
+                '<div style="font-size:14.5px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductions) + '</div></div>' +
             '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
-                '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">NET SALARY PAYABLE (A + C - B - D)</div>' +
-                '<div style="font-size:14.5px;font-weight:700;color:#2e7d32;">' + ppFormatINR(totals.net) + '</div></div>' +
+                '<div style="font-size:10px;font-weight:700;color:#444;margin-bottom:5px;">NET SALARY PAYABLE (A + C - B - D)</div>' +
+                '<div style="font-size:14.5px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +
         '<div style="background:#fbfbfd;border:1px solid #d5cee6;padding:7px 12px;font-size:11.5px;margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
@@ -259,40 +243,26 @@ function buildPayslipHTML(p) {
                     '</tr></tbody>' +
                 '</table>' +
             '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-                '<table class="pp-fin">' +
-                    '<thead><tr><th>BONUS (C)</th><th class="text-right">AMOUNT (₹)</th></tr></thead>' +
-                    '<tbody>' +
-                        bonusRows.map((r) => '<tr><td class="pp-lbl">' + r[0] + '</td><td class="text-right">' + r[1] + '</td></tr>').join('') +
-                        '<tr class="total-row"><td>TOTAL BONUS (C)</td><td class="text-right">' + ppFormatINR(totalBonus) + '</td></tr>' +
-                    '</tbody>' +
-                '</table>' +
-            '</div>' +
+            '<div style="flex:1;min-width:0;">' + finTable('BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus) + '</div>' +
         '</div>' +
         '<!-- EMPLOYER CONTRIBUTIONS -->' +
-        '<div style="margin-bottom:2px;">' +
-            '<table class="pp-fin">' +
-                '<thead><tr><th>EMPLOYER CONTRIBUTIONS</th><th class="text-right">AMOUNT (₹)</th></tr></thead>' +
-                '<tbody>' +
-                    '<tr><td>Employer PF Contribution</td><td class="text-right">' + ppFormatINR(p.employer_pf) + '</td></tr>' +
-                    '<tr><td>Employer ESI Contribution</td><td class="text-right">' + ppFormatINR(p.employer_esi) + '</td></tr>' +
-                    '<tr><td>Employer Other Contribution</td><td class="text-right">' + ppFormatINR(p.employer_contribution) + '</td></tr>' +
-                    '<tr class="total-row"><td>TOTAL EMPLOYER CONTRIBUTION</td><td class="text-right">' + ppFormatINR(totalEmployer) + '</td></tr>' +
-                '</tbody>' +
-            '</table>' +
-        '</div>' +
+        '<div style="margin-bottom:2px;">' + finTable('EMPLOYER CONTRIBUTIONS', [
+            ['Employer PF Contribution', ppNumFmt(p.employer_pf)],
+            ['Employer ESI Contribution', ppNumFmt(p.employer_esi)],
+            ['Employer Other Contribution', ppNumFmt(p.employer_contribution)]
+        ], 'TOTAL EMPLOYER CONTRIBUTION', totals.employerTotal) + '</div>' +
         '<!-- FOOTER -->' +
         '<div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:1px solid #d5cee6;font-size:10.5px;align-items:flex-end;">' +
             '<div>' +
                 '<strong>Note:</strong>' +
-                '<ul style="list-style-type:disc;padding-left:15px;color:#555555;line-height:1.4;margin-top:4px;">' +
+                '<ul style="list-style-type:disc;padding-left:15px;color:#555;line-height:1.4;margin:0;">' +
                     '<li>This is a computer generated payslip.</li>' +
                     '<li>No signature is required.</li>' +
                     '<li>Please contact HR for any discrepancies.</li>' +
                 '</ul>' +
             '</div>' +
             '<div style="text-align:right;">' +
-                '<div style="font-weight:700;color:#38286b;margin-bottom:18px;">For ' + ppEsc(String(name).toUpperCase()) + '</div>' +
+                '<div style="font-weight:700;color:#38286b;margin-bottom:18px;">For GENSAR IT SOLUTIONS PVT. LTD.</div>' +
                 '<div style="color:#555555;">This is a system generated document and does not require signature.</div>' +
             '</div>' +
         '</div>' +

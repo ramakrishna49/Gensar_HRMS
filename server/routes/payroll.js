@@ -161,10 +161,17 @@ async function renderPayslipPdf(p, company) {
             doc.on('end', () => resolve(Buffer.concat(chunks)));
             doc.on('error', reject);
 
+            // Reference template is 820px wide. Scale every metric by S = A4_width / 820
+            // so the PDF output matches the reference HTML layout proportionally.
             const PW = doc.page.width;
-            const ML = 30;
-            const CW = PW - 60;
-            const PR = 4;
+            const S = PW / 820;
+            const ML = 29 * S;
+            const CW = 762 * S;
+            const PAD_TOP = 22 * S;
+            const ROW = 24.14 * S;
+            const BAR_H = 26 * S;
+            const F = (px) => px * S;
+            const plainINR = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             if (fontsReady) {
                 doc.registerFont('Roboto', path.join(FONT_DIR, 'Roboto-Regular.ttf'));
@@ -183,46 +190,58 @@ async function renderPayslipPdf(p, company) {
             const FL = FONT_REG;
             const FB = FONT_BOLD;
 
+            const centerY = (y, h, fontPx) => y + (h - F(fontPx)) / 2;
+
             const sectionBar = (title, x, y, w) => {
-                doc.rect(x, y, 4, 18).fill(PURPLE);
-                doc.rect(x + 4, y, w - 4, 18).fill(BAR);
-                doc.fill(DARK).font(FB).fontSize(11.5).text(title, x + 12, y + 5);
-                return y + 18;
+                const h = BAR_H;
+                doc.rect(x, y, 4 * S, h).fill(PURPLE);
+                doc.rect(x + 4 * S, y, w - 4 * S, h).fill(BAR);
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).rect(x, y, w, h).stroke();
+                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(title, x + 10 * S, centerY(y, h, 11.5));
+                return y + h;
             };
 
-            const drawMoneyTable = (x, title, rows, total, totalLabel, baseY) => {
-                const w = (CW - 12) / 2;
+            // Financial table (header row, data rows, total row) matching the reference.
+            const finTable = (x, title, rows, totalLabel, total, baseY) => {
+                const w = (CW - 12 * S) / 2;
+                const AMT_W = 95 * S;
+                const vcol = x + w - AMT_W;
                 let ty = baseY;
-                doc.rect(x, ty, w, 18).fill(BAR);
-                doc.fill(DARK).font(FB).fontSize(11.5).text(title, x + 8, ty + 4);
-                doc.fill(DARK).font(FB).fontSize(11.5).text('AMOUNT (\u20B9)', x + w - 8, ty + 4, { align: 'right' });
-                ty += 18;
-                const r0 = ty;
+                const headerText = (txt, x0, w0, right) => {
+                    doc.fill(DARK).font(FB).fontSize(F(11.5));
+                    doc.text(txt, x0 + 10 * S, centerY(ty, ROW, 11.5), { width: w0 - 20 * S, align: right ? 'right' : 'left' });
+                };
+                doc.rect(x, ty, w, ROW).fill(BAR);
+                headerText(title, x, vcol - x, false);
+                headerText('AMOUNT (\u20B9)', vcol, AMT_W, true);
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(x, ty + ROW).lineTo(x + w, ty + ROW).stroke();
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(vcol, ty).lineTo(vcol, ty + ROW).stroke();
+                ty += ROW;
                 rows.forEach(([k, v]) => {
-                    doc.fill(BODY).font(FL).fontSize(11.5).text(k, x + 8, ty + 3);
-                    doc.font(FB).fontSize(11.5).text(formatINR(v), x + w - 8, ty + 3, { align: 'right' });
-                    doc.strokeColor(BORDER).lineWidth(0.5).moveTo(x, ty + 14).lineTo(x + w, ty + 14).stroke();
-                    ty += 14;
+                    doc.fill(BODY).font(FL).fontSize(F(11.5)).text(k, x + 10 * S, centerY(ty, ROW, 11.5), { width: vcol - x - 20 * S });
+                    doc.font(FB).text(plainINR(v), vcol + 10 * S, centerY(ty, ROW, 11.5), { width: AMT_W - 20 * S, align: 'right' });
+                    doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(x, ty + ROW).lineTo(x + w, ty + ROW).stroke();
+                    doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(vcol, ty).lineTo(vcol, ty + ROW).stroke();
+                    ty += ROW;
                 });
-                doc.rect(x, ty, w, 18).fill(TOTAL);
-                doc.fill(DARK).font(FB).fontSize(11.5).text(totalLabel, x + 8, ty + 4);
-                doc.font(FB).fontSize(11.5).text(formatINR(total), x + w - 8, ty + 4, { align: 'right' });
-                doc.strokeColor(BORDER).lineWidth(0.8).rect(x, r0, w, (ty + 18) - r0).stroke();
-                ty += 18;
+                doc.rect(x, ty, w, ROW).fill(TOTAL);
+                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(totalLabel, x + 10 * S, centerY(ty, ROW, 11.5), { width: vcol - x - 20 * S });
+                doc.text(plainINR(total), vcol + 10 * S, centerY(ty, ROW, 11.5), { width: AMT_W - 20 * S, align: 'right' });
+                doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(x, ty, w, ROW).stroke();
+                ty += ROW;
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).rect(x, baseY, w, ty - baseY).stroke();
                 return ty;
             };
 
             // ---- Container border ----
-            doc.strokeColor(PURPLE).lineWidth(1).rect(ML, 10, CW, doc.page.height - 20).stroke();
+            doc.strokeColor(PURPLE).lineWidth(1 * S).rect(0, 0, PW, doc.page.height).stroke();
 
-            let y = 22;
+            let y = PAD_TOP;
 
             // ---- Header: logo | divider | company info + PAYSLIP badge ----
-            const badgeW = 150;
-            const badgeX = PW - ML - badgeW;
-            const logoW = 125;
-            const tx = ML + logoW + 10;
-            const infoW = badgeX - tx - 10;
+            const badgeW = 150 * S;
+            const badgeX = ML + CW - badgeW;
+            const logoW = 175 * S;
 
             const logo = company.logo || '/assets/images/gensar_logo.png';
             try {
@@ -234,69 +253,78 @@ async function renderPayslipPdf(p, company) {
                 }
             } catch (e) { /* logo is optional */ }
 
-            doc.fill(DARK).font(FB).fontSize(19).text('Gensar IT Solutions Pvt.Ltd', tx, y, { width: infoW });
-            const hlines = [];
-            hlines.push('Manjeera Trinity, 402, 4th floor,');
-            hlines.push('KPHB, Hyderabad \u2013 500072');
-            hlines.push('Email: hr@gensaritsolutions.com');
-            hlines.push('Web: www.gensarhrms.in');
-            hlines.push('Phone: +91 40 4855 6600');
-            doc.font(FL).fontSize(10.5).fill('#222222');
-            let iy = y + 20;
-            hlines.forEach(l => {
-                doc.text(l, tx, iy, { width: infoW });
-                iy += 14;
+            const divX = ML + logoW + 15 * S;
+            doc.rect(divX, y, 1, 95 * S).fill(PURPLE);
+
+            const infoX = divX + 5 * S + 1 * S + 15 * S;
+            const infoW = badgeX - infoX - 10 * S;
+            doc.fill('#111111').font(FB).fontSize(F(19)).text('GENSAR IT SOLUTIONS PVT. LTD.', infoX, y, { width: infoW });
+            let iy = y + F(19) * 1.25 + 5 * S;
+            doc.font(FL).fontSize(F(10.5)).fill('#222222');
+            ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad \u2013 500072, Telangana, India',
+                'hr@gensaritsolutions.com',
+                'www.gensarhrms.in',
+                '+91 40 4855 6600'].forEach(l => {
+                doc.text(l, infoX, iy, { width: infoW });
+                iy += F(10.5) * 1.25 + 3 * S;
             });
 
-            const divH = Math.max(iy - y, 95);
-            doc.rect(ML + logoW, y, 1, divH).fill(PURPLE);
+            const bH = 31 * S;
+            const bhH = bH / 2;
+            doc.strokeColor(BORDER).lineWidth(1 * S);
+            doc.roundedRect(badgeX, y, badgeW, bH, 6 * S).stroke();
+            doc.rect(badgeX, y, badgeW, bhH).fill(PURPLE);
+            doc.fill('#FFFFFF').font(FB).fontSize(F(15)).text('PAYSLIP', badgeX, centerY(y, bhH, 15), { width: badgeW, align: 'center' });
+            doc.fill('#111111').font(FB).fontSize(F(13.5)).text(`${PP_MONTHS[p.month] || ''} ${p.year}`, badgeX, centerY(y + bhH, bhH, 13.5), { width: badgeW, align: 'center' });
 
-            doc.strokeColor(BORDER).lineWidth(1);
-            doc.roundedRect(badgeX, y, badgeW, 56, 6).stroke();
-            doc.rect(badgeX, y, badgeW, 26).fill(PURPLE);
-            doc.fill('#FFFFFF').font(FB).fontSize(15).text('PAYSLIP', badgeX, y + 7, { width: badgeW, align: 'center' });
-            doc.fill('#111111').font(FB).fontSize(13.5).text(`${PP_MONTHS[p.month] || ''} ${p.year}`, badgeX, y + 30, { width: badgeW, align: 'center' });
+            const divH = Math.max(iy - y, 95 * S);
+            doc.rect(divX, y, 1, divH).fill(PURPLE);
 
-            y += divH + 16;
+            y += divH + 16 * S;
+            doc.strokeColor(PURPLE).lineWidth(2 * S).moveTo(ML, y).lineTo(ML + CW, y).stroke();
+            y += 16 * S;
 
-            // ---- Employee details (4-col table) ----
+            // ---- Employee details (4 equal columns) ----
             y = sectionBar('EMPLOYEE DETAILS', ML, y, CW);
-            const colW = CW / 2;
-            const lblW = 95;
-            const empLeft = [
+            const colW = CW / 4;
+            const empCells = [
                 ['Employee ID', p.emp_id || '-'],
                 ['Employee Name', `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-'],
                 ['Designation', p.designation_name || '-'],
                 ['Department', p.department_name || '-'],
                 ['Date of Joining', formatDateOnly(p.joining_date)],
                 ['PAN Number', p.pan_number || '-'],
-                ['UAN Number', p.uan_number || '-']
-            ];
-            const empRight = [
+                ['UAN Number', p.uan_number || '-'],
                 ['Pay Period', `${PP_MONTHS[p.month] || ''} ${p.year}`],
                 ['Working Days', p.working_days || 0],
                 ['Present Days', p.present_days || 0],
                 ['Leave Days', p.leave_days || 0],
                 ['LOP Days', p.lop_days || 0],
-                ['Bank Account No', p.bank_account || '-'],
+                ['Bank Account No.', p.bank_account || '-'],
                 ['Bank Name', p.bank_name || '-']
             ];
             const t0 = y;
-            const rowH = 16;
-            for (let i = 0; i < 7; i++) {
-                const rowBg = i % 2 === 0 ? '#fbf9fc' : '#FFFFFF';
-                doc.fill(rowBg).rect(ML, y, CW, rowH).fill();
-                doc.fill('#333333').font(FL).fontSize(11.5).text(empLeft[i][0], ML + 8, y + 3);
-                doc.fill(BODY).font(FB).fontSize(11.5).text(String(empLeft[i][1]), ML + lblW, y + 3, { width: colW - lblW - 8 });
-                doc.fill('#333333').font(FL).fontSize(11.5).text(empRight[i][0], ML + colW + 8, y + 3);
-                doc.fill(BODY).font(FB).fontSize(11.5).text(String(empRight[i][1]), ML + colW + lblW, y + 3, { width: colW - lblW - 8 });
-                doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML, y + rowH).lineTo(ML + CW, y + rowH).stroke();
-                y += rowH;
+            const ecol = (ci) => ML + ci * colW;
+            for (let r = 0; r < 7; r++) {
+                const rowBg = r % 2 === 0 ? '#fbf9fc' : '#FFFFFF';
+                doc.fill(rowBg).rect(ML, y, CW, ROW).fill();
+                for (let c = 0; c < 4; c++) {
+                    const pair = empCells[r * 2 + Math.floor(c / 2)];
+                    const isVal = c % 2 === 1;
+                    doc.fill(isVal ? BODY : '#333333').font(isVal ? FB : FL).fontSize(F(11.5));
+                    doc.text(String(pair[isVal ? 1 : 0]), ecol(c) + 10 * S, centerY(y, ROW, 11.5), { width: colW - 20 * S });
+                    if (c < 3) {
+                        doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(ecol(c + 1), y).lineTo(ecol(c + 1), y + ROW).stroke();
+                    }
+                }
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(ML, y + ROW).lineTo(ML + CW, y + ROW).stroke();
+                y += ROW;
             }
-            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, t0, CW, 7 * rowH).stroke();
-            y += 12;
+            doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(ML, t0, CW, 7 * ROW).stroke();
+            y += 12 * S;
 
             // ---- Earnings (A) / Deductions (B) tables ----
+            const totals = computeTotals(p);
             const earningsRows = [
                 ['Basic Salary', num(p.basic_salary)],
                 ['HRA', num(p.hra)],
@@ -311,108 +339,115 @@ async function renderPayslipPdf(p, company) {
                 ['Income Tax', num(p.income_tax)],
                 ['Other Deductions', num(p.other_deduction)]
             ];
-            const eyE = drawMoneyTable(ML, 'EARNINGS (A)', earningsRows, num(p.gross_salary), 'TOTAL EARNINGS (A)', y);
-            const eyD = drawMoneyTable(ML + (CW - 12) / 2 + 12, 'DEDUCTIONS (B)', deductionRows, num(p.total_deductions), 'TOTAL DEDUCTIONS (B)', y);
-            y = Math.max(eyE, eyD) + 12;
+            const halfW = (CW - 12 * S) / 2;
+            const eyE = finTable(ML, 'EARNINGS', earningsRows, 'TOTAL EARNINGS (A)', totals.gross, y);
+            const eyD = finTable(ML + halfW + 12 * S, 'DEDUCTIONS', deductionRows, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions, y);
+            y = Math.max(eyE, eyD) + 14 * S;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
-            const cardW = (CW - 24) / 3;
+            const cardW = (CW - 20 * S) / 3;
             const cards = [
-                { label: 'GROSS SALARY (A)', value: num(p.gross_salary), color: DARK },
-                { label: 'TOTAL DEDUCTIONS (B)', value: num(p.total_deductions), color: DED },
-                { label: 'NET SALARY PAYABLE (A + C - B - D)', value: num(p.net_salary), color: NET }
+                { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
+                { label: 'TOTAL DEDUCTIONS (B)', value: totals.totalDeductions, color: DED },
+                { label: 'NET SALARY PAYABLE (A + C - B - D)', value: totals.net, color: NET }
             ];
             let cx = ML;
             cards.forEach(card => {
-                doc.rect(cx, y, cardW, 40).fill(CARD);
-                doc.strokeColor(BORDER).lineWidth(0.8).rect(cx, y, cardW, 40).stroke();
-                doc.fill('#444444').font(FB).fontSize(10).text(card.label, cx + 4, y + 5, { width: cardW - 8, align: 'center' });
-                doc.font(FB).fontSize(14.5).text(formatINR(card.value), cx + 4, y + 20, { width: cardW - 8, align: 'center' });
-                cx += cardW + 12;
+                const ch = 52 * S;
+                doc.rect(cx, y, cardW, ch).fill(CARD);
+                doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(cx, y, cardW, ch).stroke();
+                doc.fill('#444444').font(FB).fontSize(F(10)).text(card.label, cx + 4 * S, y + 6 * S, { width: cardW - 8 * S, align: 'center' });
+                doc.font(FB).fontSize(F(14.5)).text('\u20B9 ' + plainINR(card.value), cx + 4 * S, y + 21 * S, { width: cardW - 8 * S, align: 'center' });
+                cx += cardW + 10 * S;
             });
-            y += 40 + 12;
+            y += 52 * S + 10 * S;
 
-            // ---- Net salary in words (single line, italic) ----
-            doc.rect(ML, y, CW, 22).fill(CARD);
-            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, y, CW, 22).stroke();
-            doc.fill(DARK).font(FB).fontSize(11.5).text('NET SALARY IN WORDS:', ML + 10, y + 5);
-            doc.fill(BODY).font(FL).fontSize(11.5).text(amountToWords(num(p.net_salary)), ML + 10, y + 5);
-            y += 22 + 12;
+            // ---- Net salary in words ----
+            const wH = 28 * S;
+            doc.rect(ML, y, CW, wH).fill(CARD);
+            doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(ML, y, CW, wH).stroke();
+            const wordsLabel = 'NET SALARY IN WORDS:';
+            const labelW = doc.font(FB).fontSize(F(11.5)).widthOfString(wordsLabel);
+            doc.fill(DARK).font(FB).fontSize(F(11.5)).text(wordsLabel, ML + 12 * S, centerY(y, wH, 11.5));
+            doc.fill(BODY).font(FL).fontSize(F(11.5)).text(amountToWords(totals.net), ML + 12 * S + labelW + 12 * S, centerY(y, wH, 11.5), { width: CW - 24 * S - labelW - 12 * S });
+            y += wH + 12 * S;
 
-            // ---- Attendance summary + Bonus (C) bottom row ----
-            const halfW = (CW - 12) / 2;
-            y = sectionBar('ATTENDANCE SUMMARY', ML, y, halfW);
-            sectionBar('BONUS (C)', ML + halfW + 12, y, halfW);
-            const attRows = [
-                ['Working Days', p.working_days || 0],
-                ['Present Days', p.present_days || 0],
-                ['Leave Days', p.leave_days || 0],
-                ['LOP Days', p.lop_days || 0]
-            ];
+            // ---- Attendance summary (4-col) + Bonus (C) side by side ----
+            const attX = ML;
+            const bnsX = ML + halfW + 12 * S;
+            const attBarY = y;
+            const attBarH = BAR_H - 2 * S; // reference bar has no bottom border here
+            doc.rect(attX, attBarY, 4 * S, attBarH).fill(PURPLE);
+            doc.rect(attX + 4 * S, attBarY, halfW - 4 * S, attBarH).fill(BAR);
+            doc.fill(DARK).font(FB).fontSize(F(11.5)).text('ATTENDANCE SUMMARY', attX + 10 * S, centerY(attBarY, attBarH, 11.5));
+
+            const attColW = halfW / 4;
+            const attHeads = ['Working Days', 'Present Days', 'Leave Days', 'LOP Days'];
+            const attVals = [p.working_days || 0, p.present_days || 0, p.leave_days || 0, p.lop_days || 0];
+            let ay = attBarY + attBarH;
+            doc.fill(BAR);
+            for (let c = 0; c < 4; c++) {
+                doc.rect(attX + c * attColW, ay, attColW, ROW).fill();
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + ROW).stroke();
+            }
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + ROW).lineTo(attX + halfW, ay + ROW).stroke();
+            attHeads.forEach((h, c) => {
+                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, ROW, 11.5), { width: attColW, align: 'center' });
+            });
+            ay += ROW;
+            doc.fill('#FFFFFF').rect(attX, ay, halfW, ROW).fill();
+            attVals.forEach((v, c) => {
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + ROW).stroke();
+                doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, ROW, 11.5), { width: attColW, align: 'center' });
+            });
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + ROW).lineTo(attX + halfW, ay + ROW).stroke();
+            ay += ROW;
+
             const bonusRows = [
                 ['Incentive', num(p.incentive)],
                 ['Attendance Incentive', num(p.bonus)],
                 ['Extra Work', num(p.extra_work)]
             ];
-            const totalBonus = num(p.bonus) + num(p.incentive) + num(p.extra_work);
-            let ay = y;
-            const a0 = ay;
-            attRows.forEach(([k, v]) => {
-                doc.fill(BODY).font(FL).fontSize(11.5).text(k, ML + 8, ay + 3);
-                doc.font(FB).fontSize(11.5).text(String(v), ML + halfW - 8, ay + 3, { align: 'right' });
-                doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML, ay + 14).lineTo(ML + halfW, ay + 14).stroke();
-                ay += 14;
-            });
-            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, a0, halfW, ay - a0).stroke();
-            let by = y;
-            const b0 = by;
-            bonusRows.forEach(([k, v]) => {
-                doc.fill(BODY).font(FL).fontSize(11.5).text(k, ML + halfW + 20, by + 3);
-                doc.font(FB).fontSize(11.5).text(formatINR(v), ML + CW - 8, by + 3, { align: 'right' });
-                doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML + halfW + 12, by + 14).lineTo(ML + CW, by + 14).stroke();
-                by += 14;
-            });
-            doc.rect(ML + halfW + 12, by, halfW, 18).fill(TOTAL);
-            doc.fill(DARK).font(FB).fontSize(11.5).text('TOTAL (C)', ML + halfW + 20, by + 4);
-            doc.font(FB).fontSize(11.5).text(formatINR(totalBonus), ML + CW - 8, by + 4, { align: 'right' });
-            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML + halfW + 12, b0, halfW, (by + 18) - b0).stroke();
-            y = Math.max(ay, by + 18) + 12;
+            const by = finTable(bnsX, 'BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, attBarY);
+            y = Math.max(ay, by) + 14 * S;
 
             // ---- Employer Contributions (single column) ----
             y = sectionBar('EMPLOYER CONTRIBUTIONS', ML, y, CW);
-            const empTotal = num(p.employer_pf) + num(p.employer_esi) + num(p.employer_contribution);
+            const empTotal = totals.employerTotal;
             const eRows = [
                 ['Employer PF Contribution', num(p.employer_pf)],
                 ['Employer ESI Contribution', num(p.employer_esi)],
                 ['Employer Other Contribution', num(p.employer_contribution)]
             ];
             const er0 = y;
+            const eAmt = ML + CW - 95 * S;
             eRows.forEach(([k, v]) => {
-                doc.fill(BODY).font(FL).fontSize(11.5).text(k, ML + 8, y + 3);
-                doc.font(FB).fontSize(11.5).text(formatINR(v), ML + CW - 8, y + 3, { align: 'right' });
-                doc.strokeColor(BORDER).lineWidth(0.5).moveTo(ML, y + 14).lineTo(ML + CW, y + 14).stroke();
-                y += 14;
+                doc.fill(BODY).font(FL).fontSize(F(11.5)).text(k, ML + 10 * S, centerY(y, ROW, 11.5), { width: CW - 105 * S - 20 * S });
+                doc.font(FB).text(plainINR(v), eAmt + 10 * S, centerY(y, ROW, 11.5), { width: 75 * S, align: 'right' });
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(ML, y + ROW).lineTo(ML + CW, y + ROW).stroke();
+                y += ROW;
             });
-            doc.rect(ML, y, CW, 18).fill(TOTAL);
-            doc.fill(DARK).font(FB).fontSize(11.5).text('TOTAL EMPLOYER CONTRIBUTION', ML + 8, y + 4);
-            doc.font(FB).fontSize(11.5).text(formatINR(empTotal), ML + CW - 8, y + 4, { align: 'right' });
-            doc.strokeColor(BORDER).lineWidth(0.8).rect(ML, er0, CW, (y + 18) - er0).stroke();
-            y += 18 + 12;
+            doc.rect(ML, y, CW, ROW).fill(TOTAL);
+            doc.fill(DARK).font(FB).fontSize(F(11.5)).text('TOTAL EMPLOYER CONTRIBUTION', ML + 10 * S, centerY(y, ROW, 11.5));
+            doc.text(plainINR(empTotal), eAmt + 10 * S, centerY(y, ROW, 11.5), { width: 75 * S, align: 'right' });
+            doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(ML, er0, CW, (y + ROW) - er0).stroke();
+            y += ROW + 14 * S;
 
             // ---- Footer: notes + signature ----
-            y = Math.max(y, 700);
-            doc.strokeColor(BORDER).lineWidth(1).moveTo(ML, y).lineTo(ML + CW, y).stroke();
-            y += 10;
-            doc.fill('#555555').font(FL).fontSize(10.5).text('Note:', ML, y);
-            doc.fill('#555555').font(FL).fontSize(10.5).text('\u2022 This is a computer generated payslip.', ML + 15, y);
-            y += 13;
-            doc.fill('#555555').font(FL).fontSize(10.5).text('\u2022 No signature is required.', ML + 15, y);
-            y += 13;
-            doc.fill('#555555').font(FL).fontSize(10.5).text('\u2022 Please contact HR for any discrepancies.', ML + 15, y);
+            y = Math.max(y, 934 * S);
+            doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ML, y).lineTo(ML + CW, y).stroke();
+            let fy = y + 10 * S;
+            doc.fill('#555555').font(FB).fontSize(F(10.5)).text('Note:', ML, fy);
+            doc.font(FL).text('\u2022 This is a computer generated payslip.', ML + 15 * S, fy);
+            fy += 13 * S;
+            doc.text('\u2022 No signature is required.', ML + 15 * S, fy);
+            fy += 13 * S;
+            doc.text('\u2022 Please contact HR for any discrepancies.', ML + 15 * S, fy);
+            fy += 13 * S;
 
-            const sigX = ML + CW - 160;
-            doc.fill(DARK).font(FB).fontSize(10.5).text('For GENSAR IT SOLUTIONS PVT. LTD.', sigX, y - 28);
-            doc.fill('#555555').font(FL).fontSize(10.5).text('This is a system generated document and does not require signature.', sigX, y - 16);
+            const sigX = ML + CW - 170 * S;
+            doc.fill(DARK).font(FB).fontSize(F(10.5)).text('For GENSAR IT SOLUTIONS PVT. LTD.', sigX, y + 10 * S, { width: 170 * S, align: 'right' });
+            doc.fill('#555555').font(FL).fontSize(F(10.5)).text('This is a system generated document and does not require signature.', sigX, fy, { width: 170 * S, align: 'right' });
 
             doc.end();
         } catch (err) {
