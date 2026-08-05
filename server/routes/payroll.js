@@ -261,7 +261,8 @@ async function renderPayslipPdf(p, company) {
             doc.fill('#111111').font(FB).fontSize(F(19)).text('GENSAR IT SOLUTIONS PVT. LTD.', infoX, y, { width: infoW });
             let iy = y + F(19) * 1.25 + 5 * S;
             doc.font(FL).fontSize(F(10.5)).fill('#222222');
-            ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad \u2013 500072, Telangana, India',
+            ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad',
+                '500072, Telangana, India',
                 'hr@gensaritsolutions.com',
                 'www.gensarhrms.in',
                 '+91 9121912138'].forEach(l => {
@@ -353,14 +354,14 @@ async function renderPayslipPdf(p, company) {
             ];
             let cx = ML;
             cards.forEach(card => {
-                const ch = 60 * S;
+                const ch = 65 * S;
                 doc.rect(cx, y, cardW, ch).fill(CARD);
                 doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(cx, y, cardW, ch).stroke();
-                doc.fill('#444444').font(FB).fontSize(F(11.5)).text(card.label, cx + 4 * S, y + 7 * S, { width: cardW - 8 * S, align: 'center' });
-                doc.font(FB).fontSize(F(16)).text('\u20B9 ' + plainINR(card.value), cx + 4 * S, y + 25 * S, { width: cardW - 8 * S, align: 'center' });
+                doc.fill('#444444').font(FB).fontSize(F(13.5)).text(card.label, cx + 4 * S, y + 7 * S, { width: cardW - 8 * S, align: 'center', lineBreak: false });
+                doc.font(FB).fontSize(F(19)).text('\u20B9 ' + plainINR(card.value), cx + 4 * S, y + 29 * S, { width: cardW - 8 * S, align: 'center' });
                 cx += cardW + 10 * S;
             });
-            y += 60 * S + 10 * S;
+            y += 65 * S + 10 * S;
 
             // ---- Net salary in words ----
             const wH = 28 * S;
