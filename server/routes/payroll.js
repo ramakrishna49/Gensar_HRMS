@@ -301,17 +301,16 @@ async function renderPayslipPdf(p, company) {
                 ['Basic Salary', num(p.basic_salary)],
                 ['HRA', num(p.hra)],
                 ['Conveyance Allowance', num(p.conveyance)],
-                ['Medical Allowance', num(p.medical)],
                 ['Special Allowance', num(p.special_allowance)],
                 ['Other Allowance', num(p.other_allowance)]
             ];
             const deductionRows = [
-                ['PF Contribution', num(p.pf), 'PF'],
-                ['ESI Contribution', num(p.esi), 'ESI'],
-                ['Professional Tax', num(p.professional_tax), 'PT'],
-                ['Income Tax', num(p.income_tax), 'IT'],
-                ['Other Deductions', num(p.other_deduction), 'OD']
-            ].filter(r => r[1] !== 0 || r[2] === 'OD').map(r => [r[0], r[1]]);
+                ['PF Contribution', num(p.pf)],
+                ['ESI Contribution', num(p.esi)],
+                ['Professional Tax', num(p.professional_tax)],
+                ['Income Tax', num(p.income_tax)],
+                ['Other Deductions', num(p.other_deduction)]
+            ];
             const eyE = drawMoneyTable(ML, 'EARNINGS (A)', earningsRows, num(p.gross_salary), 'TOTAL EARNINGS (A)', y);
             const eyD = drawMoneyTable(ML + (CW - 12) / 2 + 12, 'DEDUCTIONS (B)', deductionRows, num(p.total_deductions), 'TOTAL DEDUCTIONS (B)', y);
             y = Math.max(eyE, eyD) + 12;
@@ -354,7 +353,7 @@ async function renderPayslipPdf(p, company) {
                 ['Incentive', num(p.incentive)],
                 ['Attendance Incentive', num(p.bonus)],
                 ['Extra Work', num(p.extra_work)]
-            ].filter(r => r[1] !== 0);
+            ];
             const totalBonus = num(p.bonus) + num(p.incentive) + num(p.extra_work);
             let ay = y;
             const a0 = ay;

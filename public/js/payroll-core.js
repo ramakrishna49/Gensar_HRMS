@@ -113,8 +113,8 @@ function ppSecBar(title) {
 
 function ppEmpRow(l1, v1, l2, v2) {
     return '<tr style="border-bottom:1px solid #d5cee6;">' +
-        '<td class="pp-lbl">' + l1 + '</td><td class="pp-val">' + v1 + '</td>' +
-        '<td class="pp-lbl">' + l2 + '</td><td class="pp-val">' + v2 + '</td></tr>';
+        '<td class="pp-lbl">' + l1 + '</td><td class="pp-val-left">' + v1 + '</td>' +
+        '<td class="pp-lbl">' + l2 + '</td><td class="pp-val-left">' + v2 + '</td></tr>';
 }
 
 function ppNumRow(label, value, last) {
@@ -138,22 +138,21 @@ function buildPayslipHTML(p) {
         ['Basic Salary', ppFormatINR(p.basic_salary)],
         ['HRA', ppFormatINR(p.hra)],
         ['Conveyance Allowance', ppFormatINR(p.conveyance)],
-        ['Medical Allowance', ppFormatINR(p.medical)],
         ['Special Allowance', ppFormatINR(p.special_allowance)],
         ['Other Allowance', ppFormatINR(p.other_allowance)]
     ];
     const deductions = [
-        ['PF Contribution', ppFormatINR(p.pf), 'PF'],
-        ['ESI Contribution', ppFormatINR(p.esi), 'ESI'],
-        ['Professional Tax', ppFormatINR(p.professional_tax), 'PT'],
-        ['Income Tax', ppFormatINR(p.income_tax), 'IT'],
-        ['Other Deductions', ppFormatINR(p.other_deduction), 'OD']
-    ].filter(r => ppNum(r[1]) !== 0 || r[2] === 'OD').map(r => [r[0], r[1]]);
+        ['PF Contribution', ppFormatINR(p.pf)],
+        ['ESI Contribution', ppFormatINR(p.esi)],
+        ['Professional Tax', ppFormatINR(p.professional_tax)],
+        ['Income Tax', ppFormatINR(p.income_tax)],
+        ['Other Deductions', ppFormatINR(p.other_deduction)]
+    ];
     const bonusRows = [
         ['Incentive', ppFormatINR(p.incentive)],
         ['Attendance Incentive', ppFormatINR(p.bonus)],
         ['Extra Work', ppFormatINR(p.extra_work)]
-    ].filter(r => ppNum(r[1]) !== 0);
+    ];
     const totalEarnings = totals.gross;
     const totalDeductions = totals.totalDeductions;
     const totalBonus = totals.bonus;
