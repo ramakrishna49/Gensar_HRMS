@@ -157,7 +157,7 @@
                     <div class="pp-table-wrap">
                         <table class="pp-table">
                             <thead>
-                                <tr><th style="width:40px;"></th><th>Employee</th><th style="width:130px;">Basic (₹)</th><th style="width:90px;">Working</th><th style="width:90px;">Present</th><th style="width:90px;">Leave</th><th style="width:90px;">LOP</th><th style="width:110px;">Bonus</th><th style="width:110px;">Incentive</th><th style="width:110px;">Extra Work</th><th class="pp-num">Net (est.)</th></tr>
+                                <tr><th style="width:40px;"></th><th>Employee</th><th style="width:130px;">Basic (₹)</th><th style="width:90px;">Working</th><th style="width:90px;">Present</th><th style="width:90px;">Leave</th><th style="width:90px;">LOP</th><th style="width:110px;">Bonus</th><th style="width:110px;">Incentive</th><th style="width:110px;">Extra Work</th><th class="pp-num">Gross (A)</th><th class="pp-num">Deductions (B)</th><th class="pp-num">Actual Gross</th><th class="pp-num">Per Day</th><th class="pp-num">LOP Ded.</th><th class="pp-num">Net (est.)</th></tr>
                             </thead>
                             <tbody id="bulkBody"></tbody>
                         </table>
@@ -203,9 +203,12 @@
 
                     <div class="pp-summary-strip">
                         <div class="pp-sum-box gross"><div class="pp-sum-label">Gross Earnings (A)</div><div class="pp-sum-value" id="sumGross">₹0.00</div></div>
-                        <div class="pp-sum-box bonus"><div class="pp-sum-label">Paid Days</div><div class="pp-sum-value" id="sumPaidDays">0</div></div>
-                        <div class="pp-sum-box deductions"><div class="pp-sum-label">Per Day Salary</div><div class="pp-sum-value" id="sumPerDay">₹0.00</div></div>
-                        <div class="pp-sum-box employer"><div class="pp-sum-label">LOP Deduction</div><div class="pp-sum-value" id="sumLopDeduction">₹0.00</div></div>
+                        <div class="pp-sum-box bonus"><div class="pp-sum-label">Total Deductions (B)</div><div class="pp-sum-value" id="sumDed">₹0.00</div></div>
+                        <div class="pp-sum-box deductions"><div class="pp-sum-label">Total Bonus (C)</div><div class="pp-sum-value" id="sumBonus">₹0.00</div></div>
+                        <div class="pp-sum-box employer"><div class="pp-sum-label">Actual Payable Gross</div><div class="pp-sum-value" id="sumActualGross">₹0.00</div></div>
+                        <div class="pp-sum-box net"><div class="pp-sum-label">Paid Days</div><div class="pp-sum-value" id="sumPaidDays">0</div></div>
+                        <div class="pp-sum-box gross"><div class="pp-sum-label">Per Day Salary</div><div class="pp-sum-value" id="sumPerDay">₹0.00</div></div>
+                        <div class="pp-sum-box bonus"><div class="pp-sum-label">LOP Deduction</div><div class="pp-sum-value" id="sumLopDeduction">₹0.00</div></div>
                         <div class="pp-sum-box net"><div class="pp-sum-label">Net Payable</div><div class="pp-sum-value" id="sumNet">₹0.00</div></div>
                     </div>
                     <div id="attendanceError" style="display:none;color:var(--danger);font-size:0.85rem;font-weight:600;margin-top:8px;">Attendance calculation is incorrect.</div>
@@ -380,6 +383,9 @@
         function updateSummary() {
             const t = ppCompute(currentFormValues());
             document.getElementById('sumGross').textContent = ppFormatINR(t.gross);
+            document.getElementById('sumDed').textContent = ppFormatINR(t.totalDeductions);
+            document.getElementById('sumBonus').textContent = ppFormatINR(t.bonus);
+            document.getElementById('sumActualGross').textContent = ppFormatINR(t.actualPayableGross);
             document.getElementById('sumPaidDays').textContent = t.paidDays;
             document.getElementById('sumPerDay').textContent = ppFormatINR(t.perDaySalary);
             document.getElementById('sumLopDeduction').textContent = ppFormatINR(t.lopDeduction);
@@ -562,12 +568,12 @@
             const list = bulkEmployees.filter(e => !q || (e.first_name + ' ' + e.last_name + ' ' + e.employee_id).toLowerCase().includes(q));
             const body = document.getElementById('bulkBody');
                 if (!list.length) {
-                body.innerHTML = '<tr><td colspan="11"><div class="pp-empty"><i class="fas fa-users-slash"></i><h3>No Employees</h3><p>No active employees found.</p></div></td></tr>';
+                body.innerHTML = '<tr><td colspan="16"><div class="pp-empty"><i class="fas fa-users-slash"></i><h3>No Employees</h3><p>No active employees found.</p></div></td></tr>';
                 return;
             }
             body.innerHTML = list.map(e => {
                 const comps = bulkComponents(e, null);
-                const t = ppCompute({ ...comps, working_days: 30, present_days: 30, leave_days: 0, lop_days: 0 });
+                const t = ppCompute({ ...comps, working_days: 30, present_days: 0, leave_days: 0, lop_days: 0 });
                 return '<tr data-emp="' + e.id + '">' +
                     '<td><input type="checkbox" class="bulk-check" checked style="width:16px;height:16px;accent-color:#4F46E5;"></td>' +
                     '<td><div class="pp-emp"><div class="pp-emp-avatar">' + ppEsc(getInitials(e.first_name, e.last_name)) + '</div>' +
@@ -580,6 +586,11 @@
                     '<td><input type="number" class="pp-input bulk-bonus" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-incentive" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-extra" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +
+                    '<td class="pp-num bulk-gross">' + ppFormatINR(t.gross) + '</td>' +
+                    '<td class="pp-num bulk-ded">' + ppFormatINR(t.totalDeductions) + '</td>' +
+                    '<td class="pp-num bulk-actual">' + ppFormatINR(t.actualPayableGross) + '</td>' +
+                    '<td class="pp-num bulk-perday">' + ppFormatINR(t.perDaySalary) + '</td>' +
+                    '<td class="pp-num bulk-lopded">' + ppFormatINR(t.lopDeduction) + '</td>' +
                     '<td class="pp-num bulk-net">' + ppFormatINR(t.net) + '</td>' +
                 '</tr>';
             }).join('');
@@ -601,6 +612,11 @@
                 const leave = Math.max(0, work - pres - lop);
                 r.querySelector('.bulk-leave').value = leave;
                 const t = ppCompute({ ...bulkComponents(emp, basic), bonus, incentive, extra_work: extraWork, working_days: work, present_days: pres, leave_days: leave, lop_days: lop });
+                r.querySelector('.bulk-gross').textContent = ppFormatINR(t.gross);
+                r.querySelector('.bulk-ded').textContent = ppFormatINR(t.totalDeductions);
+                r.querySelector('.bulk-actual').textContent = ppFormatINR(t.actualPayableGross);
+                r.querySelector('.bulk-perday').textContent = ppFormatINR(t.perDaySalary);
+                r.querySelector('.bulk-lopded').textContent = ppFormatINR(t.lopDeduction);
                 r.querySelector('.bulk-net').textContent = ppFormatINR(t.net);
             });
         }

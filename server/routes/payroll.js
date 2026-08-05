@@ -110,11 +110,11 @@ function computeTotals(v) {
     const lopDays = num(v.lop_days);
     const paidDays = presentDays + leaveDays;
     const attendanceValid = Math.abs(workingDays - (presentDays + leaveDays + lopDays)) < 0.001;
-    const perDaySalary = workingDays > 0 ? gross / workingDays : 0;
+    const actualPayableGross = gross - totalDeductions + bonus;
+    const perDaySalary = workingDays > 0 ? actualPayableGross / workingDays : 0;
     const lopDeduction = perDaySalary * lopDays;
-    const totalDeductionsWithEmployer = totalDeductions + employerTotal;
-    const net = gross - lopDeduction + bonus - totalDeductionsWithEmployer;
-    return { gross, totalDeductions, totalDeductionsWithEmployer, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, perDaySalary, lopDeduction, attendanceValid, net };
+    const net = actualPayableGross - lopDeduction;
+    return { gross, totalDeductions, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, actualPayableGross, perDaySalary, lopDeduction, attendanceValid, net };
 }
 
 async function getProfileSalaryValues(employeeId, values) {
