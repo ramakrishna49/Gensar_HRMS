@@ -154,8 +154,8 @@ function buildPayslipHTML(p) {
         ['Attendance Incentive', ppNumFmt(p.bonus)],
         ['Extra Work', ppNumFmt(p.extra_work)]
     ];
-    const finTable = (title, rows, totalLabel, totalValue) =>
-        '<table class="pp-fin">' +
+    const finTable = (title, rows, totalLabel, totalValue, extraStyle) =>
+        '<table class="pp-fin"' + (extraStyle ? ' style="' + extraStyle + '"' : '') + '>' +
             '<thead><tr><th>' + title + '</th><th class="text-right">AMOUNT (\u20B9)</th></tr></thead>' +
             '<tbody>' +
                 rows.map((r) => '<tr><td>' + r[0] + '</td><td class="text-right">' + r[1] + '</td></tr>').join('') +
@@ -230,10 +230,10 @@ function buildPayslipHTML(p) {
             '<span style="font-style:italic;color:#222222;">' + ppEsc(ppAmountInWords(totals.net)) + '</span>' +
         '</div>' +
         '<!-- ATTENDANCE + BONUS -->' +
-        '<div style="display:flex;gap:12px;margin-bottom:2px;">' +
-            '<div style="flex:1;min-width:0;">' +
+        '<div style="display:flex;gap:12px;margin-bottom:2px;align-items:stretch;">' +
+            '<div style="flex:1;min-width:0;display:flex;flex-direction:column;">' +
                 '<div class="pp-sec" style="margin-bottom:0;border-bottom:none;">ATTENDANCE SUMMARY</div>' +
-                '<table class="pp-fin" style="border-top:none;">' +
+                '<table class="pp-fin" style="border-top:none;flex:1;">' +
                     '<thead><tr><th style="text-align:center;">Working Days</th><th style="text-align:center;">Present Days</th><th style="text-align:center;">Leave Days</th><th style="text-align:center;">LOP Days</th></tr></thead>' +
                     '<tbody><tr>' +
                         '<td style="text-align:center;font-weight:700;">' + ppNum(p.working_days) + '</td>' +
@@ -243,7 +243,7 @@ function buildPayslipHTML(p) {
                     '</tr></tbody>' +
                 '</table>' +
             '</div>' +
-            '<div style="flex:1;min-width:0;">' + finTable('BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus) + '</div>' +
+            '<div style="flex:1;min-width:0;display:flex;flex-direction:column;">' + finTable('BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, 'flex:1;') + '</div>' +
         '</div>' +
         '<!-- EMPLOYER CONTRIBUTIONS -->' +
         '<div style="margin-bottom:2px;">' + finTable('EMPLOYER CONTRIBUTIONS', [

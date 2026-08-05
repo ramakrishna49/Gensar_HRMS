@@ -377,6 +377,7 @@ async function renderPayslipPdf(p, company) {
             const bnsX = ML + halfW + 12 * S;
             const attBarY = y;
             const attBarH = BAR_H - 2 * S; // reference bar has no bottom border here
+            const attRowH = (4 * ROW - attBarH) / 2; // fill so attendance table bottom aligns with bonus table bottom
             doc.rect(attX, attBarY, 4 * S, attBarH).fill(PURPLE);
             doc.rect(attX + 4 * S, attBarY, halfW - 4 * S, attBarH).fill(BAR);
             doc.fill(DARK).font(FB).fontSize(F(11.5)).text('ATTENDANCE SUMMARY', attX + 10 * S, centerY(attBarY, attBarH, 11.5));
@@ -387,21 +388,21 @@ async function renderPayslipPdf(p, company) {
             let ay = attBarY + attBarH;
             doc.fill(BAR);
             for (let c = 0; c < 4; c++) {
-                doc.rect(attX + c * attColW, ay, attColW, ROW).fill();
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + ROW).stroke();
+                doc.rect(attX + c * attColW, ay, attColW, attRowH).fill();
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attRowH).stroke();
             }
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + ROW).lineTo(attX + halfW, ay + ROW).stroke();
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attRowH).lineTo(attX + halfW, ay + attRowH).stroke();
             attHeads.forEach((h, c) => {
-                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, ROW, 11.5), { width: attColW, align: 'center' });
+                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, attRowH, 11.5), { width: attColW, align: 'center' });
             });
-            ay += ROW;
-            doc.fill('#FFFFFF').rect(attX, ay, halfW, ROW).fill();
+            ay += attRowH;
+            doc.fill('#FFFFFF').rect(attX, ay, halfW, attRowH).fill();
             attVals.forEach((v, c) => {
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + ROW).stroke();
-                doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, ROW, 11.5), { width: attColW, align: 'center' });
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attRowH).stroke();
+                doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attRowH, 11.5), { width: attColW, align: 'center' });
             });
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + ROW).lineTo(attX + halfW, ay + ROW).stroke();
-            ay += ROW;
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attRowH).lineTo(attX + halfW, ay + attRowH).stroke();
+            ay += attRowH;
 
             const bonusRows = [
                 ['Incentive', num(p.incentive)],
