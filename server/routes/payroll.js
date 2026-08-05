@@ -346,13 +346,13 @@ async function renderPayslipPdf(p, company) {
             y = Math.max(eyE, eyD) + 14 * S;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
-            const cardW = 228 * S;
+            const cardW = (CW - 20 * S) / 3;
             const cards = [
                 { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
                 { label: 'TOTAL DEDUCTIONS (B)', value: totals.totalDeductions, color: DED },
                 { label: 'NET SALARY PAYABLE (A + C - B - D)', value: totals.net, color: NET }
             ];
-            let cx = ML + (CW - (3 * cardW + 20 * S)) / 2;
+            let cx = ML;
             cards.forEach(card => {
                 const ch = 65 * S;
                 doc.rect(cx, y, cardW, ch).fill(CARD);
