@@ -184,6 +184,7 @@ function buildPayslipHTML(p) {
         '.ppslip .pp-att-values td{padding-top:2px;padding-bottom:2px;height:28px;}' +
         '.ppslip .pp-attendance{display:flex;flex-direction:column;}' +
         '.ppslip .pp-attendance thead{display:table;table-layout:fixed;width:100%;flex:1;}' +
+        '.ppslip .pp-attendance thead th{line-height:1.05;}' +
         '.ppslip .pp-attendance tbody{display:table;table-layout:fixed;width:100%;flex:0 0 28px;}' +
         '.ppslip .total-row td{background:#efeafb;font-weight:700;color:#38286b;}' +
         '</style>' +
@@ -194,7 +195,7 @@ function buildPayslipHTML(p) {
                 '<div style="width:1px;height:95px;background:#7c6ca8;margin:0 5px;flex-shrink:0;align-self:center;"></div>' +
                 '<div style="display:flex;flex-direction:column;justify-content:center;">' +
                     '<div style="font-size:19px;font-weight:900;color:#111;letter-spacing:0.2px;margin-bottom:5px;">GENSAR IT SOLUTIONS PVT. LTD.</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad<br>500072, Telangana, India</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,<br>Hyderabad, 500072, Telangana, India</div>' +
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">hr@gensaritsolutions.com</div>' +
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">www.gensarhrms.in</div>' +
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">+91 9121912138</div>' +
@@ -222,14 +223,14 @@ function buildPayslipHTML(p) {
             '<div style="flex:1;min-width:0;">' + finTable('DEDUCTIONS', deductions, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions) + '</div>' +
         '</div>' +
         '<!-- SUMMARY CARDS -->' +
-        '<div style="display:flex;gap:10px;margin-bottom:10px;">' +
-            '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+        '<div style="display:flex;justify-content:center;gap:10px;margin-bottom:10px;">' +
+            '<div style="flex:0 0 238px;width:238px;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">GROSS SALARY (A)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#38286b;">\u20B9 ' + ppNumFmt(totals.gross) + '</div></div>' +
-            '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="flex:0 0 238px;width:238px;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">TOTAL DEDUCTIONS (B)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductions) + '</div></div>' +
-            '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="flex:0 0 238px;width:238px;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE (A + C - B - D)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +

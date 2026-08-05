@@ -261,8 +261,8 @@ async function renderPayslipPdf(p, company) {
             doc.fill('#111111').font(FB).fontSize(F(19)).text('GENSAR IT SOLUTIONS PVT. LTD.', infoX, y, { width: infoW });
             let iy = y + F(19) * 1.25 + 5 * S;
             doc.font(FL).fontSize(F(10.5)).fill('#222222');
-            ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad',
-                '500072, Telangana, India',
+            ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,',
+                'Hyderabad, 500072, Telangana, India',
                 'hr@gensaritsolutions.com',
                 'www.gensarhrms.in',
                 '+91 9121912138'].forEach(l => {
@@ -346,13 +346,13 @@ async function renderPayslipPdf(p, company) {
             y = Math.max(eyE, eyD) + 14 * S;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
-            const cardW = (CW - 20 * S) / 3;
+            const cardW = 238 * S;
             const cards = [
                 { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
                 { label: 'TOTAL DEDUCTIONS (B)', value: totals.totalDeductions, color: DED },
                 { label: 'NET SALARY PAYABLE (A + C - B - D)', value: totals.net, color: NET }
             ];
-            let cx = ML;
+            let cx = ML + (CW - (3 * cardW + 20 * S)) / 2;
             cards.forEach(card => {
                 const ch = 65 * S;
                 doc.rect(cx, y, cardW, ch).fill(CARD);
