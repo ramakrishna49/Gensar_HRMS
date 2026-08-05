@@ -95,7 +95,7 @@ function amountToWords(amount) {
 
 // Compute totals matching the payslip layout:
 //   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
-//   D = Employer contributions, Net = Gross - LOP deduction + C - B.
+//   D = Employer contributions, Net = Gross - LOP deduction + C - B - D.
 function computeTotals(v) {
     const gross = num(v.basic_salary) + num(v.hra) + num(v.conveyance)
         + num(v.special_allowance) + num(v.other_allowance);
@@ -111,7 +111,7 @@ function computeTotals(v) {
     const attendanceValid = Math.abs(workingDays - (presentDays + leaveDays + lopDays)) < 0.001;
     const perDaySalary = workingDays > 0 ? gross / workingDays : 0;
     const lopDeduction = perDaySalary * lopDays;
-    const net = gross - lopDeduction + bonus - totalDeductions;
+    const net = gross - lopDeduction + bonus - totalDeductions - employerTotal;
     return { gross, totalDeductions, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, perDaySalary, lopDeduction, attendanceValid, net };
 }
 
@@ -388,7 +388,7 @@ async function renderPayslipPdf(p, company) {
             const cards = [
                 { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
                 { label: 'TOTAL DEDUCTIONS (B)', value: totals.totalDeductions, color: DED },
-                { label: 'NET SALARY PAYABLE (A + C - B)', value: totals.net, color: NET }
+                { label: 'NET SALARY PAYABLE (A + C - B - D)', value: totals.net, color: NET }
             ];
             let cx = ML;
             cards.forEach(card => {

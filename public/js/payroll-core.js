@@ -75,7 +75,7 @@ function ppAmountInWords(amount) {
 
 // Mirrors the server-side computeTotals
 //   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
-//   D = Employer contributions, Net = Gross - LOP deduction + C - B.
+//   D = Employer contributions, Net = Gross - LOP deduction + C - B - D.
 function ppCompute(v) {
     const gross = ppNum(v.basic_salary) + ppNum(v.hra) + ppNum(v.conveyance)
         + ppNum(v.special_allowance) + ppNum(v.other_allowance);
@@ -91,7 +91,7 @@ function ppCompute(v) {
     const attendanceValid = Math.abs(workingDays - (presentDays + leaveDays + lopDays)) < 0.001;
     const perDaySalary = workingDays > 0 ? gross / workingDays : 0;
     const lopDeduction = perDaySalary * lopDays;
-    const net = gross - lopDeduction + bonus - totalDeductions;
+    const net = gross - lopDeduction + bonus - totalDeductions - employerTotal;
     return { gross, totalDeductions, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, perDaySalary, lopDeduction, attendanceValid, net };
 }
 
@@ -238,7 +238,7 @@ function buildPayslipHTML(p) {
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">TOTAL DEDUCTIONS (B)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductions) + '</div></div>' +
             '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
-                '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE (A + C - B)</div>' +
+                '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE (A + C - B - D)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +
