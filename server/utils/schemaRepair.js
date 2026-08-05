@@ -32,10 +32,15 @@ const EMPLOYEE_ALTER_COLUMNS = {
     reporting_manager_id: 'INT REFERENCES employees(id) ON DELETE SET NULL'
 };
 
-function parseMissingColumn(message) {
-    // e.g. column "basic_salary" of relation "employees" does not exist
-    const m = /column "([a-z0-9_]+)" of relation "([a-z0-9_]+)" does not exist/i.exec(message || '');
-    return m ? { column: m[1], table: m[2] } : null;
+function missingColumnInfo(error) {
+    // Postgres reports 42703 either as `column "x" of relation "y" does not
+    // exist` or simply `column "x" does not exist`. Accept both, and fall back
+    // to the structured error fields when the driver exposes them.
+    const msg = error && error.message ? String(error.message) : '';
+    const m = /column "([a-z0-9_]+)"(?: of relation "([a-z0-9_]+)")? does not exist/i.exec(msg);
+    const column = (m && m[1]) || (error && error.column) || null;
+    const table = (m && m[2]) || (error && error.table) || null;
+    return { column, table };
 }
 
 async function ensureEmployeeColumn(column) {
@@ -50,14 +55,14 @@ async function ensureEmployeeColumn(column) {
 // table, adds the missing column and retries. Loops in case several columns are
 // missing (Postgres reports the first one at a time).
 async function runWithSchemaRepair(fn) {
-    const maxAttempts = Object.keys(EMPLOYEE_ALTER_COLUMNS).length + 1;
+    const maxAttempts = Object.keys(EMPLOYEE_ALTER_COLUMNS).length + 2;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
             return await fn();
         } catch (error) {
             if (error && error.code === '42703' && attempt < maxAttempts - 1) {
-                const miss = parseMissingColumn(error.message);
-                if (miss && miss.table === 'employees' && await ensureEmployeeColumn(miss.column)) {
+                const miss = missingColumnInfo(error);
+                if (miss.column && await ensureEmployeeColumn(miss.column)) {
                     continue;
                 }
             }
@@ -93,4 +98,4 @@ function pgErrorResponse(error) {
     return { status: 500, message: 'Server error' };
 }
 
-module.exports = { runWithSchemaRepair, ensureEmployeeColumn, pgErrorResponse, parseMissingColumn };
+module.exports = { runWithSchemaRepair, ensureEmployeeColumn, pgErrorResponse, missingColumnInfo };
