@@ -369,8 +369,8 @@ async function renderPayslipPdf(p, company) {
                 ['Basic Salary', num(p.basic_salary)],
                 ['HRA', num(p.hra)],
                 ['Conveyance Allowance', num(p.conveyance)],
-                ['Special Allowance', num(p.special_allowance)],
-                ['Other Allowance', num(p.other_allowance)]
+                ['Medical Allowance', num(p.other_allowance)],
+                ['Special Allowance', num(p.special_allowance)]
             ];
             const deductionRows = [
                 ['PF Contribution', num(p.pf)],
@@ -381,14 +381,14 @@ async function renderPayslipPdf(p, company) {
             ];
             const halfW = (CW - 12 * S) / 2;
             const eyE = finTable(ML, 'EARNINGS', earningsRows, 'TOTAL EARNINGS (A)', totals.gross, y);
-            const eyD = finTable(ML + halfW + 12 * S, 'DEDUCTIONS', deductionRows, 'TOTAL DEDUCTIONS (B)', totals.totalDeductionsWithEmployer, y);
+            const eyD = finTable(ML + halfW + 12 * S, 'DEDUCTIONS', deductionRows, 'TOTAL DEDUCTIONS (B + D)', totals.totalDeductionsWithEmployer, y);
             y = Math.max(eyE, eyD) + 14 * S;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
             const cardW = (CW - 20 * S) / 3;
             const cards = [
                 { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
-                { label: 'TOTAL DEDUCTIONS (B)', value: totals.totalDeductionsWithEmployer, color: DED },
+                { label: 'TOTAL DEDUCTIONS (B + D)', value: totals.totalDeductionsWithEmployer, color: DED },
                 { label: 'NET SALARY PAYABLE', value: totals.net, color: NET }
             ];
             let cx = ML;
