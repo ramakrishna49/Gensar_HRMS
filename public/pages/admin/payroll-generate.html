@@ -173,7 +173,7 @@
 
                         <div class="pp-section-head"><i class="fas fa-calendar-day" style="margin-right:6px;"></i>Attendance</div>
                         <div class="pp-field"><label>Working Days</label><input type="number" id="working_days" class="pp-input" value="30" min="0"></div>
-                        <div class="pp-field"><label>Present Days</label><input type="number" id="present_days" class="pp-input" value="30" min="0"></div>
+                        <div class="pp-field"><label>Present Days</label><input type="number" id="present_days" class="pp-input" value="0" min="0"></div>
                         <div class="pp-field"><label>Leave Days</label><input type="number" id="leave_days" class="pp-input" value="0" min="0"></div>
                         <div class="pp-field"><label>LOP Days</label><input type="number" id="lop_days" class="pp-input" value="0" min="0"></div>
 
@@ -572,7 +572,7 @@
                         '<div><b>' + ppEsc(e.first_name) + ' ' + ppEsc(e.last_name) + '</b><small>' + ppEsc(e.employee_id) + (e.department_name ? ' &middot; ' + ppEsc(e.department_name) : '') + '</small></div></div></td>' +
                     '<td><input type="number" class="pp-input bulk-basic" value="' + (comps.basic_salary || 0) + '" step="0.01" min="0" readonly></td>' +
                     '<td><input type="number" class="pp-input bulk-work" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
-                    '<td><input type="number" class="pp-input bulk-pres" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-pres" value="0" min="0" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-leave" value="0" min="0" readonly></td>' +
                     '<td><input type="number" class="pp-input bulk-lop" value="0" min="0" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-bonus" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +

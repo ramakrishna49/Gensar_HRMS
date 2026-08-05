@@ -95,7 +95,7 @@ function amountToWords(amount) {
 
 // Compute totals matching the payslip layout:
 //   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
-//   D = Employer contributions, Net = Gross - LOP deduction + C - B - D.
+//   D = Employer contributions, Net = Gross - LOP deduction + C - (B + D).
 function computeTotals(v) {
     const gross = num(v.basic_salary) + num(v.hra) + num(v.conveyance)
         + num(v.special_allowance) + num(v.other_allowance);
@@ -111,8 +111,9 @@ function computeTotals(v) {
     const attendanceValid = Math.abs(workingDays - (presentDays + leaveDays + lopDays)) < 0.001;
     const perDaySalary = workingDays > 0 ? gross / workingDays : 0;
     const lopDeduction = perDaySalary * lopDays;
-    const net = gross - lopDeduction + bonus - totalDeductions - employerTotal;
-    return { gross, totalDeductions, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, perDaySalary, lopDeduction, attendanceValid, net };
+    const totalDeductionsWithEmployer = totalDeductions + employerTotal;
+    const net = gross - lopDeduction + bonus - totalDeductionsWithEmployer;
+    return { gross, totalDeductions, totalDeductionsWithEmployer, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, perDaySalary, lopDeduction, attendanceValid, net };
 }
 
 async function getProfileSalaryValues(employeeId, values) {
@@ -380,14 +381,14 @@ async function renderPayslipPdf(p, company) {
             ];
             const halfW = (CW - 12 * S) / 2;
             const eyE = finTable(ML, 'EARNINGS', earningsRows, 'TOTAL EARNINGS (A)', totals.gross, y);
-            const eyD = finTable(ML + halfW + 12 * S, 'DEDUCTIONS', deductionRows, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions, y);
+            const eyD = finTable(ML + halfW + 12 * S, 'DEDUCTIONS', deductionRows, 'TOTAL DEDUCTIONS (B + D)', totals.totalDeductionsWithEmployer, y);
             y = Math.max(eyE, eyD) + 14 * S;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
             const cardW = (CW - 20 * S) / 3;
             const cards = [
                 { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
-                { label: 'TOTAL DEDUCTIONS (B)', value: totals.totalDeductions, color: DED },
+                { label: 'TOTAL DEDUCTIONS (B + D)', value: totals.totalDeductionsWithEmployer, color: DED },
                 { label: 'NET SALARY PAYABLE (A + C - B - D)', value: totals.net, color: NET }
             ];
             let cx = ML;
