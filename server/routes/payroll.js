@@ -264,7 +264,7 @@ async function renderPayslipPdf(p, company) {
             ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad \u2013 500072, Telangana, India',
                 'hr@gensaritsolutions.com',
                 'www.gensarhrms.in',
-                '+91 40 4855 6600'].forEach(l => {
+                '+91 9121912138'].forEach(l => {
                 doc.text(l, infoX, iy, { width: infoW });
                 iy += F(10.5) * 1.25 + 3 * S;
             });
@@ -353,14 +353,14 @@ async function renderPayslipPdf(p, company) {
             ];
             let cx = ML;
             cards.forEach(card => {
-                const ch = 52 * S;
+                const ch = 60 * S;
                 doc.rect(cx, y, cardW, ch).fill(CARD);
                 doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(cx, y, cardW, ch).stroke();
-                doc.fill('#444444').font(FB).fontSize(F(10)).text(card.label, cx + 4 * S, y + 6 * S, { width: cardW - 8 * S, align: 'center' });
-                doc.font(FB).fontSize(F(14.5)).text('\u20B9 ' + plainINR(card.value), cx + 4 * S, y + 21 * S, { width: cardW - 8 * S, align: 'center' });
+                doc.fill('#444444').font(FB).fontSize(F(11.5)).text(card.label, cx + 4 * S, y + 7 * S, { width: cardW - 8 * S, align: 'center' });
+                doc.font(FB).fontSize(F(16)).text('\u20B9 ' + plainINR(card.value), cx + 4 * S, y + 25 * S, { width: cardW - 8 * S, align: 'center' });
                 cx += cardW + 10 * S;
             });
-            y += 52 * S + 10 * S;
+            y += 60 * S + 10 * S;
 
             // ---- Net salary in words ----
             const wH = 28 * S;
@@ -380,7 +380,8 @@ async function renderPayslipPdf(p, company) {
             const bnsW = CW - attW - rowGap;
             const attBarY = y;
             const attBarH = BAR_H - 2 * S; // reference bar has no bottom border here
-            const attRowH = (4 * ROW - attBarH) / 2; // fill so attendance table bottom aligns with bonus table bottom
+            const attValueH = 26 * S;
+            const attHeadH = 4 * ROW - attBarH - attValueH;
             doc.rect(attX, attBarY, 4 * S, attBarH).fill(PURPLE);
             doc.rect(attX + 4 * S, attBarY, attW - 4 * S, attBarH).fill(BAR);
             doc.fill(DARK).font(FB).fontSize(F(11.5)).text('ATTENDANCE SUMMARY', attX + 10 * S, centerY(attBarY, attBarH, 11.5));
@@ -391,21 +392,21 @@ async function renderPayslipPdf(p, company) {
             let ay = attBarY + attBarH;
             doc.fill(BAR);
             for (let c = 0; c < 4; c++) {
-                doc.rect(attX + c * attColW, ay, attColW, attRowH).fill();
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attRowH).stroke();
+                doc.rect(attX + c * attColW, ay, attColW, attHeadH).fill();
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attHeadH).stroke();
             }
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attRowH).lineTo(attX + attW, ay + attRowH).stroke();
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attHeadH).lineTo(attX + attW, ay + attHeadH).stroke();
             attHeads.forEach((h, c) => {
-                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, attRowH, 11.5), { width: attColW, align: 'center' });
+                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, attHeadH, 11.5), { width: attColW, align: 'center' });
             });
-            ay += attRowH;
-            doc.fill('#FFFFFF').rect(attX, ay, attW, attRowH).fill();
+            ay += attHeadH;
+            doc.fill('#FFFFFF').rect(attX, ay, attW, attValueH).fill();
             attVals.forEach((v, c) => {
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attRowH).stroke();
-                doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attRowH, 11.5), { width: attColW, align: 'center' });
+                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attValueH).stroke();
+                doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attValueH, 11.5), { width: attColW, align: 'center' });
             });
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attRowH).lineTo(attX + attW, ay + attRowH).stroke();
-            ay += attRowH;
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attValueH).lineTo(attX + attW, ay + attValueH).stroke();
+            ay += attValueH;
 
             const bonusRows = [
                 ['Incentive', num(p.incentive)],
@@ -432,7 +433,7 @@ async function renderPayslipPdf(p, company) {
                 y += ROW;
             });
             doc.rect(ML, y, CW, ROW).fill(TOTAL);
-            doc.fill(DARK).font(FB).fontSize(F(11.5)).text('TOTAL EMPLOYER CONTRIBUTION', ML + 10 * S, centerY(y, ROW, 11.5));
+            doc.fill(DARK).font(FB).fontSize(F(11.5)).text('TOTAL EMPLOYER CONTRIBUTION (D)', ML + 10 * S, centerY(y, ROW, 11.5));
             doc.text(plainINR(empTotal), eAmt + 10 * S, centerY(y, ROW, 11.5), { width: 75 * S, align: 'right' });
             doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(ML, er0, CW, (y + ROW) - er0).stroke();
             y += ROW + 14 * S;

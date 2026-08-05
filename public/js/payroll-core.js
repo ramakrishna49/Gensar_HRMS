@@ -181,6 +181,10 @@ function buildPayslipHTML(p) {
         '.ppslip .pp-emp td:nth-child(even){color:#111;font-weight:600;}' +
         '.ppslip .pp-fin th{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;border:1px solid #d5cee6;}' +
         '.ppslip .pp-fin td{border:1px solid #d5cee6;}' +
+        '.ppslip .pp-att-values td{padding-top:2px;padding-bottom:2px;height:28px;}' +
+        '.ppslip .pp-attendance{display:flex;flex-direction:column;}' +
+        '.ppslip .pp-attendance thead{display:table;table-layout:fixed;width:100%;flex:1;}' +
+        '.ppslip .pp-attendance tbody{display:table;table-layout:fixed;width:100%;flex:0 0 28px;}' +
         '.ppslip .total-row td{background:#efeafb;font-weight:700;color:#38286b;}' +
         '</style>' +
         '<!-- HEADER -->' +
@@ -193,7 +197,7 @@ function buildPayslipHTML(p) {
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad \u2013 500072, Telangana, India</div>' +
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">hr@gensaritsolutions.com</div>' +
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">www.gensarhrms.in</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">+91 40 4855 6600</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">+91 9121912138</div>' +
                 '</div>' +
             '</div>' +
             '<div style="width:150px;border:1px solid #7c6ca8;border-radius:6px;overflow:hidden;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
@@ -219,15 +223,15 @@ function buildPayslipHTML(p) {
         '</div>' +
         '<!-- SUMMARY CARDS -->' +
         '<div style="display:flex;gap:10px;margin-bottom:10px;">' +
-            '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
-                '<div style="font-size:10px;font-weight:700;color:#444;margin-bottom:5px;">GROSS SALARY (A)</div>' +
-                '<div style="font-size:14.5px;font-weight:700;color:#38286b;">\u20B9 ' + ppNumFmt(totals.gross) + '</div></div>' +
-            '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
-                '<div style="font-size:10px;font-weight:700;color:#444;margin-bottom:5px;">TOTAL DEDUCTIONS (B)</div>' +
-                '<div style="font-size:14.5px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductions) + '</div></div>' +
-            '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
-                '<div style="font-size:10px;font-weight:700;color:#444;margin-bottom:5px;">NET SALARY PAYABLE (A + C - B - D)</div>' +
-                '<div style="font-size:14.5px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
+            '<div style="flex:1;min-height:60px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:10px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+                '<div style="font-size:11.5px;font-weight:700;color:#444;margin-bottom:5px;">GROSS SALARY (A)</div>' +
+                '<div style="font-size:16px;font-weight:700;color:#38286b;">\u20B9 ' + ppNumFmt(totals.gross) + '</div></div>' +
+            '<div style="flex:1;min-height:60px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:10px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+                '<div style="font-size:11.5px;font-weight:700;color:#444;margin-bottom:5px;">TOTAL DEDUCTIONS (B)</div>' +
+                '<div style="font-size:16px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductions) + '</div></div>' +
+            '<div style="flex:1;min-height:60px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:10px 9px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+                '<div style="font-size:11.5px;font-weight:700;color:#444;margin-bottom:5px;">NET SALARY PAYABLE (A + C - B - D)</div>' +
+                '<div style="font-size:16px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +
         '<div style="background:#fbfbfd;border:1px solid #d5cee6;padding:7px 12px;font-size:11.5px;margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
@@ -238,9 +242,9 @@ function buildPayslipHTML(p) {
         '<div style="display:flex;gap:20px;margin-bottom:2px;align-items:stretch;">' +
             '<div style="flex:0 0 46%;min-width:0;overflow:hidden;display:flex;flex-direction:column;">' +
                 '<div class="pp-sec" style="margin-bottom:0;border-bottom:none;">ATTENDANCE SUMMARY</div>' +
-                '<table class="pp-fin" style="border-top:none;flex:1;max-width:100%;">' +
+                '<table class="pp-fin pp-attendance" style="border-top:none;flex:1;max-width:100%;">' +
                     '<thead><tr><th style="text-align:center;">Working Days</th><th style="text-align:center;">Present Days</th><th style="text-align:center;">Leave Days</th><th style="text-align:center;">LOP Days</th></tr></thead>' +
-                    '<tbody><tr>' +
+                    '<tbody><tr class="pp-att-values">' +
                         '<td style="text-align:center;font-weight:700;">' + ppNum(p.working_days) + '</td>' +
                         '<td style="text-align:center;font-weight:700;">' + ppNum(p.present_days) + '</td>' +
                         '<td style="text-align:center;font-weight:700;">' + ppNum(p.leave_days) + '</td>' +
@@ -255,7 +259,7 @@ function buildPayslipHTML(p) {
             ['Employer PF Contribution', ppNumFmt(p.employer_pf)],
             ['Employer ESI Contribution', ppNumFmt(p.employer_esi)],
             ['Employer Other Contribution', ppNumFmt(p.employer_contribution)]
-        ], 'TOTAL EMPLOYER CONTRIBUTION', totals.employerTotal) + '</div>' +
+        ], 'TOTAL EMPLOYER CONTRIBUTION (D)', totals.employerTotal) + '</div>' +
         '<!-- FOOTER -->' +
         '<div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:1px solid #d5cee6;font-size:10.5px;align-items:flex-end;">' +
             '<div>' +
