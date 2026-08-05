@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
-    "db:init": "node server/scripts/init-db.js"
+    "db:init": "node server/scripts/init-db.js",
+    "db:migrate": "node server/scripts/migrate.js"
   },
   "keywords": [
     "hrms",

@@ -6,6 +6,7 @@ const { query, getPool } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateEmployee, collectFieldErrors } = require('../middleware/validation');
 const { deleteFile, deleteFileByUrl } = require('../services/storage');
+const { runWithSchemaRepair, pgErrorResponse } = require('../utils/schemaRepair');
 
 const MAIN_ADMIN_ID = 1;
 
@@ -211,13 +212,40 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
         if (emailCheck.rows.length > 0) {
             return res.status(400).json({ success: false, message: 'Email already exists' });
         }
+
+        // Check if employee_id exists (uniqueness pre-check so users get a clear message)
+        const empIdCheck = await query('SELECT id FROM employees WHERE employee_id = $1', [employee_id]);
+        if (empIdCheck.rows.length > 0) {
+            return res.status(400).json({ success: false, message: 'Employee ID already exists' });
+        }
+
+        // Validate numeric fields early so a bad value gives a friendly message
+        // instead of a Postgres cast error.
+        const numFields = {
+            salary: 'Salary', basic_salary: 'Basic Salary', hra: 'HRA', conveyance: 'Conveyance',
+            medical: 'Medical Allowance', special_allowance: 'Special Allowance', other_allowance: 'Other Allowance',
+            pf: 'Employee PF', esi: 'Employee ESI', professional_tax: 'Professional Tax', income_tax: 'Income Tax',
+            loan_deduction: 'Loan Deduction', advance_salary: 'Advance Salary', other_deduction: 'Other Deduction',
+            incentive: 'Incentive', bonus: 'Attendance Incentive (Bonus)', extra_work: 'Extra Work',
+            employer_pf: 'Employer PF', employer_esi: 'Employer ESI', employer_contribution: 'Employer Contribution'
+        };
+        const numErrors = [];
+        for (const [key, label] of Object.entries(numFields)) {
+            const v = req.body[key];
+            if (v !== undefined && v !== null && String(v).trim() !== '' && isNaN(Number(String(v).trim()))) {
+                numErrors.push(label + ' must be a valid number');
+            }
+        }
+        if (numErrors.length > 0) {
+            return res.status(400).json({ success: false, errors: numErrors });
+        }
         
         // Generate random temp password if not provided
         const tempPassword = password || crypto.randomBytes(6).toString('base64url');
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(tempPassword, salt);
         
-        const result = await query(
+        const result = await runWithSchemaRepair(() => query(
             `INSERT INTO employees 
             (employee_id, first_name, last_name, email, phone, password_hash, 
              department_id, designation_id, joining_date, salary, role, address, 
@@ -238,25 +266,33 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
             RETURNING id, employee_id, first_name, last_name, email, role`,
             [
                 employee_id, first_name, last_name, email, phone, password_hash,
-                department_id || null, designation_id || null, joining_date,
-                salary || null, role || 'employee', address || null,
+                cleanNum(department_id) ?? null, cleanNum(designation_id) ?? null, joining_date,
+                cleanNum(salary), role || 'employee', address || null,
                 date_of_birth || null, gender || null,
                 permanent_address || null, languages_spoken || null, marital_status || null, personal_email || null,
                 qualification || null, specialization || null, pan_number || null, aadhaar_number || null, passport_number || null,
                 uan_number || null, pf_number || null, esi_number || null,
                 bank_name || null, bank_branch || null, bank_account || null, bank_ifsc || null,
-                reporting_manager_id || null,
-                basic_salary || 0, hra || 0, conveyance || 0, medical || 0, special_allowance || 0, other_allowance || 0,
-                pf || 0, esi || 0, professional_tax || 0, income_tax || 0, loan_deduction || 0, advance_salary || 0, other_deduction || 0,
-                incentive || 0, bonus || 0, extra_work || 0, employer_pf || 0, employer_esi || 0, employer_contribution || 0
+                cleanNum(reporting_manager_id) ?? null,
+                cleanNum(basic_salary) ?? 0, cleanNum(hra) ?? 0, cleanNum(conveyance) ?? 0, cleanNum(medical) ?? 0,
+                cleanNum(special_allowance) ?? 0, cleanNum(other_allowance) ?? 0,
+                cleanNum(pf) ?? 0, cleanNum(esi) ?? 0, cleanNum(professional_tax) ?? 0, cleanNum(income_tax) ?? 0,
+                cleanNum(loan_deduction) ?? 0, cleanNum(advance_salary) ?? 0, cleanNum(other_deduction) ?? 0,
+                cleanNum(incentive) ?? 0, cleanNum(bonus) ?? 0, cleanNum(extra_work) ?? 0,
+                cleanNum(employer_pf) ?? 0, cleanNum(employer_esi) ?? 0, cleanNum(employer_contribution) ?? 0
             ]
-        );
+        ));
         
         res.status(201).json({ success: true, employee: result.rows[0], temp_password: tempPassword });
         
     } catch (error) {
         console.error('Create employee error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        const mapped = pgErrorResponse(error);
+        const body = { success: false, message: mapped.message };
+        if (req.user && req.user.role === 'admin') {
+            body.detail = error && error.message;
+        }
+        res.status(mapped.status).json(body);
     }
 });
 
@@ -285,6 +321,14 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
 
         if (reporting_manager_id && parseInt(reporting_manager_id) === parseInt(req.params.id)) {
             return res.status(400).json({ success: false, message: 'An employee cannot be their own reporting manager' });
+        }
+
+        // Email uniqueness check excluding this employee's own record
+        if (email) {
+            const emailDup = await query('SELECT id FROM employees WHERE email = $1 AND id != $2', [email, req.params.id]);
+            if (emailDup.rows.length > 0) {
+                return res.status(400).json({ success: false, message: 'Email already exists' });
+            }
         }
 
         // Only the main Admin can manage admin accounts (promote to admin, or change an admin's role/status).
@@ -324,7 +368,7 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
             }
         }
         
-        const result = await query(
+        const result = await runWithSchemaRepair(() => query(
             `UPDATE employees SET 
             first_name = COALESCE($1, first_name),
             last_name = COALESCE($2, last_name),
@@ -392,7 +436,7 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
              cleanNum(pf), cleanNum(esi), cleanNum(professional_tax), cleanNum(income_tax), cleanNum(loan_deduction), cleanNum(advance_salary), cleanNum(other_deduction),
              cleanNum(incentive), cleanNum(bonus), cleanNum(extra_work), cleanNum(employer_pf), cleanNum(employer_esi), cleanNum(employer_contribution),
              reporting_manager_id, req.params.id]
-        );
+        ));
         
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
@@ -402,7 +446,12 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
         
     } catch (error) {
         console.error('Update employee error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        const mapped = pgErrorResponse(error);
+        const body = { success: false, message: mapped.message };
+        if (req.user && req.user.role === 'admin') {
+            body.detail = error && error.message;
+        }
+        res.status(mapped.status).json(body);
     }
 });
 
