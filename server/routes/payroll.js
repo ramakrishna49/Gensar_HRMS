@@ -97,8 +97,9 @@ function amountToWords(amount) {
 //   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
 //   D = Employer contributions, Net = Gross - LOP deduction + C - (B + D).
 function computeTotals(v) {
-    const gross = num(v.basic_salary) + num(v.hra) + num(v.conveyance)
+    const componentGross = num(v.basic_salary) + num(v.hra) + num(v.conveyance)
         + num(v.special_allowance) + num(v.other_allowance);
+    const gross = num(v.monthly_gross) > 0 ? num(v.monthly_gross) : componentGross;
     const totalDeductions = num(v.pf) + num(v.esi) + num(v.professional_tax) + num(v.income_tax)
         + num(v.other_deduction);
     const bonus = num(v.bonus) + num(v.incentive) + num(v.extra_work);
@@ -143,7 +144,9 @@ async function getProfileSalaryValues(employeeId, values) {
         other_deduction: num(profile.other_deduction),
         employer_pf: num(profile.employer_pf),
         employer_esi: num(profile.employer_esi),
-        employer_contribution: num(profile.employer_contribution)
+        employer_contribution: num(profile.employer_contribution),
+        monthly_gross: num(profile.basic_salary) + num(profile.hra) + num(profile.conveyance)
+            + num(profile.special_allowance) + num(profile.other_allowance)
     };
 }
 

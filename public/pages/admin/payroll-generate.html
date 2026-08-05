@@ -181,11 +181,11 @@
                         <div class="pp-field"><label>Basic Salary <span class="pp-req">*</span></label><input type="number" id="basic_salary" class="pp-input" step="0.01" min="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>HRA</label><input type="number" id="hra" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Conveyance</label><input type="number" id="conveyance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Medical Allowance</label><input type="number" id="other_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Special Allowance</label><input type="number" id="special_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Bonus</label><input type="number" id="bonus" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
                         <div class="pp-field"><label>Incentive</label><input type="number" id="incentive" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
                         <div class="pp-field"><label>Extra Work</label><input type="number" id="extra_work" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Other Allowance</label><input type="number" id="other_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
 
                         <div class="pp-section-head"><i class="fas fa-minus-circle" style="margin-right:6px;"></i>Deductions</div>
                         <div class="pp-field"><label>Employee PF</label><input type="number" id="pf" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
@@ -366,6 +366,7 @@
                 working_days: get('working_days'), present_days: get('present_days'),
                 leave_days: get('leave_days'), lop_days: get('lop_days'),
                 basic_salary: get('basic_salary'), hra: get('hra'), conveyance: get('conveyance'),
+                monthly_gross: selectedProfile ? ppNum(selectedProfile.basic_salary != null ? selectedProfile.basic_salary : selectedProfile.salary) + ppNum(selectedProfile.hra) + ppNum(selectedProfile.conveyance) + ppNum(selectedProfile.other_allowance) + ppNum(selectedProfile.special_allowance) : 0,
                 medical: get('medical'), special_allowance: get('special_allowance'),
                 bonus: get('bonus'), incentive: get('incentive'), extra_work: get('extra_work'), other_allowance: get('other_allowance'),
                 pf: get('pf'), esi: get('esi'), professional_tax: get('professional_tax'),
@@ -401,7 +402,7 @@
                 month: v.month, year: v.year,
                 working_days: v.working_days, present_days: v.present_days,
                 leave_days: v.leave_days, lop_days: v.lop_days,
-                basic_salary: v.basic_salary, hra: v.hra, conveyance: v.conveyance,
+                 basic_salary: v.basic_salary, hra: v.hra, conveyance: v.conveyance, monthly_gross: v.monthly_gross,
                 medical: v.medical, special_allowance: v.special_allowance,
                 bonus: v.bonus, incentive: v.incentive, extra_work: v.extra_work, other_allowance: v.other_allowance,
                 pf: v.pf, esi: v.esi, professional_tax: v.professional_tax,
@@ -547,6 +548,7 @@
                 return {
                  basic_salary: emp.basic_salary != null ? emp.basic_salary : (emp.salary || 0),
                  hra: emp.hra, conveyance: emp.conveyance, medical: 0,
+                 monthly_gross: (emp.basic_salary != null ? emp.basic_salary : (emp.salary || 0)) + (parseFloat(emp.hra) || 0) + (parseFloat(emp.conveyance) || 0) + (parseFloat(emp.other_allowance) || 0) + (parseFloat(emp.special_allowance) || 0),
                  special_allowance: emp.special_allowance, other_allowance: emp.other_allowance,
                  pf: emp.pf, esi: emp.esi, professional_tax: emp.professional_tax, income_tax: emp.income_tax,
                  loan_deduction: 0, advance_salary: 0, other_deduction: emp.other_deduction,

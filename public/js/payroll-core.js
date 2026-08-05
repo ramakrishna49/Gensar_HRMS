@@ -77,8 +77,9 @@ function ppAmountInWords(amount) {
 //   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
 //   D = Employer contributions, Net = Gross - LOP deduction + C - (B + D).
 function ppCompute(v) {
-    const gross = ppNum(v.basic_salary) + ppNum(v.hra) + ppNum(v.conveyance)
+    const componentGross = ppNum(v.basic_salary) + ppNum(v.hra) + ppNum(v.conveyance)
         + ppNum(v.special_allowance) + ppNum(v.other_allowance);
+    const gross = ppNum(v.monthly_gross) > 0 ? ppNum(v.monthly_gross) : componentGross;
     const totalDeductions = ppNum(v.pf) + ppNum(v.esi) + ppNum(v.professional_tax) + ppNum(v.income_tax)
         + ppNum(v.other_deduction);
     const bonus = ppNum(v.bonus) + ppNum(v.incentive) + ppNum(v.extra_work);

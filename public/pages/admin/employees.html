@@ -158,8 +158,8 @@
                             <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" name="basic_salary"></div>
                             <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" name="hra"></div>
                             <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" name="conveyance"></div>
+                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" name="other_allowance"></div>
                             <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" name="special_allowance"></div>
-                            <div class="form-group"><label>Other Allowance</label><input type="number" step="0.01" class="form-control" name="other_allowance"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
                         <div class="grid grid-2">
@@ -248,8 +248,8 @@
                             <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" id="editBasicSalary"></div>
                             <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" id="editHRA"></div>
                             <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" id="editConveyance"></div>
+                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
                             <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" id="editSpecialAllowance"></div>
-                            <div class="form-group"><label>Other Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
                         <div class="grid grid-2">
@@ -1007,8 +1007,8 @@
                     vRow('Basic Salary', formatCurrency(emp.basic_salary)) +
                     vRow('HRA', formatCurrency(emp.hra)) +
                     vRow('Conveyance', formatCurrency(emp.conveyance)) +
+                    vRow('Medical Allowance', formatCurrency(emp.other_allowance)) +
                     vRow('Special Allowance', formatCurrency(emp.special_allowance)) +
-                    vRow('Other Allowance', formatCurrency(emp.other_allowance)) +
                     vRow('Employee PF', formatCurrency(emp.pf)) +
                     vRow('Employee ESI', formatCurrency(emp.esi)) +
                     vRow('Professional Tax', formatCurrency(emp.professional_tax)) +

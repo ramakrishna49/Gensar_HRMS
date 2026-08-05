@@ -223,7 +223,7 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
         // instead of a Postgres cast error.
         const numFields = {
             salary: 'Salary', basic_salary: 'Basic Salary', hra: 'HRA', conveyance: 'Conveyance',
-            medical: 'Medical Allowance', special_allowance: 'Special Allowance', other_allowance: 'Other Allowance',
+            medical: 'Medical Allowance', special_allowance: 'Special Allowance', other_allowance: 'Medical Allowance',
             pf: 'Employee PF', esi: 'Employee ESI', professional_tax: 'Professional Tax', income_tax: 'Income Tax',
             loan_deduction: 'Loan Deduction', advance_salary: 'Advance Salary', other_deduction: 'Other Deduction',
             incentive: 'Incentive', bonus: 'Attendance Incentive (Bonus)', extra_work: 'Extra Work',
