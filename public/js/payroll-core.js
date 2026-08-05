@@ -75,16 +75,24 @@ function ppAmountInWords(amount) {
 
 // Mirrors the server-side computeTotals
 //   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
-//   D = Employer contributions, Net = A + C - B - D.
+//   D = Employer contributions, Net = Gross - LOP deduction + C - B.
 function ppCompute(v) {
-    const gross = ppNum(v.basic_salary) + ppNum(v.hra) + ppNum(v.conveyance) + ppNum(v.medical)
+    const gross = ppNum(v.basic_salary) + ppNum(v.hra) + ppNum(v.conveyance)
         + ppNum(v.special_allowance) + ppNum(v.other_allowance);
     const totalDeductions = ppNum(v.pf) + ppNum(v.esi) + ppNum(v.professional_tax) + ppNum(v.income_tax)
-        + ppNum(v.loan_deduction) + ppNum(v.advance_salary) + ppNum(v.other_deduction);
+        + ppNum(v.other_deduction);
     const bonus = ppNum(v.bonus) + ppNum(v.incentive) + ppNum(v.extra_work);
     const employerTotal = ppNum(v.employer_pf) + ppNum(v.employer_esi) + ppNum(v.employer_contribution);
-    const net = gross + bonus - totalDeductions - employerTotal;
-    return { gross, totalDeductions, bonus, employerTotal, net };
+    const workingDays = ppNum(v.working_days);
+    const presentDays = ppNum(v.present_days);
+    const leaveDays = ppNum(v.leave_days);
+    const lopDays = ppNum(v.lop_days);
+    const paidDays = presentDays + leaveDays;
+    const attendanceValid = Math.abs(workingDays - (presentDays + leaveDays + lopDays)) < 0.001;
+    const perDaySalary = workingDays > 0 ? gross / workingDays : 0;
+    const lopDeduction = perDaySalary * lopDays;
+    const net = gross - lopDeduction + bonus - totalDeductions;
+    return { gross, totalDeductions, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, perDaySalary, lopDeduction, attendanceValid, net };
 }
 
 // ---- Dynamic library loading (html2pdf, JSZip) ----
@@ -196,8 +204,7 @@ function buildPayslipHTML(p) {
                 '<div style="display:flex;flex-direction:column;justify-content:center;">' +
                     '<div style="font-size:19px;font-weight:900;color:#111;letter-spacing:0.2px;margin-bottom:5px;">GENSAR IT SOLUTIONS PVT. LTD.</div>' +
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,<br>Hyderabad, 500072, Telangana, India</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">hr@gensaritsolutions.com</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">www.gensarhrms.in</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">hr@gensarit.com</div>' +
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">+91 9121912138</div>' +
                 '</div>' +
             '</div>' +
@@ -231,7 +238,7 @@ function buildPayslipHTML(p) {
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">TOTAL DEDUCTIONS (B)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductions) + '</div></div>' +
             '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
-                '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE (A + C - B - D)</div>' +
+                '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE (A + C - B)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +

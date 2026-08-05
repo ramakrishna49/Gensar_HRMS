@@ -95,16 +95,24 @@ function amountToWords(amount) {
 
 // Compute totals matching the payslip layout:
 //   A = Earnings (basic + allowances), B = Deductions, C = Bonus (incl. extra work),
-//   D = Employer contributions, Net = A + C - B - D.
+//   D = Employer contributions, Net = Gross - LOP deduction + C - B.
 function computeTotals(v) {
-    const gross = num(v.basic_salary) + num(v.hra) + num(v.conveyance) + num(v.medical)
+    const gross = num(v.basic_salary) + num(v.hra) + num(v.conveyance)
         + num(v.special_allowance) + num(v.other_allowance);
     const totalDeductions = num(v.pf) + num(v.esi) + num(v.professional_tax) + num(v.income_tax)
-        + num(v.loan_deduction) + num(v.advance_salary) + num(v.other_deduction);
+        + num(v.other_deduction);
     const bonus = num(v.bonus) + num(v.incentive) + num(v.extra_work);
     const employerTotal = num(v.employer_pf) + num(v.employer_esi) + num(v.employer_contribution);
-    const net = gross + bonus - totalDeductions - employerTotal;
-    return { gross, totalDeductions, bonus, employerTotal, net };
+    const workingDays = num(v.working_days);
+    const presentDays = num(v.present_days);
+    const leaveDays = num(v.leave_days);
+    const lopDays = num(v.lop_days);
+    const paidDays = presentDays + leaveDays;
+    const attendanceValid = Math.abs(workingDays - (presentDays + leaveDays + lopDays)) < 0.001;
+    const perDaySalary = workingDays > 0 ? gross / workingDays : 0;
+    const lopDeduction = perDaySalary * lopDays;
+    const net = gross - lopDeduction + bonus - totalDeductions;
+    return { gross, totalDeductions, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, perDaySalary, lopDeduction, attendanceValid, net };
 }
 
 async function getProfileSalaryValues(employeeId, values) {
@@ -294,8 +302,7 @@ async function renderPayslipPdf(p, company) {
             doc.font(FL).fontSize(F(10.5)).fill('#222222');
             ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,',
                 'Hyderabad, 500072, Telangana, India',
-                'hr@gensaritsolutions.com',
-                'www.gensarhrms.in',
+                'hr@gensarit.com',
                 '+91 9121912138'].forEach(l => {
                 doc.text(l, infoX, iy, { width: infoW });
                 iy += F(10.5) * 1.25 + 3 * S;
@@ -381,7 +388,7 @@ async function renderPayslipPdf(p, company) {
             const cards = [
                 { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
                 { label: 'TOTAL DEDUCTIONS (B)', value: totals.totalDeductions, color: DED },
-                { label: 'NET SALARY PAYABLE (A + C - B - D)', value: totals.net, color: NET }
+                { label: 'NET SALARY PAYABLE (A + C - B)', value: totals.net, color: NET }
             ];
             let cx = ML;
             cards.forEach(card => {
@@ -617,6 +624,9 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Employee profile not found' });
         }
         const totals = computeTotals(payrollValues);
+        if (!totals.attendanceValid) {
+            return res.status(400).json({ success: false, message: 'Attendance calculation is incorrect.' });
+        }
         const gross = totals.gross;
         const totalDeductions = totals.totalDeductions;
         const net = totals.net;
@@ -719,6 +729,11 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                     continue;
                 }
                 const totals = computeTotals(payrollValues);
+                if (!totals.attendanceValid) {
+                    failed++;
+                    results.push({ employee_id, ok: false, reason: 'Attendance calculation is incorrect.' });
+                    continue;
+                }
                 const gross = totals.gross;
                 const totalDeductions = totals.totalDeductions;
                 const net = totals.net;

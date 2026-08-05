@@ -203,11 +203,12 @@
 
                     <div class="pp-summary-strip">
                         <div class="pp-sum-box gross"><div class="pp-sum-label">Gross Earnings (A)</div><div class="pp-sum-value" id="sumGross">₹0.00</div></div>
-                        <div class="pp-sum-box bonus"><div class="pp-sum-label">Bonus (C)</div><div class="pp-sum-value" id="sumBonus">₹0.00</div></div>
-                        <div class="pp-sum-box deductions"><div class="pp-sum-label">Total Deductions (B)</div><div class="pp-sum-value" id="sumDed">₹0.00</div></div>
-                        <div class="pp-sum-box employer"><div class="pp-sum-label">Employer (D)</div><div class="pp-sum-value" id="sumEmployer">₹0.00</div></div>
+                        <div class="pp-sum-box bonus"><div class="pp-sum-label">Paid Days</div><div class="pp-sum-value" id="sumPaidDays">0</div></div>
+                        <div class="pp-sum-box deductions"><div class="pp-sum-label">Per Day Salary</div><div class="pp-sum-value" id="sumPerDay">₹0.00</div></div>
+                        <div class="pp-sum-box employer"><div class="pp-sum-label">LOP Deduction</div><div class="pp-sum-value" id="sumLopDeduction">₹0.00</div></div>
                         <div class="pp-sum-box net"><div class="pp-sum-label">Net Payable</div><div class="pp-sum-value" id="sumNet">₹0.00</div></div>
                     </div>
+                    <div id="attendanceError" style="display:none;color:var(--danger);font-size:0.85rem;font-weight:600;margin-top:8px;">Attendance calculation is incorrect.</div>
                     <div class="pp-words" id="sumWords">Rupees Zero Only</div>
                 </div>
 
@@ -378,10 +379,12 @@
         function updateSummary() {
             const t = ppCompute(currentFormValues());
             document.getElementById('sumGross').textContent = ppFormatINR(t.gross);
-            document.getElementById('sumBonus').textContent = ppFormatINR(t.bonus);
-            document.getElementById('sumDed').textContent = ppFormatINR(t.totalDeductions);
+            document.getElementById('sumPaidDays').textContent = t.paidDays;
+            document.getElementById('sumPerDay').textContent = ppFormatINR(t.perDaySalary);
+            document.getElementById('sumLopDeduction').textContent = ppFormatINR(t.lopDeduction);
             document.getElementById('sumNet').textContent = ppFormatINR(t.net);
-            document.getElementById('sumEmployer').textContent = ppFormatINR(t.employerTotal);
+            const error = document.getElementById('attendanceError');
+            error.style.display = t.attendanceValid ? 'none' : 'block';
             document.getElementById('sumWords').textContent = ppAmountInWords(t.net);
         }
 
@@ -439,6 +442,7 @@
             const v = currentFormValues();
             if (!v.month || !v.year) { showToast('Select month and year', 'warning'); return; }
             if (!ppNum(v.basic_salary)) { showToast('Enter Basic Salary', 'warning'); return; }
+            if (!ppCompute(v).attendanceValid) { showToast('Attendance calculation is incorrect.', 'error'); return; }
 
             const btn = document.getElementById('btnGenerate');
             const label = document.getElementById('btnGenerateLabel');
