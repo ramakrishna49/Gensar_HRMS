@@ -158,7 +158,6 @@
                             <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" name="basic_salary"></div>
                             <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" name="hra"></div>
                             <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" name="conveyance"></div>
-                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" name="medical"></div>
                             <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" name="special_allowance"></div>
                             <div class="form-group"><label>Other Allowance</label><input type="number" step="0.01" class="form-control" name="other_allowance"></div>
                         </div>
@@ -168,8 +167,6 @@
                             <div class="form-group"><label>Employee ESI</label><input type="number" step="0.01" class="form-control" name="esi"></div>
                             <div class="form-group"><label>Professional Tax</label><input type="number" step="0.01" class="form-control" name="professional_tax"></div>
                             <div class="form-group"><label>Income Tax</label><input type="number" step="0.01" class="form-control" name="income_tax"></div>
-                            <div class="form-group"><label>Loan Deduction</label><input type="number" step="0.01" class="form-control" name="loan_deduction"></div>
-                            <div class="form-group"><label>Advance Salary</label><input type="number" step="0.01" class="form-control" name="advance_salary"></div>
                             <div class="form-group"><label>Other Deduction</label><input type="number" step="0.01" class="form-control" name="other_deduction"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Employer Contributions</div>
@@ -251,7 +248,6 @@
                             <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" id="editBasicSalary"></div>
                             <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" id="editHRA"></div>
                             <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" id="editConveyance"></div>
-                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" id="editMedical"></div>
                             <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" id="editSpecialAllowance"></div>
                             <div class="form-group"><label>Other Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
                         </div>
@@ -261,8 +257,6 @@
                             <div class="form-group"><label>Employee ESI</label><input type="number" step="0.01" class="form-control" id="editEmployeeESI"></div>
                             <div class="form-group"><label>Professional Tax</label><input type="number" step="0.01" class="form-control" id="editProfessionalTax"></div>
                             <div class="form-group"><label>Income Tax</label><input type="number" step="0.01" class="form-control" id="editIncomeTax"></div>
-                            <div class="form-group"><label>Loan Deduction</label><input type="number" step="0.01" class="form-control" id="editLoanDeduction"></div>
-                            <div class="form-group"><label>Advance Salary</label><input type="number" step="0.01" class="form-control" id="editAdvanceSalary"></div>
                             <div class="form-group"><label>Other Deduction</label><input type="number" step="0.01" class="form-control" id="editOtherDeduction"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Employer Contributions</div>
@@ -660,11 +654,10 @@
                 document.getElementById('editBankIFSC').value = emp.bank_ifsc || '';
                 const setNum = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val === null || val === undefined) ? '' : val; };
                 setNum('editBasicSalary', emp.basic_salary); setNum('editHRA', emp.hra);
-                setNum('editConveyance', emp.conveyance); setNum('editMedical', emp.medical);
+                setNum('editConveyance', emp.conveyance);
                 setNum('editSpecialAllowance', emp.special_allowance); setNum('editOtherAllowance', emp.other_allowance);
                 setNum('editEmployeePF', emp.pf); setNum('editEmployeeESI', emp.esi);
                 setNum('editProfessionalTax', emp.professional_tax); setNum('editIncomeTax', emp.income_tax);
-                setNum('editLoanDeduction', emp.loan_deduction); setNum('editAdvanceSalary', emp.advance_salary);
                 setNum('editOtherDeduction', emp.other_deduction);
                 setNum('editEmployerPF', emp.employer_pf); setNum('editEmployerESI', emp.employer_esi);
                 setNum('editEmployerContribution', emp.employer_contribution);
@@ -710,15 +703,12 @@
                 basic_salary: document.getElementById('editBasicSalary').value || undefined,
                 hra: document.getElementById('editHRA').value || undefined,
                 conveyance: document.getElementById('editConveyance').value || undefined,
-                medical: document.getElementById('editMedical').value || undefined,
                 special_allowance: document.getElementById('editSpecialAllowance').value || undefined,
                 other_allowance: document.getElementById('editOtherAllowance').value || undefined,
                 pf: document.getElementById('editEmployeePF').value || undefined,
                 esi: document.getElementById('editEmployeeESI').value || undefined,
                 professional_tax: document.getElementById('editProfessionalTax').value || undefined,
                 income_tax: document.getElementById('editIncomeTax').value || undefined,
-                loan_deduction: document.getElementById('editLoanDeduction').value || undefined,
-                advance_salary: document.getElementById('editAdvanceSalary').value || undefined,
                 other_deduction: document.getElementById('editOtherDeduction').value || undefined,
                 employer_pf: document.getElementById('editEmployerPF').value || undefined,
                 employer_esi: document.getElementById('editEmployerESI').value || undefined,
@@ -1017,15 +1007,12 @@
                     vRow('Basic Salary', formatCurrency(emp.basic_salary)) +
                     vRow('HRA', formatCurrency(emp.hra)) +
                     vRow('Conveyance', formatCurrency(emp.conveyance)) +
-                    vRow('Medical Allowance', formatCurrency(emp.medical)) +
                     vRow('Special Allowance', formatCurrency(emp.special_allowance)) +
                     vRow('Other Allowance', formatCurrency(emp.other_allowance)) +
                     vRow('Employee PF', formatCurrency(emp.pf)) +
                     vRow('Employee ESI', formatCurrency(emp.esi)) +
                     vRow('Professional Tax', formatCurrency(emp.professional_tax)) +
                     vRow('Income Tax', formatCurrency(emp.income_tax)) +
-                    vRow('Loan Deduction', formatCurrency(emp.loan_deduction)) +
-                    vRow('Advance Salary', formatCurrency(emp.advance_salary)) +
                     vRow('Other Deduction', formatCurrency(emp.other_deduction)) +
                      vRow('Employer PF', formatCurrency(emp.employer_pf)) +
                     vRow('Employer ESI', formatCurrency(emp.employer_esi)) +

@@ -107,6 +107,37 @@ function computeTotals(v) {
     return { gross, totalDeductions, bonus, employerTotal, net };
 }
 
+async function getProfileSalaryValues(employeeId, values) {
+    const result = await query(
+        `SELECT salary, basic_salary, hra, conveyance, special_allowance, other_allowance,
+                pf, esi, professional_tax, income_tax, other_deduction,
+                employer_pf, employer_esi, employer_contribution
+         FROM employees WHERE id = $1`,
+        [employeeId]
+    );
+    if (result.rows.length === 0) return null;
+    const profile = result.rows[0];
+    return {
+        ...values,
+        basic_salary: num(profile.basic_salary) || num(profile.salary),
+        hra: num(profile.hra),
+        conveyance: num(profile.conveyance),
+        medical: 0,
+        special_allowance: num(profile.special_allowance),
+        other_allowance: num(profile.other_allowance),
+        pf: num(profile.pf),
+        esi: num(profile.esi),
+        professional_tax: num(profile.professional_tax),
+        income_tax: num(profile.income_tax),
+        loan_deduction: 0,
+        advance_salary: 0,
+        other_deduction: num(profile.other_deduction),
+        employer_pf: num(profile.employer_pf),
+        employer_esi: num(profile.employer_esi),
+        employer_contribution: num(profile.employer_contribution)
+    };
+}
+
 // Company branding + contact block used on the payslip.
 async function getCompanyData() {
     const comp = await query('SELECT * FROM companies LIMIT 1');

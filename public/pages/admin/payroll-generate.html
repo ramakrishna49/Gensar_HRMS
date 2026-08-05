@@ -157,7 +157,7 @@
                     <div class="pp-table-wrap">
                         <table class="pp-table">
                             <thead>
-                                <tr><th style="width:40px;"></th><th>Employee</th><th style="width:130px;">Basic (₹)</th><th style="width:90px;">Working</th><th style="width:90px;">Present</th><th style="width:90px;">LOP</th><th class="pp-num">Net (est.)</th></tr>
+                                <tr><th style="width:40px;"></th><th>Employee</th><th style="width:130px;">Basic (₹)</th><th style="width:90px;">Working</th><th style="width:90px;">Present</th><th style="width:90px;">Leave</th><th style="width:90px;">LOP</th><th style="width:110px;">Bonus</th><th style="width:110px;">Incentive</th><th style="width:110px;">Extra Work</th><th class="pp-num">Net (est.)</th></tr>
                             </thead>
                             <tbody id="bulkBody"></tbody>
                         </table>
@@ -181,7 +181,6 @@
                         <div class="pp-field"><label>Basic Salary <span class="pp-req">*</span></label><input type="number" id="basic_salary" class="pp-input" step="0.01" min="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>HRA</label><input type="number" id="hra" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Conveyance</label><input type="number" id="conveyance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
-                        <div class="pp-field"><label>Medical Allowance</label><input type="number" id="medical" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Special Allowance</label><input type="number" id="special_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Bonus</label><input type="number" id="bonus" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
                         <div class="pp-field"><label>Incentive</label><input type="number" id="incentive" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
@@ -193,8 +192,6 @@
                         <div class="pp-field"><label>Employee ESI</label><input type="number" id="esi" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Professional Tax</label><input type="number" id="professional_tax" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Income Tax</label><input type="number" id="income_tax" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
-                        <div class="pp-field"><label>Loan Deduction</label><input type="number" id="loan_deduction" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
-                        <div class="pp-field"><label>Advance Salary</label><input type="number" id="advance_salary" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Other Deduction</label><input type="number" id="other_deduction" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
 
                         <div class="pp-section-head"><i class="fas fa-hand-holding-usd" style="margin-right:6px;"></i>Employer Contributions</div>
@@ -318,11 +315,10 @@
             const set = (k, val) => { const el = document.getElementById(k); if (el) el.value = (val === null || val === undefined || val === '') ? 0 : val; };
             set('basic_salary', selectedProfile.basic_salary != null ? selectedProfile.basic_salary : selectedProfile.salary);
             set('hra', selectedProfile.hra); set('conveyance', selectedProfile.conveyance);
-            set('medical', selectedProfile.medical); set('special_allowance', selectedProfile.special_allowance);
+            set('special_allowance', selectedProfile.special_allowance);
             set('other_allowance', selectedProfile.other_allowance);
             set('pf', selectedProfile.pf); set('esi', selectedProfile.esi);
             set('professional_tax', selectedProfile.professional_tax); set('income_tax', selectedProfile.income_tax);
-            set('loan_deduction', selectedProfile.loan_deduction); set('advance_salary', selectedProfile.advance_salary);
             set('other_deduction', selectedProfile.other_deduction);
             set('employer_pf', selectedProfile.employer_pf); set('employer_esi', selectedProfile.employer_esi);
             set('employer_contribution', selectedProfile.employer_contribution);
@@ -508,12 +504,11 @@
             set('working_days', editingPayslip.working_days); set('present_days', editingPayslip.present_days);
             set('leave_days', editingPayslip.leave_days); set('lop_days', editingPayslip.lop_days);
             set('basic_salary', editingPayslip.basic_salary); set('hra', editingPayslip.hra);
-            set('conveyance', editingPayslip.conveyance); set('medical', editingPayslip.medical);
+             set('conveyance', editingPayslip.conveyance);
             set('special_allowance', editingPayslip.special_allowance); set('bonus', editingPayslip.bonus);
             set('incentive', editingPayslip.incentive); set('extra_work', editingPayslip.extra_work); set('other_allowance', editingPayslip.other_allowance);
             set('pf', editingPayslip.pf); set('esi', editingPayslip.esi);
             set('professional_tax', editingPayslip.professional_tax); set('income_tax', editingPayslip.income_tax);
-            set('loan_deduction', editingPayslip.loan_deduction); set('advance_salary', editingPayslip.advance_salary);
             set('other_deduction', editingPayslip.other_deduction);
             set('employer_pf', editingPayslip.employer_pf); set('employer_esi', editingPayslip.employer_esi);
             set('employer_contribution', editingPayslip.employer_contribution);
@@ -545,13 +540,13 @@
         }
 
         function bulkComponents(emp, basic) {
-            return {
-                basic_salary: basic != null ? basic : (emp.basic_salary != null ? emp.basic_salary : (emp.salary || 0)),
-                hra: emp.hra, conveyance: emp.conveyance, medical: emp.medical,
-                special_allowance: emp.special_allowance, other_allowance: emp.other_allowance,
-                pf: emp.pf, esi: emp.esi, professional_tax: emp.professional_tax, income_tax: emp.income_tax,
-                loan_deduction: emp.loan_deduction, advance_salary: emp.advance_salary, other_deduction: emp.other_deduction,
-                bonus: emp.bonus, incentive: emp.incentive, extra_work: emp.extra_work,
+                return {
+                 basic_salary: emp.basic_salary != null ? emp.basic_salary : (emp.salary || 0),
+                 hra: emp.hra, conveyance: emp.conveyance, medical: 0,
+                 special_allowance: emp.special_allowance, other_allowance: emp.other_allowance,
+                 pf: emp.pf, esi: emp.esi, professional_tax: emp.professional_tax, income_tax: emp.income_tax,
+                 loan_deduction: 0, advance_salary: 0, other_deduction: emp.other_deduction,
+                 bonus: 0, incentive: 0, extra_work: 0,
                 employer_pf: emp.employer_pf, employer_esi: emp.employer_esi, employer_contribution: emp.employer_contribution
             };
         }
@@ -560,8 +555,8 @@
             const q = (document.getElementById('bulkSearch').value || '').toLowerCase();
             const list = bulkEmployees.filter(e => !q || (e.first_name + ' ' + e.last_name + ' ' + e.employee_id).toLowerCase().includes(q));
             const body = document.getElementById('bulkBody');
-            if (!list.length) {
-                body.innerHTML = '<tr><td colspan="7"><div class="pp-empty"><i class="fas fa-users-slash"></i><h3>No Employees</h3><p>No active employees found.</p></div></td></tr>';
+                if (!list.length) {
+                body.innerHTML = '<tr><td colspan="11"><div class="pp-empty"><i class="fas fa-users-slash"></i><h3>No Employees</h3><p>No active employees found.</p></div></td></tr>';
                 return;
             }
             body.innerHTML = list.map(e => {
@@ -571,10 +566,14 @@
                     '<td><input type="checkbox" class="bulk-check" checked style="width:16px;height:16px;accent-color:#4F46E5;"></td>' +
                     '<td><div class="pp-emp"><div class="pp-emp-avatar">' + ppEsc(getInitials(e.first_name, e.last_name)) + '</div>' +
                         '<div><b>' + ppEsc(e.first_name) + ' ' + ppEsc(e.last_name) + '</b><small>' + ppEsc(e.employee_id) + (e.department_name ? ' &middot; ' + ppEsc(e.department_name) : '') + '</small></div></div></td>' +
-                    '<td><input type="number" class="pp-input bulk-basic" value="' + (comps.basic_salary || 0) + '" step="0.01" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-basic" value="' + (comps.basic_salary || 0) + '" step="0.01" min="0" readonly></td>' +
                     '<td><input type="number" class="pp-input bulk-work" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-pres" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-leave" value="0" min="0" readonly></td>' +
                     '<td><input type="number" class="pp-input bulk-lop" value="0" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-bonus" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-incentive" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-extra" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +
                     '<td class="pp-num bulk-net">' + ppFormatINR(t.net) + '</td>' +
                 '</tr>';
             }).join('');
@@ -590,8 +589,12 @@
                 const work = parseFloat(r.querySelector('.bulk-work').value) || 0;
                 const pres = parseFloat(r.querySelector('.bulk-pres').value) || 0;
                 const lop = parseFloat(r.querySelector('.bulk-lop').value) || 0;
+                const bonus = parseFloat(r.querySelector('.bulk-bonus').value) || 0;
+                const incentive = parseFloat(r.querySelector('.bulk-incentive').value) || 0;
+                const extraWork = parseFloat(r.querySelector('.bulk-extra').value) || 0;
                 const leave = Math.max(0, work - pres - lop);
-                const t = ppCompute({ ...bulkComponents(emp, basic), working_days: work, present_days: pres, leave_days: leave, lop_days: lop });
+                r.querySelector('.bulk-leave').value = leave;
+                const t = ppCompute({ ...bulkComponents(emp, basic), bonus, incentive, extra_work: extraWork, working_days: work, present_days: pres, leave_days: leave, lop_days: lop });
                 r.querySelector('.bulk-net').textContent = ppFormatINR(t.net);
             });
         }
@@ -619,13 +622,17 @@
                 const work = parseFloat(r.querySelector('.bulk-work').value) || 0;
                 const pres = parseFloat(r.querySelector('.bulk-pres').value) || 0;
                 const lop = parseFloat(r.querySelector('.bulk-lop').value) || 0;
+                const bonus = parseFloat(r.querySelector('.bulk-bonus').value) || 0;
+                const incentive = parseFloat(r.querySelector('.bulk-incentive').value) || 0;
+                const extraWork = parseFloat(r.querySelector('.bulk-extra').value) || 0;
                 const leave = Math.max(0, work - pres - lop);
                 items.push({
                     profile: emp,
                     v: {
                         employee_id: emp.id, month, year,
-                        working_days: work, present_days: pres, leave_days: leave, lop_days: lop,
-                        ...bulkComponents(emp, basic)
+                         working_days: work, present_days: pres, leave_days: leave, lop_days: lop,
+                         ...bulkComponents(emp, basic),
+                         bonus, incentive, extra_work: extraWork
                     }
                 });
             });
