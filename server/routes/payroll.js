@@ -437,12 +437,12 @@ async function renderPayslipPdf(p, company) {
             doc.fill(DARK).font(FB).fontSize(F(11.5)).text('TOTAL EMPLOYER CONTRIBUTION (D)', ML + 10 * S, centerY(y, ROW, 11.5));
             doc.text(plainINR(empTotal), eAmt + 10 * S, centerY(y, ROW, 11.5), { width: 75 * S, align: 'right' });
             doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(ML, er0, CW, (y + ROW) - er0).stroke();
-            y += ROW + 14 * S;
+            y += ROW + 8 * S;
 
             // ---- Footer: notes + signature ----
-            y = Math.max(y, 934 * S);
+            y = Math.max(y, 924 * S);
             doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ML, y).lineTo(ML + CW, y).stroke();
-            let fy = y + 10 * S;
+            let fy = y + 6 * S;
             doc.fill('#555555').font(FB).fontSize(F(10.5)).text('Note:', ML, fy);
             doc.font(FL).text('\u2022 This is a computer generated payslip.', ML + 15 * S, fy);
             fy += 13 * S;
@@ -452,8 +452,8 @@ async function renderPayslipPdf(p, company) {
             fy += 13 * S;
 
             const sigX = ML + CW - 170 * S;
-            doc.fill(DARK).font(FB).fontSize(F(10.5)).text('For GENSAR IT SOLUTIONS PVT. LTD.', sigX, y + 10 * S, { width: 170 * S, align: 'right' });
-            doc.fill('#555555').font(FL).fontSize(F(10.5)).text('This is a system generated document and does not require signature.', sigX, fy, { width: 170 * S, align: 'right' });
+            doc.fill(DARK).font(FB).fontSize(F(10.5)).text('For GENSAR IT SOLUTIONS PVT. LTD.', sigX, y + 6 * S, { width: 170 * S, align: 'right' });
+            doc.fill('#555555').font(FL).fontSize(F(10.5)).text('This is a system generated document and does not require signature.', sigX, y + 27 * S, { width: 170 * S, align: 'right' });
 
             doc.end();
         } catch (err) {

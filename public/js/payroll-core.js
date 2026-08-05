@@ -262,7 +262,7 @@ function buildPayslipHTML(p) {
             ['Employer Other Contribution', ppNumFmt(p.employer_contribution)]
         ], 'TOTAL EMPLOYER CONTRIBUTION (D)', totals.employerTotal) + '</div>' +
         '<!-- FOOTER -->' +
-        '<div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:1px solid #d5cee6;font-size:10.5px;align-items:flex-end;">' +
+        '<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;padding-bottom:0;border-top:1px solid #d5cee6;font-size:10.5px;align-items:flex-end;">' +
             '<div>' +
                 '<strong>Note:</strong>' +
                 '<ul style="list-style-type:disc;padding-left:15px;color:#555;line-height:1.4;margin:0;">' +
@@ -272,7 +272,7 @@ function buildPayslipHTML(p) {
                 '</ul>' +
             '</div>' +
             '<div style="text-align:right;">' +
-                '<div style="font-weight:700;color:#38286b;margin-bottom:18px;">For GENSAR IT SOLUTIONS PVT. LTD.</div>' +
+                '<div style="font-weight:700;color:#38286b;margin-bottom:8px;">For GENSAR IT SOLUTIONS PVT. LTD.</div>' +
                 '<div style="color:#555555;">This is a system generated document and does not require signature.</div>' +
             '</div>' +
         '</div>' +
