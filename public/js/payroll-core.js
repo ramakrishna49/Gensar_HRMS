@@ -228,7 +228,7 @@ function buildPayslipHTML(p) {
         '<!-- EARNINGS / DEDUCTIONS -->' +
         '<div style="display:flex;gap:12px;margin-bottom:2px;">' +
             '<div style="flex:1;min-width:0;">' + finTable('EARNINGS', earnings, 'TOTAL EARNINGS (A)', totals.gross) + '</div>' +
-            '<div style="flex:1;min-width:0;">' + finTable('DEDUCTIONS', deductions, 'TOTAL DEDUCTIONS (B + D)', totals.totalDeductionsWithEmployer) + '</div>' +
+            '<div style="flex:1;min-width:0;">' + finTable('DEDUCTIONS', deductions, 'TOTAL DEDUCTIONS (B)', totals.totalDeductionsWithEmployer) + '</div>' +
         '</div>' +
         '<!-- SUMMARY CARDS -->' +
         '<div style="display:flex;justify-content:center;gap:10px;margin-bottom:10px;">' +
@@ -239,7 +239,7 @@ function buildPayslipHTML(p) {
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">TOTAL DEDUCTIONS (B)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductions) + '</div></div>' +
             '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
-                '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE (A + C - (B + D))</div>' +
+                '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +
