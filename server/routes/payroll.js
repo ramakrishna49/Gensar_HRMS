@@ -346,7 +346,7 @@ async function renderPayslipPdf(p, company) {
             y = Math.max(eyE, eyD) + 14 * S;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
-            const cardW = 238 * S;
+            const cardW = 228 * S;
             const cards = [
                 { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
                 { label: 'TOTAL DEDUCTIONS (B)', value: totals.totalDeductions, color: DED },
