@@ -581,12 +581,16 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Employee, month and year are required' });
         }
 
-        const totals = computeTotals(v);
+        const payrollValues = await getProfileSalaryValues(employee_id, v);
+        if (!payrollValues) {
+            return res.status(404).json({ success: false, message: 'Employee profile not found' });
+        }
+        const totals = computeTotals(payrollValues);
         const gross = totals.gross;
         const totalDeductions = totals.totalDeductions;
         const net = totals.net;
         // Keep legacy columns in sync for older report code.
-        const allowances = gross - num(v.basic_salary);
+        const allowances = gross - num(payrollValues.basic_salary);
         const deductions = totalDeductions;
 
         const result = await query(
@@ -617,12 +621,12 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
                 employee_id, month, year,
                 parseInt(v.working_days) || 0, parseInt(v.present_days) || 0,
                 parseInt(v.leave_days) || 0, parseInt(v.lop_days) || 0,
-                num(v.basic_salary), num(v.hra), num(v.conveyance), num(v.medical),
-                num(v.special_allowance), num(v.bonus), num(v.incentive), num(v.other_allowance),
-                num(v.extra_work),
-                num(v.pf), num(v.esi), num(v.professional_tax), num(v.income_tax),
-                num(v.loan_deduction), num(v.advance_salary), num(v.other_deduction),
-                num(v.employer_pf), num(v.employer_esi), num(v.employer_contribution),
+                num(payrollValues.basic_salary), num(payrollValues.hra), num(payrollValues.conveyance), num(payrollValues.medical),
+                num(payrollValues.special_allowance), num(payrollValues.bonus), num(payrollValues.incentive), num(payrollValues.other_allowance),
+                num(payrollValues.extra_work),
+                num(payrollValues.pf), num(payrollValues.esi), num(payrollValues.professional_tax), num(payrollValues.income_tax),
+                num(payrollValues.loan_deduction), num(payrollValues.advance_salary), num(payrollValues.other_deduction),
+                num(payrollValues.employer_pf), num(payrollValues.employer_esi), num(payrollValues.employer_contribution),
                 gross, totalDeductions, allowances, deductions, net
             ]
         );
@@ -677,11 +681,17 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                 const year = parseInt(v.year, 10);
                 if (!employee_id || !month || !year) { failed++; results.push({ employee_id, ok: false, reason: 'Invalid employee/month/year' }); continue; }
 
-                const totals = computeTotals(v);
+                const payrollValues = await getProfileSalaryValues(employee_id, v);
+                if (!payrollValues) {
+                    failed++;
+                    results.push({ employee_id, ok: false, reason: 'Employee profile not found' });
+                    continue;
+                }
+                const totals = computeTotals(payrollValues);
                 const gross = totals.gross;
                 const totalDeductions = totals.totalDeductions;
                 const net = totals.net;
-                const allowances = gross - num(v.basic_salary);
+                const allowances = gross - num(payrollValues.basic_salary);
                 const deductions = totalDeductions;
 
                 const result = await query(
@@ -712,12 +722,12 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                         employee_id, month, year,
                         parseInt(v.working_days) || 0, parseInt(v.present_days) || 0,
                         parseInt(v.leave_days) || 0, parseInt(v.lop_days) || 0,
-                        num(v.basic_salary), num(v.hra), num(v.conveyance), num(v.medical),
-                        num(v.special_allowance), num(v.bonus), num(v.incentive), num(v.other_allowance),
-                        num(v.extra_work),
-                        num(v.pf), num(v.esi), num(v.professional_tax), num(v.income_tax),
-                        num(v.loan_deduction), num(v.advance_salary), num(v.other_deduction),
-                        num(v.employer_pf), num(v.employer_esi), num(v.employer_contribution),
+                        num(payrollValues.basic_salary), num(payrollValues.hra), num(payrollValues.conveyance), num(payrollValues.medical),
+                        num(payrollValues.special_allowance), num(payrollValues.bonus), num(payrollValues.incentive), num(payrollValues.other_allowance),
+                        num(payrollValues.extra_work),
+                        num(payrollValues.pf), num(payrollValues.esi), num(payrollValues.professional_tax), num(payrollValues.income_tax),
+                        num(payrollValues.loan_deduction), num(payrollValues.advance_salary), num(payrollValues.other_deduction),
+                        num(payrollValues.employer_pf), num(payrollValues.employer_esi), num(payrollValues.employer_contribution),
                         gross, totalDeductions, allowances, deductions, net
                     ]
                 );

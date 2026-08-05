@@ -168,7 +168,7 @@
 
                 <!-- Entry form -->
                 <div class="pp-card" id="formCard" style="display:none;">
-                    <div class="pp-card-title"><i class="fas fa-pen-square"></i> Monthly Values <span class="pp-chip-note">Basic auto-filled from employee salary - edit as needed.</span></div>
+                    <div class="pp-card-title"><i class="fas fa-pen-square"></i> Monthly Values <span class="pp-chip-note">Salary values are auto-filled from the employee profile. Add Bonus (C) values for this payslip.</span></div>
                     <div class="pp-form-grid" oninput="onFormInput()">
 
                         <div class="pp-section-head"><i class="fas fa-calendar-day" style="margin-right:6px;"></i>Attendance</div>
@@ -178,29 +178,29 @@
                         <div class="pp-field"><label>LOP Days</label><input type="number" id="lop_days" class="pp-input" value="0" min="0"></div>
 
                         <div class="pp-section-head"><i class="fas fa-plus-circle" style="margin-right:6px;"></i>Earnings</div>
-                        <div class="pp-field"><label>Basic Salary <span class="pp-req">*</span></label><input type="number" id="basic_salary" class="pp-input" step="0.01" min="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>HRA</label><input type="number" id="hra" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Conveyance</label><input type="number" id="conveyance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Medical Allowance</label><input type="number" id="medical" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Special Allowance</label><input type="number" id="special_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Basic Salary <span class="pp-req">*</span></label><input type="number" id="basic_salary" class="pp-input" step="0.01" min="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>HRA</label><input type="number" id="hra" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Conveyance</label><input type="number" id="conveyance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Medical Allowance</label><input type="number" id="medical" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Special Allowance</label><input type="number" id="special_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
                         <div class="pp-field"><label>Bonus</label><input type="number" id="bonus" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
                         <div class="pp-field"><label>Incentive</label><input type="number" id="incentive" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
                         <div class="pp-field"><label>Extra Work</label><input type="number" id="extra_work" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Other Allowance</label><input type="number" id="other_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Other Allowance</label><input type="number" id="other_allowance" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
 
                         <div class="pp-section-head"><i class="fas fa-minus-circle" style="margin-right:6px;"></i>Deductions</div>
-                        <div class="pp-field"><label>Employee PF</label><input type="number" id="pf" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Employee ESI</label><input type="number" id="esi" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Professional Tax</label><input type="number" id="professional_tax" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Income Tax</label><input type="number" id="income_tax" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Loan Deduction</label><input type="number" id="loan_deduction" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Advance Salary</label><input type="number" id="advance_salary" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Other Deduction</label><input type="number" id="other_deduction" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Employee PF</label><input type="number" id="pf" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Employee ESI</label><input type="number" id="esi" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Professional Tax</label><input type="number" id="professional_tax" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Income Tax</label><input type="number" id="income_tax" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Loan Deduction</label><input type="number" id="loan_deduction" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Advance Salary</label><input type="number" id="advance_salary" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Other Deduction</label><input type="number" id="other_deduction" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
 
                         <div class="pp-section-head"><i class="fas fa-hand-holding-usd" style="margin-right:6px;"></i>Employer Contributions</div>
-                        <div class="pp-field"><label>Employer PF</label><input type="number" id="employer_pf" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Employer ESI</label><input type="number" id="employer_esi" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
-                        <div class="pp-field"><label>Employer Contribution</label><input type="number" id="employer_contribution" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00"></div>
+                        <div class="pp-field"><label>Employer PF</label><input type="number" id="employer_pf" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Employer ESI</label><input type="number" id="employer_esi" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
+                        <div class="pp-field"><label>Employer Contribution</label><input type="number" id="employer_contribution" class="pp-input" step="0.01" min="0" value="0" placeholder="0.00" readonly></div>
 
                     </div>
 
@@ -324,7 +324,6 @@
             set('professional_tax', selectedProfile.professional_tax); set('income_tax', selectedProfile.income_tax);
             set('loan_deduction', selectedProfile.loan_deduction); set('advance_salary', selectedProfile.advance_salary);
             set('other_deduction', selectedProfile.other_deduction);
-            set('bonus', selectedProfile.bonus); set('incentive', selectedProfile.incentive); set('extra_work', selectedProfile.extra_work);
             set('employer_pf', selectedProfile.employer_pf); set('employer_esi', selectedProfile.employer_esi);
             set('employer_contribution', selectedProfile.employer_contribution);
             document.getElementById('formCard').style.display = 'block';

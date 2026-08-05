@@ -172,11 +172,8 @@
                             <div class="form-group"><label>Advance Salary</label><input type="number" step="0.01" class="form-control" name="advance_salary"></div>
                             <div class="form-group"><label>Other Deduction</label><input type="number" step="0.01" class="form-control" name="other_deduction"></div>
                         </div>
-                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Bonus / Employer Contributions</div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Employer Contributions</div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label>Incentive</label><input type="number" step="0.01" class="form-control" name="incentive"></div>
-                            <div class="form-group"><label>Attendance Incentive (Bonus)</label><input type="number" step="0.01" class="form-control" name="bonus"></div>
-                            <div class="form-group"><label>Extra Work</label><input type="number" step="0.01" class="form-control" name="extra_work"></div>
                             <div class="form-group"><label>Employer PF</label><input type="number" step="0.01" class="form-control" name="employer_pf"></div>
                             <div class="form-group"><label>Employer ESI</label><input type="number" step="0.01" class="form-control" name="employer_esi"></div>
                             <div class="form-group"><label>Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" name="employer_contribution"></div>
@@ -268,11 +265,8 @@
                             <div class="form-group"><label>Advance Salary</label><input type="number" step="0.01" class="form-control" id="editAdvanceSalary"></div>
                             <div class="form-group"><label>Other Deduction</label><input type="number" step="0.01" class="form-control" id="editOtherDeduction"></div>
                         </div>
-                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Bonus / Employer Contributions</div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Employer Contributions</div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label>Incentive</label><input type="number" step="0.01" class="form-control" id="editIncentive"></div>
-                            <div class="form-group"><label>Attendance Incentive (Bonus)</label><input type="number" step="0.01" class="form-control" id="editBonus"></div>
-                            <div class="form-group"><label>Extra Work</label><input type="number" step="0.01" class="form-control" id="editExtraWork"></div>
                             <div class="form-group"><label>Employer PF</label><input type="number" step="0.01" class="form-control" id="editEmployerPF"></div>
                             <div class="form-group"><label>Employer ESI</label><input type="number" step="0.01" class="form-control" id="editEmployerESI"></div>
                             <div class="form-group"><label>Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" id="editEmployerContribution"></div>
@@ -672,7 +666,6 @@
                 setNum('editProfessionalTax', emp.professional_tax); setNum('editIncomeTax', emp.income_tax);
                 setNum('editLoanDeduction', emp.loan_deduction); setNum('editAdvanceSalary', emp.advance_salary);
                 setNum('editOtherDeduction', emp.other_deduction);
-                setNum('editIncentive', emp.incentive); setNum('editBonus', emp.bonus); setNum('editExtraWork', emp.extra_work);
                 setNum('editEmployerPF', emp.employer_pf); setNum('editEmployerESI', emp.employer_esi);
                 setNum('editEmployerContribution', emp.employer_contribution);
                 document.getElementById('editEmployeeModal').classList.add('active');
@@ -727,9 +720,6 @@
                 loan_deduction: document.getElementById('editLoanDeduction').value || undefined,
                 advance_salary: document.getElementById('editAdvanceSalary').value || undefined,
                 other_deduction: document.getElementById('editOtherDeduction').value || undefined,
-                incentive: document.getElementById('editIncentive').value || undefined,
-                bonus: document.getElementById('editBonus').value || undefined,
-                extra_work: document.getElementById('editExtraWork').value || undefined,
                 employer_pf: document.getElementById('editEmployerPF').value || undefined,
                 employer_esi: document.getElementById('editEmployerESI').value || undefined,
                 employer_contribution: document.getElementById('editEmployerContribution').value || undefined
@@ -1037,10 +1027,7 @@
                     vRow('Loan Deduction', formatCurrency(emp.loan_deduction)) +
                     vRow('Advance Salary', formatCurrency(emp.advance_salary)) +
                     vRow('Other Deduction', formatCurrency(emp.other_deduction)) +
-                    vRow('Incentive', formatCurrency(emp.incentive)) +
-                    vRow('Attendance Incentive', formatCurrency(emp.bonus)) +
-                    vRow('Extra Work', formatCurrency(emp.extra_work)) +
-                    vRow('Employer PF', formatCurrency(emp.employer_pf)) +
+                     vRow('Employer PF', formatCurrency(emp.employer_pf)) +
                     vRow('Employer ESI', formatCurrency(emp.employer_esi)) +
                     vRow('Employer Contribution', formatCurrency(emp.employer_contribution))) +
                 vSection('System Info', 'fa-clock',

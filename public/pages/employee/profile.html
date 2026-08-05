@@ -123,6 +123,13 @@
                 </div>
             </div>
 
+            <div class="card slide-up stagger-4 mb-3">
+                <div class="card-header">
+                    <h3 style="font-weight:600;"><i class="fas fa-money-check-dollar" style="color:var(--secondary);margin-right:8px;"></i>Salary Details</h3>
+                </div>
+                <div id="salaryDetails"><div style="text-align:center;padding:20px;"><div class="spinner" style="margin:0 auto;"></div></div></div>
+            </div>
+
             </div>
 
             <div class="card slide-up stagger-4">
@@ -312,12 +319,35 @@
                 bankHtml += detailItem('fa-barcode', 'IFSC Code', u.bank_ifsc);
                 bankHtml += '</div>';
                 document.getElementById('bankDetails').innerHTML = bankHtml;
+
+                const money = value => '₹' + Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const salaryItem = (label, value) => detailItem('fa-indian-rupee-sign', label, money(value));
+                let salaryHtml = '<div class="detail-grid">';
+                salaryHtml += salaryItem('Basic Salary (A)', u.basic_salary != null && u.basic_salary !== '' ? u.basic_salary : u.salary);
+                salaryHtml += salaryItem('HRA', u.hra);
+                salaryHtml += salaryItem('Conveyance Allowance', u.conveyance);
+                salaryHtml += salaryItem('Medical Allowance', u.medical);
+                salaryHtml += salaryItem('Special Allowance', u.special_allowance);
+                salaryHtml += salaryItem('Other Allowance', u.other_allowance);
+                salaryHtml += salaryItem('PF (B)', u.pf);
+                salaryHtml += salaryItem('ESI (B)', u.esi);
+                salaryHtml += salaryItem('Professional Tax (B)', u.professional_tax);
+                salaryHtml += salaryItem('Income Tax (B)', u.income_tax);
+                salaryHtml += salaryItem('Loan Deduction (B)', u.loan_deduction);
+                salaryHtml += salaryItem('Advance Salary (B)', u.advance_salary);
+                salaryHtml += salaryItem('Other Deduction (B)', u.other_deduction);
+                salaryHtml += salaryItem('Employer PF (D)', u.employer_pf);
+                salaryHtml += salaryItem('Employer ESI (D)', u.employer_esi);
+                salaryHtml += salaryItem('Employer Contribution (D)', u.employer_contribution);
+                salaryHtml += '</div>';
+                document.getElementById('salaryDetails').innerHTML = salaryHtml;
             } else {
                 document.getElementById('profileHeader').innerHTML = '<p style="color:var(--danger);text-align:center;padding:20px;">Failed to load profile data</p>';
                 document.getElementById('personalDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
                 document.getElementById('jobDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
                 document.getElementById('qualificationDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
                 document.getElementById('bankDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
+                document.getElementById('salaryDetails').innerHTML = '<p style="color:var(--danger);">Failed to load</p>';
             }
         }
 
