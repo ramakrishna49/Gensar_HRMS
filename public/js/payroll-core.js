@@ -166,9 +166,14 @@ function buildPayslipHTML(p) {
         : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
     return '<div class="pp-sheet ppslip" style="width:820px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
+        '.ppslip{line-height:normal;}' +
         '.ppslip *{box-sizing:border-box;}' +
         '.ppslip table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:12px;}' +
-        '.ppslip th,.ppslip td{border:1px solid #d5cee6;padding:5.5px 10px;text-align:left;}' +
+        '.ppslip th,.ppslip td{border:1px solid #d5cee6;padding:5.5px 10px;text-align:left;font-size:11.5px;text-transform:none;letter-spacing:normal;white-space:normal;}' +
+        '.ppslip th{font-weight:700;}' +
+        '.ppslip tbody tr:last-child td{border-bottom:1px solid #d5cee6;}' +
+        '.ppslip tbody tr:hover{background:transparent;}' +
+        '.ppslip tr{transition:none;}' +
         '.ppslip .text-right{text-align:right;}' +
         '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;padding:6px 10px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px;border-top:1px solid #d5cee6;border-right:1px solid #d5cee6;border-bottom:1px solid #d5cee6;border-left:4px solid #7c6ca8;margin-bottom:8px;}' +
         '.ppslip .pp-emp td{width:25%;}' +
@@ -230,10 +235,10 @@ function buildPayslipHTML(p) {
             '<span style="font-style:italic;color:#222222;">' + ppEsc(ppAmountInWords(totals.net)) + '</span>' +
         '</div>' +
         '<!-- ATTENDANCE + BONUS -->' +
-        '<div style="display:flex;gap:12px;margin-bottom:2px;align-items:stretch;">' +
-            '<div style="flex:1;min-width:0;display:flex;flex-direction:column;">' +
+        '<div style="display:flex;gap:20px;margin-bottom:2px;align-items:stretch;">' +
+            '<div style="flex:0 0 46%;min-width:0;overflow:hidden;display:flex;flex-direction:column;">' +
                 '<div class="pp-sec" style="margin-bottom:0;border-bottom:none;">ATTENDANCE SUMMARY</div>' +
-                '<table class="pp-fin" style="border-top:none;flex:1;">' +
+                '<table class="pp-fin" style="border-top:none;flex:1;max-width:100%;">' +
                     '<thead><tr><th style="text-align:center;">Working Days</th><th style="text-align:center;">Present Days</th><th style="text-align:center;">Leave Days</th><th style="text-align:center;">LOP Days</th></tr></thead>' +
                     '<tbody><tr>' +
                         '<td style="text-align:center;font-weight:700;">' + ppNum(p.working_days) + '</td>' +
@@ -243,7 +248,7 @@ function buildPayslipHTML(p) {
                     '</tr></tbody>' +
                 '</table>' +
             '</div>' +
-            '<div style="flex:1;min-width:0;display:flex;flex-direction:column;">' + finTable('BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, 'flex:1;') + '</div>' +
+            '<div style="flex:1;min-width:0;display:flex;flex-direction:column;">' + finTable('BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, 'flex:1;max-width:100%;') + '</div>' +
         '</div>' +
         '<!-- EMPLOYER CONTRIBUTIONS -->' +
         '<div style="margin-bottom:2px;">' + finTable('EMPLOYER CONTRIBUTIONS', [

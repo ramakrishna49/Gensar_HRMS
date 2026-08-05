@@ -202,8 +202,8 @@ async function renderPayslipPdf(p, company) {
             };
 
             // Financial table (header row, data rows, total row) matching the reference.
-            const finTable = (x, title, rows, totalLabel, total, baseY) => {
-                const w = (CW - 12 * S) / 2;
+            const finTable = (x, title, rows, totalLabel, total, baseY, tableW) => {
+                const w = tableW || (CW - 12 * S) / 2;
                 const AMT_W = 95 * S;
                 const vcol = x + w - AMT_W;
                 let ty = baseY;
@@ -374,15 +374,18 @@ async function renderPayslipPdf(p, company) {
 
             // ---- Attendance summary (4-col) + Bonus (C) side by side ----
             const attX = ML;
-            const bnsX = ML + halfW + 12 * S;
+            const attW = 0.46 * CW;
+            const rowGap = 20 * S;
+            const bnsX = ML + attW + rowGap;
+            const bnsW = CW - attW - rowGap;
             const attBarY = y;
             const attBarH = BAR_H - 2 * S; // reference bar has no bottom border here
             const attRowH = (4 * ROW - attBarH) / 2; // fill so attendance table bottom aligns with bonus table bottom
             doc.rect(attX, attBarY, 4 * S, attBarH).fill(PURPLE);
-            doc.rect(attX + 4 * S, attBarY, halfW - 4 * S, attBarH).fill(BAR);
+            doc.rect(attX + 4 * S, attBarY, attW - 4 * S, attBarH).fill(BAR);
             doc.fill(DARK).font(FB).fontSize(F(11.5)).text('ATTENDANCE SUMMARY', attX + 10 * S, centerY(attBarY, attBarH, 11.5));
 
-            const attColW = halfW / 4;
+            const attColW = attW / 4;
             const attHeads = ['Working Days', 'Present Days', 'Leave Days', 'LOP Days'];
             const attVals = [p.working_days || 0, p.present_days || 0, p.leave_days || 0, p.lop_days || 0];
             let ay = attBarY + attBarH;
@@ -391,17 +394,17 @@ async function renderPayslipPdf(p, company) {
                 doc.rect(attX + c * attColW, ay, attColW, attRowH).fill();
                 doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attRowH).stroke();
             }
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attRowH).lineTo(attX + halfW, ay + attRowH).stroke();
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attRowH).lineTo(attX + attW, ay + attRowH).stroke();
             attHeads.forEach((h, c) => {
                 doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, attRowH, 11.5), { width: attColW, align: 'center' });
             });
             ay += attRowH;
-            doc.fill('#FFFFFF').rect(attX, ay, halfW, attRowH).fill();
+            doc.fill('#FFFFFF').rect(attX, ay, attW, attRowH).fill();
             attVals.forEach((v, c) => {
                 doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attRowH).stroke();
                 doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attRowH, 11.5), { width: attColW, align: 'center' });
             });
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attRowH).lineTo(attX + halfW, ay + attRowH).stroke();
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attRowH).lineTo(attX + attW, ay + attRowH).stroke();
             ay += attRowH;
 
             const bonusRows = [
@@ -409,7 +412,7 @@ async function renderPayslipPdf(p, company) {
                 ['Attendance Incentive', num(p.bonus)],
                 ['Extra Work', num(p.extra_work)]
             ];
-            const by = finTable(bnsX, 'BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, attBarY);
+            const by = finTable(bnsX, 'BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, attBarY, bnsW);
             y = Math.max(ay, by) + 14 * S;
 
             // ---- Employer Contributions (single column) ----
