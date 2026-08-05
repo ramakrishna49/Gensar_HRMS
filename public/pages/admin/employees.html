@@ -148,7 +148,7 @@
                         <div class="form-group"><label>Reporting Person</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Person</option></select>
                             <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
                         <div class="form-group"><label>Joining Date *</label><input type="date" class="form-control" name="joining_date" required></div>
-                        <div class="form-group"><label>Salary</label><input type="number" class="form-control" name="salary"></div>
+                        <div class="form-group"><label>Total Compensation</label><input type="number" class="form-control" name="salary"></div>
                         <div class="form-group"><label>UAN Number</label><input type="text" class="form-control" name="uan_number" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
                         <div class="form-group"><label>Password (default: welcome123)</label><input type="password" class="form-control" name="password" value="welcome123"></div>
                     </div>
@@ -209,7 +209,7 @@
                         <div class="form-group"><label>Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
                         <div class="form-group"><label>Reporting Person</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Person</option></select>
                             <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
-                        <div class="form-group"><label>Salary</label><input type="number" class="form-control" id="editSalary"></div>
+                        <div class="form-group"><label>Total Compensation</label><input type="number" class="form-control" id="editSalary"></div>
                         <div class="form-group"><label>UAN Number</label><input type="text" class="form-control" id="editUAN" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
                         <div class="form-group"><label>Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
                         <div class="form-group"><label>Gender</label><select class="form-control" id="editGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
@@ -1000,8 +1000,8 @@
                     vRow('Role', emp.role) +
                     vRow('Joining Date', emp.joining_date ? formatDate(emp.joining_date) : null) +
                     vRow('Status', emp.status)) +
-                vSection('Compensation', 'fa-indian-rupee-sign',
-                    vRow('Salary', emp.salary ? formatCurrency(emp.salary) : null) +
+                vSection('Total Compensation', 'fa-indian-rupee-sign',
+                    vRow('Total Compensation', emp.salary ? formatCurrency(emp.salary) : null) +
                     vRow('UAN Number', emp.uan_number)) +
                 vSection('Salary Structure', 'fa-calculator',
                     vRow('Basic Salary', formatCurrency(emp.basic_salary)) +

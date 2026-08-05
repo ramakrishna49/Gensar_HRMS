@@ -323,6 +323,7 @@
                 const money = value => '₹' + Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const salaryItem = (label, value) => detailItem('fa-indian-rupee-sign', label, money(value));
                 let salaryHtml = '<div class="detail-grid">';
+                salaryHtml += salaryItem('Total Compensation', u.salary);
                 salaryHtml += salaryItem('Basic Salary (A)', u.basic_salary != null && u.basic_salary !== '' ? u.basic_salary : u.salary);
                 salaryHtml += salaryItem('HRA', u.hra);
                 salaryHtml += salaryItem('Conveyance Allowance', u.conveyance);
