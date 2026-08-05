@@ -126,15 +126,14 @@ function ppNumRow(label, value, last) {
 function buildPayslipHTML(p) {
     if (!p) return '';
     const company = p.company || {};
-    const name = (company.name || p.company_name || 'GENSAR IT SOLUTIONS PVT. LTD.');
+    const name = 'Gensar IT Solutions Pvt.Ltd';
+    const addrLine1 = 'Manjeera Trinity, 402, 4th floor,';
+    const addrLine2 = 'KPHB, Hyderabad \u2013 500072';
     const empName = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || '-';
     const period = (PP_MONTHS[p.month] || '') + ' ' + (p.year || '');
     const totals = ppCompute(p);
     const doj = p.joining_date ? String(p.joining_date).substring(0, 10) : '-';
     const genDate = new Date().toLocaleDateString('en-IN');
-    const addr = company.address || '';
-    const addrLine1 = addr ? addr.split(',').slice(0, 3).join(',') : '';
-    const addrLine2 = addr ? addr.split(',').slice(3).join(',').trim() : '';
     const earnings = [
         ['Basic Salary', ppFormatINR(p.basic_salary)],
         ['HRA', ppFormatINR(p.hra)],
@@ -159,14 +158,14 @@ function buildPayslipHTML(p) {
     const totalDeductions = totals.totalDeductions;
     const totalBonus = totals.bonus;
     const totalEmployer = totals.employerTotal;
-    const logoHtml = company.logo
-        ? '<img src="' + ppEsc(company.logo) + '" alt="logo" style="width:175px;max-width:175px;height:auto;object-fit:contain;flex-shrink:0;vertical-align:middle;" onerror="this.style.display=\'none\';">'
+    const logoHtml = (company.logo || '/assets/images/gensar_logo.png')
+        ? '<img src="' + ppEsc(company.logo || '/assets/images/gensar_logo.png') + '" alt="logo" style="width:175px;max-width:175px;height:auto;object-fit:contain;flex-shrink:0;vertical-align:middle;" onerror="this.style.display=\'none\';">'
         : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
     return '<div class="pp-sheet ppslip" style="width:820px;margin:0 auto;background:#FFFFFF;color:#222222;font-family:Arial,\'Helvetica Neue\',Helvetica,sans-serif;position:relative;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
         '.ppslip *{box-sizing:border-box;}' +
         '.ppslip table{border-collapse:collapse;width:100%;}' +
-        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;padding:6px 10px;border-left:4px solid #7c6ca8;border:1px solid #d5cee6;margin-bottom:8px;display:flex;align-items:center;gap:6px;}' +
+        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;padding:6px 10px;border-top:1px solid #d5cee6;border-right:1px solid #d5cee6;border-bottom:1px solid #d5cee6;border-left:4px solid #7c6ca8;margin-bottom:8px;display:flex;align-items:center;gap:6px;}' +
         '.ppslip .pp-lbl{color:#333333;font-size:11.5px;font-weight:400;white-space:nowrap;padding:5.5px 10px;}' +
         '.ppslip .pp-val{font-size:11.5px;font-weight:700;color:#111111;padding:5.5px 10px;text-align:right;}' +
         '.ppslip .pp-val-left{font-size:11.5px;font-weight:700;color:#111111;padding:5.5px 10px;text-align:left;}' +
@@ -206,7 +205,7 @@ function buildPayslipHTML(p) {
             ppEmpRow('Designation', ppEsc(p.designation_name || '-'), 'Present Days', ppNum(p.present_days)) +
             ppEmpRow('Department', ppEsc(p.department_name || '-'), 'Leave Days', ppNum(p.leave_days)) +
             ppEmpRow('Date of Joining', ppEsc(doj), 'LOP Days', ppNum(p.lop_days)) +
-            ppEmpRow('PAN Number', ppEsc(p.pan_number || '-'), 'Bank Account No', ppEsc(p.bank_account || '-')) +
+            ppEmpRow('PAN Number', ppEsc(p.pan_number || '-'), 'Bank Account No.', ppEsc(p.bank_account || '-')) +
             ppEmpRow('UAN Number', ppEsc(p.uan_number || '-'), 'Bank Name', ppEsc(p.bank_name || '-')) +
         '</table>' +
         '<!-- EARNINGS / DEDUCTIONS -->' +
@@ -239,7 +238,7 @@ function buildPayslipHTML(p) {
                 '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">TOTAL DEDUCTIONS (B)</div>' +
                 '<div style="font-size:14.5px;font-weight:700;color:#d97706;">' + ppFormatINR(totalDeductions) + '</div></div>' +
             '<div style="flex:1;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:9px;text-align:center;">' +
-                '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">NET SALARY PAYABLE (A - B + C)</div>' +
+                '<div style="font-size:10px;font-weight:700;color:#444444;margin-bottom:5px;">NET SALARY PAYABLE (A + C - B - D)</div>' +
                 '<div style="font-size:14.5px;font-weight:700;color:#2e7d32;">' + ppFormatINR(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +

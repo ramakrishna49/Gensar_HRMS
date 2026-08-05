@@ -7,7 +7,7 @@ const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { sendPayslipEmail } = require('../services/email');
 
-const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const PP_MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 // Roboto ships with the Indian Rupee glyph (₹). pdfkit's built-in Helvetica
 // cannot render it, so we embed Roboto and only fall back when the font files
@@ -184,8 +184,9 @@ async function renderPayslipPdf(p, company) {
             const FB = FONT_BOLD;
 
             const sectionBar = (title, x, y, w) => {
-                doc.rect(x, y, w, 18).fill(BAR);
-                doc.fill(DARK).font(FB).fontSize(11.5).text(title, x + 10, y + 5);
+                doc.rect(x, y, 4, 18).fill(PURPLE);
+                doc.rect(x + 4, y, w - 4, 18).fill(BAR);
+                doc.fill(DARK).font(FB).fontSize(11.5).text(title, x + 12, y + 5);
                 return y + 18;
             };
 
@@ -219,32 +220,27 @@ async function renderPayslipPdf(p, company) {
             // ---- Header: logo | divider | company info + PAYSLIP badge ----
             const badgeW = 150;
             const badgeX = PW - ML - badgeW;
-            const tx = ML + 175 + 10;
+            const logoW = 125;
+            const tx = ML + logoW + 10;
             const infoW = badgeX - tx - 10;
 
-            if (company.logo) {
-                try {
-                    const logoPath = path.isAbsolute(company.logo)
-                        ? company.logo
-                        : path.join(__dirname, '../../public', company.logo.replace(/^\/+/, ''));
-                    if (fs.existsSync(logoPath)) {
-                        doc.image(logoPath, ML, y, { width: 175 });
-                    }
-                } catch (e) { /* logo is optional */ }
-            }
+            const logo = company.logo || '/assets/images/gensar_logo.png';
+            try {
+                const logoPath = path.isAbsolute(logo)
+                    ? logo
+                    : path.join(__dirname, '../../public', logo.replace(/^\/+/, ''));
+                if (fs.existsSync(logoPath)) {
+                    doc.image(logoPath, ML, y, { width: logoW });
+                }
+            } catch (e) { /* logo is optional */ }
 
-            doc.fill(DARK).font(FB).fontSize(19).text(p.company_name || company.name || 'GENSAR IT SOLUTIONS PVT. LTD.', tx, y, { width: infoW });
+            doc.fill(DARK).font(FB).fontSize(19).text('Gensar IT Solutions Pvt.Ltd', tx, y, { width: infoW });
             const hlines = [];
-            if (company.address) {
-                const addr = company.address;
-                const parts = addr.split(',');
-                hlines.push(parts.slice(0, 3).join(',').trim());
-                const rest = parts.slice(3).join(',').trim();
-                if (rest) hlines.push(rest);
-            }
-            if (company.phone) hlines.push('Phone: ' + company.phone);
-            if (company.email) hlines.push('Email: ' + company.email);
-            if (company.website) hlines.push('Web: ' + company.website);
+            hlines.push('Manjeera Trinity, 402, 4th floor,');
+            hlines.push('KPHB, Hyderabad \u2013 500072');
+            hlines.push('Email: hr@gensaritsolutions.com');
+            hlines.push('Web: www.gensarhrms.in');
+            hlines.push('Phone: +91 40 4855 6600');
             doc.font(FL).fontSize(10.5).fill('#222222');
             let iy = y + 20;
             hlines.forEach(l => {
@@ -253,7 +249,7 @@ async function renderPayslipPdf(p, company) {
             });
 
             const divH = Math.max(iy - y, 95);
-            doc.rect(ML + 175, y, 1, divH).fill(PURPLE);
+            doc.rect(ML + logoW, y, 1, divH).fill(PURPLE);
 
             doc.strokeColor(BORDER).lineWidth(1);
             doc.roundedRect(badgeX, y, badgeW, 56, 6).stroke();
@@ -416,7 +412,7 @@ async function renderPayslipPdf(p, company) {
             doc.fill('#555555').font(FL).fontSize(10.5).text('\u2022 Please contact HR for any discrepancies.', ML + 15, y);
 
             const sigX = ML + CW - 160;
-            doc.fill(DARK).font(FB).fontSize(10.5).text('For ' + String(p.company_name || company.name || 'GENSAR IT SOLUTIONS PVT. LTD.').toUpperCase(), sigX, y - 28);
+            doc.fill(DARK).font(FB).fontSize(10.5).text('For GENSAR IT SOLUTIONS PVT. LTD.', sigX, y - 28);
             doc.fill('#555555').font(FL).fontSize(10.5).text('This is a system generated document and does not require signature.', sigX, y - 16);
 
             doc.end();
