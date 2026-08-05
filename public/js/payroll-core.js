@@ -204,8 +204,8 @@ function buildPayslipHTML(p) {
                 '<div style="display:flex;flex-direction:column;justify-content:center;">' +
                     '<div style="font-size:19px;font-weight:900;color:#111;letter-spacing:0.2px;margin-bottom:5px;">GENSAR IT SOLUTIONS PVT. LTD.</div>' +
                     '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,<br>Hyderabad, 500072, Telangana, India</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">hr@gensarit.com</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">+91 9121912138</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">E-Mail: hr@gensarit.com</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Ph No: +91 9121912138</div>' +
                 '</div>' +
             '</div>' +
             '<div style="width:150px;border:1px solid #7c6ca8;border-radius:6px;overflow:hidden;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +

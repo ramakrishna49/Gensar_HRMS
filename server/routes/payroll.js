@@ -302,8 +302,8 @@ async function renderPayslipPdf(p, company) {
             doc.font(FL).fontSize(F(10.5)).fill('#222222');
             ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,',
                 'Hyderabad, 500072, Telangana, India',
-                'hr@gensarit.com',
-                '+91 9121912138'].forEach(l => {
+                'E-Mail: hr@gensarit.com',
+                'Ph No: +91 9121912138'].forEach(l => {
                 doc.text(l, infoX, iy, { width: infoW });
                 iy += F(10.5) * 1.25 + 3 * S;
             });
