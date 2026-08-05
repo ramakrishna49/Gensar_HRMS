@@ -183,7 +183,7 @@ function buildPayslipHTML(p) {
         '.ppslip .pp-fin td{border:1px solid #d5cee6;}' +
         '.ppslip .pp-att-values td{padding-top:2px;padding-bottom:2px;height:28px;}' +
         '.ppslip .pp-attendance{display:flex;flex-direction:column;}' +
-        '.ppslip .pp-attendance thead{display:table;table-layout:fixed;width:100%;flex:0 0 55px;}' +
+        '.ppslip .pp-attendance thead{display:table;table-layout:fixed;width:100%;flex:0 0 30px;}' +
         '.ppslip .pp-attendance thead th{line-height:1.0;}' +
         '.ppslip .pp-attendance tbody{display:table;table-layout:fixed;width:100%;flex:0 0 28px;}' +
         '.ppslip .total-row td{background:#efeafb;font-weight:700;color:#38286b;}' +
@@ -224,13 +224,13 @@ function buildPayslipHTML(p) {
         '</div>' +
         '<!-- SUMMARY CARDS -->' +
         '<div style="display:flex;justify-content:center;gap:10px;margin-bottom:10px;">' +
-            '<div style="flex:0 0 228px;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">GROSS SALARY (A)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#38286b;">\u20B9 ' + ppNumFmt(totals.gross) + '</div></div>' +
-            '<div style="flex:0 0 228px;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">TOTAL DEDUCTIONS (B)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductions) + '</div></div>' +
-            '<div style="flex:0 0 228px;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE (A + C - B - D)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +
