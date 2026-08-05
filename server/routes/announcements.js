@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
-const { verifyToken, isAdmin } = require('../middleware/auth');
+const { verifyToken, isAdmin, audienceForRole } = require('../middleware/auth');
 const { sendToAudience } = require('../services/push');
 
 router.get('/', verifyToken, async (req, res) => {
@@ -12,9 +12,9 @@ router.get('/', verifyToken, async (req, res) => {
             FROM announcements a
             LEFT JOIN employees e ON a.posted_by = e.id
             LEFT JOIN announcement_reads ar ON ar.announcement_id = a.id AND ar.employee_id = $1
-            WHERE a.is_active = 1
+            WHERE a.is_active = 1 AND a.target_audience = ANY($2::text[])
             ORDER BY a.created_at DESC`,
-            [req.user.id]
+            [req.user.id, audienceForRole(req.user.role)]
         );
         res.json({ success: true, announcements: result.rows });
     } catch (error) {
@@ -27,10 +27,11 @@ router.get('/unread-count', verifyToken, async (req, res) => {
         const result = await query(
             `SELECT COUNT(*) as count FROM announcements a
             WHERE a.is_active = 1
+            AND a.target_audience = ANY($2::text[])
             AND a.id NOT IN (
                 SELECT announcement_id FROM announcement_reads WHERE employee_id = $1
             )`,
-            [req.user.id]
+            [req.user.id, audienceForRole(req.user.role)]
         );
         res.json({ success: true, count: parseInt(result.rows[0].count) });
     } catch (error) {
@@ -44,10 +45,11 @@ router.post('/read-all', verifyToken, async (req, res) => {
             `INSERT INTO announcement_reads (employee_id, announcement_id)
             SELECT $1, a.id FROM announcements a
             WHERE a.is_active = 1
+            AND a.target_audience = ANY($2::text[])
             AND a.id NOT IN (
                 SELECT announcement_id FROM announcement_reads WHERE employee_id = $1
             )`,
-            [req.user.id]
+            [req.user.id, audienceForRole(req.user.role)]
         );
         res.json({ success: true });
     } catch (error) {
@@ -57,6 +59,14 @@ router.post('/read-all', verifyToken, async (req, res) => {
 
 router.post('/:id/read', verifyToken, async (req, res) => {
     try {
+        const visible = await query(
+            `SELECT id FROM announcements
+            WHERE id = $1 AND is_active = 1 AND target_audience = ANY($2::text[])`,
+            [req.params.id, audienceForRole(req.user.role)]
+        );
+        if (visible.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Announcement not found' });
+        }
         const existing = await query(
             'SELECT id FROM announcement_reads WHERE employee_id = $1 AND announcement_id = $2',
             [req.user.id, req.params.id]

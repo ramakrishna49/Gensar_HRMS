@@ -122,8 +122,9 @@ function showToast(message, type = 'success') {
     
     toast.innerHTML = `
         <i class="fas fa-${icons[type] || 'info-circle'}"></i>
-        <span>${message}</span>
+        <span></span>
     `;
+    toast.querySelector('span').textContent = message;
     
     container.appendChild(toast);
     
@@ -159,7 +160,24 @@ async function apiCall(endpoint, method = 'GET', body = null) {
             return null;
         }
         
-        return await response.json();
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            data = null;
+        }
+        
+        if (!data) {
+            return { success: false, message: 'Server error. Please try again.' };
+        }
+        
+        // Surface the server's error message to the caller instead of a generic one.
+        if (!response.ok && !data.success) {
+            return data;
+        }
+        
+        return data;
     } catch (error) {
         console.error('API Error:', error);
         showToast('Network error. Please try again.', 'error');
@@ -220,8 +238,13 @@ function downloadPayslipPdf(id) {
 
 // Get current user
 function getCurrentUser() {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    try {
+        const user = localStorage.getItem('user');
+        return user ? JSON.parse(user) : null;
+    } catch (e) {
+        localStorage.removeItem('user');
+        return null;
+    }
 }
 
 // Check authentication
@@ -261,12 +284,18 @@ function formatDate(dateString, options = {}) {
     return new Date(dateString).toLocaleDateString('en-IN', { ...defaults, ...options });
 }
 
-// Escape HTML
+// Escape HTML for both text and attribute contexts.
+// div.textContent/div.innerHTML escapes &, <, > and (in browsers) " and ',
+// but relying on the browser mapping is fragile, so we also escape quotes
+// and '/' explicitly for safe use inside single/double-quoted attributes.
 function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // Load saved theme

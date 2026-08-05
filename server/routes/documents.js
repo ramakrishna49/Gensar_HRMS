@@ -2,11 +2,34 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const crypto = require('crypto');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { uploadBuffer, deleteFile, getStorageClient } = require('../services/storage');
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const ALLOWED_MIME = new Set([
+    'application/pdf',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'text/csv'
+]);
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (!ALLOWED_MIME.has(file.mimetype)) {
+            return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
+        }
+        cb(null, true);
+    }
+});
 
 router.get('/my', verifyToken, async (req, res) => {
     try {
@@ -34,13 +57,27 @@ router.get('/all', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
-router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
+router.post('/upload', verifyToken, (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ success: false, message: 'File too large. Maximum size is 10 MB.' });
+            }
+            if (err instanceof multer.MulterError && err.code === 'LIMIT_UNEXPECTED_FILE') {
+                return res.status(400).json({ success: false, message: 'File type not allowed. Use PDF, images, Word, Excel, PowerPoint, CSV or text files.' });
+            }
+            return res.status(400).json({ success: false, message: 'Upload failed: ' + err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
         
         const { title, document_type } = req.body;
-        const fileName = `doc-${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const file_url = await uploadBuffer('documents', fileName, req.file.buffer, req.file.mimetype);
+        const cleanExt = path.extname(req.file.originalname).replace(/[^a-zA-Z0-9.]/g, '').slice(0, 10);
+        const fileName = `doc-${crypto.randomBytes(16).toString('hex')}${cleanExt}`;
+        const file_url = await uploadBuffer('documents', fileName, req.file.buffer, req.file.mimetype, { public: false });
         
         const result = await query(
             `INSERT INTO documents (employee_id, title, file_url, file_name, document_type, uploaded_by) 

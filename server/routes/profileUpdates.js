@@ -117,9 +117,14 @@ router.post('/:id/approve', verifyToken, isAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Field is not editable' });
         }
 
+        let newValue = request.new_value;
+        if (newValue !== null && typeof newValue === 'object') {
+            newValue = JSON.stringify(newValue);
+        }
+
         const applyResult = await query(
             `UPDATE employees SET ${request.field} = $1, updated_at = NOW() WHERE id = $2`,
-            [request.new_value, request.employee_id]
+            [newValue, request.employee_id]
         );
 
         const updateResult = await query(

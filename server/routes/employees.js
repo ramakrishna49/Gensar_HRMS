@@ -1,12 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { query } = require('../config/database');
+const crypto = require('crypto');
+const { query, getPool } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateEmployee, collectFieldErrors } = require('../middleware/validation');
 const { deleteFile, deleteFileByUrl } = require('../services/storage');
 
 const MAIN_ADMIN_ID = 1;
+
+// Convert an incoming numeric value to a number, or null when the value is
+// missing/blank. Returning null lets COALESCE keep the existing DB value so
+// empty form fields never overwrite stored salary/allowance data with 0.
+function cleanNum(v) {
+    if (v === null || v === undefined) return null;
+    const s = String(v).trim();
+    if (s === '' || s.toLowerCase() === 'null' || s.toLowerCase() === 'nan') return null;
+    const n = Number(s);
+    return isNaN(n) ? null : n;
+}
 
 async function activeAdminCount() {
     const r = await query(`SELECT COUNT(*) AS count FROM employees WHERE role = 'admin' AND status = 'active'`);
@@ -18,6 +30,16 @@ async function lastActiveAdminGuard(targetId) {
     const target = r.rows[0];
     if (target && target.role === 'admin' && target.status === 'active' && await activeAdminCount() <= 1) {
         return 'Cannot remove the last active admin. You would lose all admin access.';
+    }
+    return null;
+}
+
+// Only the MAIN_ADMIN_ID account may create/promote/demote/pause/delete admin
+// accounts or reset an admin's password.
+async function adminTargetGuard(targetId, requesterId) {
+    const r = await query('SELECT role FROM employees WHERE id = $1', [targetId]);
+    if (r.rows[0] && r.rows[0].role === 'admin' && Number(requesterId) !== MAIN_ADMIN_ID) {
+        return 'Only the main Admin can manage admin accounts.';
     }
     return null;
 }
@@ -180,7 +202,7 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
         } = req.body;
 
         // Only the main Admin can create admin accounts.
-        if (role === 'admin' && req.user.role !== 'admin') {
+        if (role === 'admin' && Number(req.user.id) !== MAIN_ADMIN_ID) {
             return res.status(403).json({ success: false, message: 'Only the main Admin can create admin accounts.' });
         }
         
@@ -191,7 +213,7 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
         }
         
         // Generate random temp password if not provided
-        const tempPassword = password || Math.random().toString(36).slice(-8);
+        const tempPassword = password || crypto.randomBytes(6).toString('base64url');
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(tempPassword, salt);
         
@@ -266,7 +288,7 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
         }
 
         // Only the main Admin can manage admin accounts (promote to admin, or change an admin's role/status).
-        if (req.user.role !== 'admin') {
+        if (Number(req.user.id) !== MAIN_ADMIN_ID) {
             const cur = await query('SELECT role FROM employees WHERE id = $1', [req.params.id]);
             const curIsAdmin = cur.rows[0] && cur.rows[0].role === 'admin';
             if (role === 'admin' || (curIsAdmin && (role !== undefined || status !== undefined))) {
@@ -310,7 +332,7 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
             phone = COALESCE($4, phone),
             department_id = COALESCE($5, department_id),
             designation_id = COALESCE($6, designation_id),
-            salary = COALESCE($7, salary),
+            salary = COALESCE($7::numeric, salary),
             role = COALESCE($8, role),
             status = COALESCE($9, status),
             address = COALESCE($10, address),
@@ -359,16 +381,16 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
             updated_at = NOW()
             WHERE id = $53
             RETURNING id, employee_id, first_name, last_name, email, role`,
-            [first_name, last_name, email, phone, department_id, designation_id, 
-             salary, role, status, address, joining_date, gender, date_of_birth,
+            [first_name, last_name, email, phone, cleanNum(department_id), cleanNum(designation_id), 
+             cleanNum(salary), role, status, address, joining_date, gender, date_of_birth,
              blood_group, emergency_contact, emergency_contact_name,
              permanent_address, languages_spoken, marital_status, personal_email,
              qualification, specialization, pan_number, aadhaar_number, passport_number,
              uan_number, pf_number, esi_number,
              bank_name, bank_branch, bank_account, bank_ifsc,
-             basic_salary || 0, hra || 0, conveyance || 0, medical || 0, special_allowance || 0, other_allowance || 0,
-             pf || 0, esi || 0, professional_tax || 0, income_tax || 0, loan_deduction || 0, advance_salary || 0, other_deduction || 0,
-             incentive || 0, bonus || 0, extra_work || 0, employer_pf || 0, employer_esi || 0, employer_contribution || 0,
+             cleanNum(basic_salary), cleanNum(hra), cleanNum(conveyance), cleanNum(medical), cleanNum(special_allowance), cleanNum(other_allowance),
+             cleanNum(pf), cleanNum(esi), cleanNum(professional_tax), cleanNum(income_tax), cleanNum(loan_deduction), cleanNum(advance_salary), cleanNum(other_deduction),
+             cleanNum(incentive), cleanNum(bonus), cleanNum(extra_work), cleanNum(employer_pf), cleanNum(employer_esi), cleanNum(employer_contribution),
              reporting_manager_id, req.params.id]
         );
         
@@ -389,7 +411,12 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
 // @access  Private (Admin/HR)
 router.post('/:id/reset-password', verifyToken, isAdmin, async (req, res) => {
     try {
-        const tempPassword = req.body.password || Math.random().toString(36).slice(-8) + 'A1';
+        const adminGuardError = await adminTargetGuard(req.params.id, req.user.id);
+        if (adminGuardError) {
+            return res.status(403).json({ success: false, message: adminGuardError });
+        }
+
+        const tempPassword = req.body.password || crypto.randomBytes(6).toString('base64url') + 'A1';
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(tempPassword, salt);
 
@@ -417,6 +444,10 @@ router.post('/:id/pause', verifyToken, isAdmin, async (req, res) => {
     try {
         if (parseInt(req.params.id) === parseInt(req.user.id)) {
             return res.status(400).json({ success: false, message: 'You cannot pause your own account' });
+        }
+        const adminGuardError = await adminTargetGuard(req.params.id, req.user.id);
+        if (adminGuardError) {
+            return res.status(403).json({ success: false, message: adminGuardError });
         }
         const guardError = await lastActiveAdminGuard(req.params.id);
         if (guardError) {
@@ -462,6 +493,10 @@ router.post('/:id/resume', verifyToken, isAdmin, async (req, res) => {
 // @access  Private (Admin)
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
+        const adminGuardError = await adminTargetGuard(req.params.id, req.user.id);
+        if (adminGuardError) {
+            return res.status(403).json({ success: false, message: adminGuardError });
+        }
         const guardError = await lastActiveAdminGuard(req.params.id);
         if (guardError) {
             return res.status(400).json({ success: false, message: guardError });
@@ -493,6 +528,11 @@ router.delete('/:id/permanent', verifyToken, isAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'You cannot permanently delete your own account' });
         }
 
+        const adminGuardError = await adminTargetGuard(req.params.id, req.user.id);
+        if (adminGuardError) {
+            return res.status(403).json({ success: false, message: adminGuardError });
+        }
+
         const guardError = await lastActiveAdminGuard(req.params.id);
         if (guardError) {
             return res.status(400).json({ success: false, message: guardError });
@@ -508,16 +548,27 @@ router.delete('/:id/permanent', verifyToken, isAdmin, async (req, res) => {
         const docRes = await query('SELECT file_name FROM documents WHERE employee_id = $1', [req.params.id]);
         const profilePhoto = employee.profile_photo;
 
-        // Delete related data (cascade across all child tables)
-        await query('DELETE FROM attendance_photos WHERE employee_id = $1', [req.params.id]);
-        await query('DELETE FROM attendance WHERE employee_id = $1', [req.params.id]);
-        await query('DELETE FROM leave_applications WHERE employee_id = $1', [req.params.id]);
-        await query('DELETE FROM payroll WHERE employee_id = $1', [req.params.id]);
-        await query('DELETE FROM documents WHERE employee_id = $1', [req.params.id]);
-        await query('DELETE FROM profile_update_requests WHERE employee_id = $1', [req.params.id]);
-        await query('DELETE FROM announcement_reads WHERE employee_id = $1', [req.params.id]);
-        await query('DELETE FROM password_reset_otps WHERE email = $1', [employee.email]);
-        await query('DELETE FROM employees WHERE id = $1', [req.params.id]);
+        // Delete related data inside a transaction so a failure mid-way does not
+        // leave the employee without their child records (or vice versa).
+        const client = await getPool().connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('DELETE FROM attendance_photos WHERE employee_id = $1', [req.params.id]);
+            await client.query('DELETE FROM attendance WHERE employee_id = $1', [req.params.id]);
+            await client.query('DELETE FROM leave_applications WHERE employee_id = $1', [req.params.id]);
+            await client.query('DELETE FROM payroll WHERE employee_id = $1', [req.params.id]);
+            await client.query('DELETE FROM documents WHERE employee_id = $1', [req.params.id]);
+            await client.query('DELETE FROM profile_update_requests WHERE employee_id = $1', [req.params.id]);
+            await client.query('DELETE FROM announcement_reads WHERE employee_id = $1', [req.params.id]);
+            await client.query('DELETE FROM password_reset_otps WHERE email = $1', [employee.email]);
+            await client.query('DELETE FROM employees WHERE id = $1', [req.params.id]);
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
 
         // Remove associated files from Supabase Storage
         try {

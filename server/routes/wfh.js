@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { istDateString } = require('../utils/date');
 const { sendToUser } = require('../services/push');
 
 function isWeekend(dateStr) {
@@ -75,6 +76,45 @@ router.post('/apply', verifyToken, async (req, res) => {
         res.status(201).json({ success: true, wfh: result.rows[0] });
     } catch (error) {
         console.error('WFH apply error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   POST /api/wfh/:id/cancel
+// @desc    Employee cancels their own WFH request (pending, or approved before it starts)
+// @access  Private
+router.post('/:id/cancel', verifyToken, async (req, res) => {
+    try {
+        const result = await query(
+            'SELECT status, start_date, employee_id FROM wfh_requests WHERE id = $1 AND employee_id = $2',
+            [req.params.id, req.user.id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'WFH request not found' });
+        }
+        const app = result.rows[0];
+        const today = istDateString();
+        const isApproved = app.status === 'approved';
+        if (app.status !== 'pending' && !(isApproved && app.start_date > today)) {
+            return res.status(400).json({ success: false, message: 'This request can no longer be cancelled' });
+        }
+
+        await query(
+            `UPDATE wfh_requests SET status = 'cancelled', updated_at = NOW()
+            WHERE id = $1 AND employee_id = $2`,
+            [req.params.id, req.user.id]
+        );
+
+        if (isApproved) {
+            await query(
+                `DELETE FROM attendance
+                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'Work from home%'`,
+                [app.employee_id, app.start_date, app.end_date]
+            );
+        }
+
+        res.json({ success: true, message: 'WFH request cancelled' });
+    } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
@@ -160,6 +200,9 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
         if (wfhApp.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'WFH request not found' });
         }
+        if (wfhApp.rows[0].status !== 'pending') {
+            return res.status(400).json({ success: false, message: `This request has already been ${wfhApp.rows[0].status}. You can only review pending requests.` });
+        }
 
         const result = await query(
             `UPDATE wfh_requests
@@ -167,6 +210,39 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
             WHERE id = $4 RETURNING *`,
             [status, req.user.id, remarks, req.params.id]
         );
+
+        if (status === 'approved') {
+            const app = wfhApp.rows[0];
+            const holidayRows = await query(
+                `SELECT to_char(date, 'YYYY-MM-DD') as d FROM holidays WHERE date BETWEEN $1 AND $2`,
+                [app.start_date, app.end_date]
+            );
+            const holidays = new Set((holidayRows.rows || []).map(r => r.d));
+
+            for (let d = new Date(app.start_date); d <= new Date(app.end_date); d.setDate(d.getDate() + 1)) {
+                if (d.getDay() === 0 || d.getDay() === 6) continue;
+                const dateStr = istDateString(d);
+                if (holidays.has(dateStr)) continue;
+                const existing = await query(
+                    'SELECT id FROM attendance WHERE employee_id = $1 AND date = $2',
+                    [app.employee_id, dateStr]
+                );
+                if (existing.rows.length === 0) {
+                    await query(
+                        `INSERT INTO attendance (employee_id, date, status, remarks) 
+                        VALUES ($1, $2, 'present', $3)`,
+                        [app.employee_id, dateStr, 'Work from home' + (remarks ? ': ' + remarks : '')]
+                    );
+                }
+            }
+        } else if (status === 'rejected') {
+            const app = wfhApp.rows[0];
+            await query(
+                `DELETE FROM attendance 
+                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'Work from home%'`,
+                [app.employee_id, app.start_date, app.end_date]
+            );
+        }
 
         res.json({ success: true, wfh: result.rows[0] });
 

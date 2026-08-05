@@ -3,7 +3,6 @@
    - API data (/api/*) is NEVER cached (privacy: attendance, payroll, PII)
    - Push notification handlers for installed PWA
 */
-const CACHE_VERSION = 'gensar-v2';
 const APP_SHELL_CACHE = 'gensar-app-shell';
 const RUNTIME_CACHE = 'gensar-runtime';
 
@@ -14,9 +13,11 @@ const APP_SHELL_URLS = [
     '/pages/login.html',
     '/pages/admin-login.html',
     '/css/main.css',
+    '/css/payroll.css',
     '/js/auth.js',
     '/js/dashboard.js',
     '/js/tickets.js',
+    '/js/payroll-core.js',
     '/assets/images/gensar_logo.png',
     '/assets/images/fav-icon.png',
     '/assets/images/icon-192.png',
@@ -33,6 +34,7 @@ const APP_SHELL_URLS = [
     '/pages/admin/holidays.html',
     '/pages/admin/leave.html',
     '/pages/admin/payroll.html',
+    '/pages/admin/payroll-generate.html',
     '/pages/admin/reports.html',
     '/pages/admin/settings.html',
     '/pages/admin/tickets.html',

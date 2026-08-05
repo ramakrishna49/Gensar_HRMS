@@ -49,6 +49,11 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Start date cannot be a weekend' });
         }
 
+        const today = istDateString();
+        if (start_date < today) {
+            return res.status(400).json({ success: false, message: 'Start date cannot be in the past' });
+        }
+
         const empRes = await query(
             'SELECT role, reporting_manager_id FROM employees WHERE id = $1', [req.user.id]
         );
@@ -75,6 +80,50 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
         }
 
         const totalDays = calcBusinessDays(start_date, end_date);
+
+        // Reject overlapping approved/pending leave or WFH requests.
+        const overlapLeave = await query(
+            `SELECT id FROM leave_applications
+            WHERE employee_id = $1 AND status IN ('approved', 'pending')
+            AND start_date <= $2 AND end_date >= $3 LIMIT 1`,
+            [req.user.id, end_date, start_date]
+        );
+        if (overlapLeave.rows.length > 0) {
+            return res.status(400).json({ success: false, message: 'You already have a leave request that overlaps with these dates' });
+        }
+        const overlapWfh = await query(
+            `SELECT id FROM wfh_requests
+            WHERE employee_id = $1 AND status IN ('approved', 'pending')
+            AND start_date <= $2 AND end_date >= $3 LIMIT 1`,
+            [req.user.id, end_date, start_date]
+        );
+        if (overlapWfh.rows.length > 0) {
+            return res.status(400).json({ success: false, message: 'You already have a WFH request that overlaps with these dates' });
+        }
+
+        // Check leave balance (skip when the leave type has no annual limit).
+        const ltRes = await query(
+            'SELECT days_per_year FROM leave_types WHERE id = $1 AND is_active = 1',
+            [leave_type_id]
+        );
+        if (ltRes.rows.length > 0 && ltRes.rows[0].days_per_year) {
+            const year = new Date(start_date).getFullYear();
+            const usedRes = await query(
+                `SELECT COALESCE(SUM(total_days), 0) as used FROM leave_applications
+                WHERE employee_id = $1 AND leave_type_id = $2
+                AND to_char(start_date, 'YYYY') = $3
+                AND status IN ('approved', 'pending')`,
+                [req.user.id, leave_type_id, String(year)]
+            );
+            const used = parseFloat(usedRes.rows[0].used) || 0;
+            if (used + totalDays > ltRes.rows[0].days_per_year) {
+                const remaining = Math.max(0, ltRes.rows[0].days_per_year - used);
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient leave balance. You have ${remaining} day(s) left for this leave type this year.`
+                });
+            }
+        }
 
         const result = await query(
             `INSERT INTO leave_applications (employee_id, leave_type_id, reporting_manager_id, start_date, end_date, total_days, reason) 
@@ -187,6 +236,9 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
         if (leaveApp.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Leave application not found' });
         }
+        if (leaveApp.rows[0].status !== 'pending') {
+            return res.status(400).json({ success: false, message: `This request has already been ${leaveApp.rows[0].status}. You can only review pending requests.` });
+        }
         
         const result = await query(
             `UPDATE leave_applications 
@@ -225,6 +277,15 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
                     );
                 }
             }
+        } else if (status === 'rejected') {
+            // Remove any 'On leave' attendance rows that were pre-created for this
+            // request so the employee can check in normally on those days.
+            const app = leaveApp.rows[0];
+            await query(
+                `DELETE FROM attendance 
+                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'On leave%'`,
+                [app.employee_id, app.start_date, app.end_date]
+            );
         }
         
         res.json({ success: true, leave: result.rows[0] });
@@ -239,6 +300,45 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
                 url: '/pages/employee/leave.html'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   POST /api/leave/:id/cancel
+// @desc    Employee cancels their own leave request (pending, or approved before it starts)
+// @access  Private
+router.post('/:id/cancel', verifyToken, async (req, res) => {
+    try {
+        const result = await query(
+            'SELECT status, start_date, employee_id FROM leave_applications WHERE id = $1 AND employee_id = $2',
+            [req.params.id, req.user.id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Leave request not found' });
+        }
+        const app = result.rows[0];
+        const today = istDateString();
+        const isApproved = app.status === 'approved';
+        if (app.status !== 'pending' && !(isApproved && app.start_date > today)) {
+            return res.status(400).json({ success: false, message: 'This request can no longer be cancelled' });
+        }
+
+        await query(
+            `UPDATE leave_applications SET status = 'cancelled', updated_at = NOW()
+            WHERE id = $1 AND employee_id = $2`,
+            [req.params.id, req.user.id]
+        );
+
+        if (isApproved) {
+            await query(
+                `DELETE FROM attendance
+                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'On leave%'`,
+                [app.employee_id, app.start_date, app.end_date]
+            );
+        }
+
+        res.json({ success: true, message: 'Leave request cancelled' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }

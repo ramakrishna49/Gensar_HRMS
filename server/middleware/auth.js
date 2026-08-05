@@ -19,21 +19,25 @@ const verifyToken = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded;
 
-        // Ensure the account still exists and is active (blocks terminated/paused/deleted users)
+        // Ensure the account still exists and is active (blocks terminated/paused/deleted users).
+        // Also re-read the current role so role changes (e.g. demotions) take effect
+        // immediately instead of waiting for the JWT to expire.
         try {
-            const result = await query('SELECT id, status FROM employees WHERE id = $1', [decoded.id]);
+            const result = await query('SELECT id, role, status FROM employees WHERE id = $1', [decoded.id]);
             if (result.rows.length === 0) {
                 return res.status(401).json({ 
                     success: false, 
                     message: 'Account no longer exists.' 
                 });
             }
-            if (result.rows[0].status !== 'active') {
+            const current = result.rows[0];
+            if (current.status !== 'active') {
                 return res.status(401).json({ 
                     success: false, 
                     message: 'Your account has been deactivated. Contact your administrator.' 
                 });
             }
+            req.user.role = current.role;
         } catch (dbError) {
             return res.status(500).json({ success: false, message: 'Server error' });
         }
@@ -85,9 +89,22 @@ const generateToken = (user) => {
     );
 };
 
+// Which announcement target_audience values a given role may see.
+// team_lead counts as manager-level; hr/manager/team_lead are also employees.
+const audienceForRole = (role) => {
+    switch (role) {
+        case 'admin': return ['all', 'admin'];
+        case 'hr': return ['all', 'hr', 'employee'];
+        case 'manager':
+        case 'team_lead': return ['all', 'manager', 'employee'];
+        default: return ['all', 'employee'];
+    }
+};
+
 module.exports = { 
     verifyToken, 
     isAdmin, 
     isManager, 
-    generateToken 
+    generateToken,
+    audienceForRole
 };

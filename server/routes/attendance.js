@@ -15,11 +15,11 @@ router.post('/check-in', verifyToken, async (req, res) => {
         const location = req.body.location || '';
         
         const existing = await query(
-            'SELECT id FROM attendance WHERE employee_id = $1 AND date = $2',
+            'SELECT id, check_in FROM attendance WHERE employee_id = $1 AND date = $2',
             [req.user.id, today]
         );
         
-        if (existing.rows.length > 0) {
+        if (existing.rows.length > 0 && existing.rows[0].check_in) {
             return res.status(400).json({ success: false, message: 'Already checked in today' });
         }
         
@@ -61,11 +61,26 @@ router.post('/check-in', verifyToken, async (req, res) => {
             status = 'half-day';
         }
         
-        const result = await query(
-            `INSERT INTO attendance (employee_id, date, check_in, status, check_in_location) 
-            VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [req.user.id, today, now, status, location]
-        );
+        let result;
+        if (existing.rows.length > 0) {
+            // Override a pre-marked absent / on-leave row with a real check-in
+            // so approved-leave days do not block an actual check-in.
+            result = await query(
+                `UPDATE attendance SET check_in = $1, status = $2, check_in_location = $3,
+                remarks = NULL WHERE id = $4 RETURNING *`,
+                [now, status, location, existing.rows[0].id]
+            );
+        } else {
+            result = await query(
+                `INSERT INTO attendance (employee_id, date, check_in, status, check_in_location) 
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (employee_id, date) DO UPDATE
+                SET check_in = EXCLUDED.check_in, status = EXCLUDED.status,
+                    check_in_location = EXCLUDED.check_in_location, remarks = NULL
+                RETURNING *`,
+                [req.user.id, today, now, status, location]
+            );
+        }
 
         const attendance = result.rows[0];
         let has_photo = false;
@@ -119,7 +134,10 @@ router.post('/check-out', verifyToken, async (req, res) => {
         
         let overtime = 0;
         const checkInTime = checkIn.rows[0].check_in;
-        const officeEnd = '18:30:00';
+        const endSettings = await query(
+            `SELECT setting_key, setting_value FROM company_settings WHERE setting_key = 'office_end_time'`
+        );
+        const officeEnd = (endSettings.rows.length > 0 && endSettings.rows[0].setting_value) || '18:30:00';
         if (checkInTime && now > officeEnd) {
             const endParts = officeEnd.split(':').map(Number);
             const nowParts = now.split(':').map(Number);

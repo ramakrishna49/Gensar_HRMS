@@ -2,16 +2,33 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
-const { istDateString, istMonth, istYear } = require('../utils/date');
+const { istDateString, istTimeString, istMonth, istYear } = require('../utils/date');
 
 router.get('/dashboard', verifyToken, isAdmin, async (req, res) => {
     try {
         const today = istDateString();
+        const now = istTimeString();
         
         const [totalEmp, presentToday, absentToday, pendingLeaves, departments, lateToday, todayRows, pendingProfileUpdates] = await Promise.all([
             query("SELECT COUNT(*) as count FROM employees WHERE status = 'active' AND role != 'admin'"),
             query("SELECT COUNT(*) as count FROM attendance WHERE date = $1 AND status IN ('present', 'late', 'half-day') AND employee_id IN (SELECT id FROM employees WHERE role != 'admin')", [today]),
-            query("SELECT COUNT(*) as count FROM employees WHERE status = 'active' AND role != 'admin' AND id NOT IN (SELECT employee_id FROM attendance WHERE date = $1)", [today]),
+            query(
+                `SELECT COUNT(*) as count FROM employees
+                WHERE status = 'active' AND role != 'admin'
+                AND NOT EXISTS (SELECT 1 FROM holidays WHERE date = $1)
+                AND (
+                    id IN (
+                        SELECT employee_id FROM attendance
+                        WHERE date = $1 AND status = 'absent'
+                        AND (remarks IS NULL OR remarks NOT LIKE 'On leave%')
+                    )
+                    OR (
+                        id NOT IN (SELECT employee_id FROM attendance WHERE date = $1)
+                        AND $2 > COALESCE((SELECT setting_value FROM company_settings WHERE setting_key = 'office_end_time'), '18:30')
+                    )
+                )`,
+                [today, now]
+            ),
             query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'"),
             query("SELECT COUNT(*) as count FROM departments"),
             query("SELECT COUNT(*) as count FROM attendance WHERE date = $1 AND status = 'late' AND employee_id IN (SELECT id FROM employees WHERE role != 'admin')", [today]),

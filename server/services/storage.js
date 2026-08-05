@@ -16,17 +16,20 @@ function getStorageClient() {
     return supabase;
 }
 
-async function ensureBucket(bucket) {
+async function ensureBucket(bucket, opts = {}) {
     const sb = getStorageClient();
-    const { error } = await sb.storage.getBucket(bucket);
+    const publicAccess = opts.public !== false;
+    const { data, error } = await sb.storage.getBucket(bucket);
     if (error && error.message && /not found/i.test(error.message)) {
-        await sb.storage.createBucket(bucket, { public: true });
+        await sb.storage.createBucket(bucket, { public: publicAccess });
+    } else if (data && data.public !== publicAccess) {
+        await sb.storage.updateBucket(bucket, { public: publicAccess });
     }
 }
 
-async function uploadBuffer(bucket, fileName, buffer, contentType) {
+async function uploadBuffer(bucket, fileName, buffer, contentType, opts = {}) {
     const sb = getStorageClient();
-    await ensureBucket(bucket);
+    await ensureBucket(bucket, opts);
     const { error } = await sb.storage.from(bucket).upload(fileName, buffer, {
         contentType,
         cacheControl: '3600',

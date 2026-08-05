@@ -10,9 +10,17 @@ function isWeekend(dateStr) {
     return day === 0 || day === 6;
 }
 
-function isPastCutoff(now) {
+async function getOfficeEndTime() {
+    const res = await query(
+        `SELECT setting_value FROM company_settings WHERE setting_key = 'office_end_time'`
+    );
+    return (res.rows.length > 0 && res.rows[0].setting_value) || OFFICE_END_TIME;
+}
+
+async function isPastCutoff(now) {
     const currentTime = istTimeString(now);
-    return currentTime > OFFICE_END_TIME;
+    const officeEnd = await getOfficeEndTime();
+    return currentTime > officeEnd;
 }
 
 // Mark absent for a single date. Skips holidays, approved leave, approved WFH,
@@ -35,7 +43,8 @@ async function markAbsentForDate(dateStr) {
               SELECT 1 FROM wfh_requests wr
               WHERE wr.employee_id = e.id AND wr.status = 'approved'
                 AND wr.start_date <= $6 AND wr.end_date >= $7
-          )`,
+          )
+        ON CONFLICT (employee_id, date) DO NOTHING`,
         [dateStr, dateStr, dateStr, dateStr, dateStr, dateStr, dateStr]
     );
     return result.changes || 0;
@@ -61,7 +70,7 @@ async function runAutoMark() {
         if (isWeekend(dateStr)) continue;
 
         // Current day only counts once office hours are over.
-        if (dateStr === todayStr && !isPastCutoff(now)) continue;
+        if (dateStr === todayStr && !(await isPastCutoff(now))) continue;
 
         const marked = await markAbsentForDate(dateStr);
         total += marked;

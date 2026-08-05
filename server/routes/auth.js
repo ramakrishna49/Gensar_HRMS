@@ -287,7 +287,7 @@ router.post('/profile-request', verifyToken, async (req, res) => {
         }
 
         const employeeResult = await query(
-            `SELECT ${EDITABLE_FIELDS.join(', ')} FROM employees WHERE id = $1`,
+            `SELECT * FROM employees WHERE id = $1`,
             [req.user.id]
         );
 

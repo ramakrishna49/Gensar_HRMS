@@ -346,7 +346,7 @@
                     const label = cell.check_in
                         ? escapeHtml(cell.check_in) + (cell.check_out ? '<span style="display:block;font-size:0.6rem;color:var(--text-secondary);margin-top:2px;">' + escapeHtml(cell.check_out) + '</span>' : '')
                         : escapeHtml(getStatusForDisplay(cell.status));
-                    html += '<td class="' + cls + '" onmouseenter="showTooltip(event, \'' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '\', ' + d + ', \'' + cell.status + '\', \'' + (cell.check_in || '') + '\', \'' + (cell.check_out || '') + '\', \'' + (cell.check_in_location || '') + '\')" onmouseleave="hideTooltip()" onclick="handleCellClick(' + emp.id + ', ' + d + ', \'' + cell.status + '\')">' + label + '</td>';
+                    html += '<td class="' + cls + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml(cell.status || '') + '" data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
                 }
                 grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandUpcoming += u;
                 const totalDays = p + l + (h * 0.5);
@@ -358,6 +358,13 @@
             html += '</tbody></table>';
             container.innerHTML = html;
 
+            container.removeEventListener('mouseover', matrixCellMouseOver);
+            container.removeEventListener('mouseout', matrixCellMouseOut);
+            container.removeEventListener('click', matrixCellClick);
+            container.addEventListener('mouseover', matrixCellMouseOver);
+            container.addEventListener('mouseout', matrixCellMouseOut);
+            container.addEventListener('click', matrixCellClick);
+
             document.getElementById('statPresent').textContent = grandPresent + grandLate;
             document.getElementById('statLate').textContent = grandLate;
             document.getElementById('statHalfDay').textContent = grandHalf;
@@ -365,12 +372,28 @@
             document.getElementById('statWeekoff').textContent = grandWeekoff;
         }
 
+        function matrixCellMouseOver(e) {
+            const td = e.target && e.target.closest ? e.target.closest('td[data-emp]') : null;
+            if (!td) return;
+            showTooltip(e, td.getAttribute('data-name'), td.getAttribute('data-day'), td.getAttribute('data-status'), td.getAttribute('data-in'), td.getAttribute('data-out'), td.getAttribute('data-loc'));
+        }
+
+        function matrixCellMouseOut(e) {
+            if (e.target && e.target.closest && e.target.closest('td[data-emp]')) hideTooltip();
+        }
+
+        function matrixCellClick(e) {
+            const td = e.target && e.target.closest ? e.target.closest('td[data-emp]') : null;
+            if (!td) return;
+            handleCellClick(parseInt(td.getAttribute('data-emp'), 10), parseInt(td.getAttribute('data-day'), 10), td.getAttribute('data-status'));
+        }
+
         function showTooltip(e, name, day, status, checkIn, checkOut, location) {
             const tip = document.getElementById('cellTooltip');
             let locHtml = '';
             if (location && location.includes(',')) {
                 const [lat, lon] = location.split(',');
-                locHtml = '<br>Location: <a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:#60A5FA;text-decoration:none;">View on Map</a>';
+                locHtml = '<br>Location: <a href="https://www.google.com/maps?q=' + encodeURIComponent(lat.trim() + ',' + lon.trim()) + '" target="_blank" style="color:#60A5FA;text-decoration:none;">View on Map</a>';
             } else if (location) {
                 locHtml = '<br>Location: ' + escapeHtml(location);
             }
