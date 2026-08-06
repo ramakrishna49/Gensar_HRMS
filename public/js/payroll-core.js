@@ -176,7 +176,7 @@ function buildPayslipHTML(p) {
     const logoHtml = (company.logo || '/assets/images/gensar_logo.png')
         ? '<img src="' + ppEsc(company.logo || '/assets/images/gensar_logo.png') + '" alt="Gensar Logo" style="width:175px;height:auto;object-fit:contain;flex-shrink:0;" onerror="this.style.display=\'none\';">'
         : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
-    return '<div class="pp-sheet ppslip" style="width:820px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
+    return '<div class="pp-sheet ppslip" style="width:100%;max-width:820px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
         '.ppslip{line-height:normal;}' +
         '.ppslip *{box-sizing:border-box;}' +
@@ -306,6 +306,7 @@ async function payslipHtmlToPdfBlob(p) {
     try {
         const el = holder.querySelector('.pp-sheet');
         if (!el) throw new Error('Payslip template not rendered');
+        el.style.width = '794px';
         const blob = await html2pdf().set({
             margin: 0,
             filename: 'payslip.pdf',
@@ -342,6 +343,7 @@ async function downloadPayslip(p, filename) {
     document.body.appendChild(holder);
     try {
         const el = holder.querySelector('.pp-sheet');
+        el.style.width = '794px';
         const name = filename || ('payslip_' + (p.emp_id || p.employee_id || '') + '_' + (p.month || '') + '_' + (p.year || '') + '.pdf');
         await html2pdf().set({
             margin: 0,

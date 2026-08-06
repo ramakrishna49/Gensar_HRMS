@@ -80,8 +80,9 @@
                     </div>
                     <div class="pp-actions">
                         <button class="pp-btn pp-btn-blue" id="btnPrint" onclick="onPrint()"><i class="fas fa-print"></i> Print</button>
-                        <button class="pp-btn pp-btn-light" id="btnDownload" onclick="onDownload()"><i class="fas fa-download"></i> Download PDF</button>
-                        <button class="pp-btn pp-btn-green" id="btnGenerate" onclick="onGenerate()"><i class="fas fa-paper-plane"></i> <span id="btnGenerateLabel">Generate &amp; Email</span></button>
+                        <button class="pp-btn pp-btn-light" id="btnDownload" onclick="onDownload()"><i class="fas fa-download"></i> Download</button>
+                        <button class="pp-btn pp-btn-green" id="btnGenerate" onclick="onGenerate()"><i class="fas fa-save"></i> <span id="btnGenerateLabel">Generate</span></button>
+                        <button class="pp-btn pp-btn-blue" id="btnEmail" onclick="onEmail()"><i class="fas fa-paper-plane"></i> Email</button>
                     </div>
                 </div>
 
@@ -448,18 +449,11 @@
             const label = document.getElementById('btnGenerateLabel');
             const original = label.textContent;
             btn.disabled = true;
-            label.textContent = 'Preparing PDF & sending email...';
+            label.textContent = 'Generating...';
             try {
-                const payload = buildDisplayPayload(selectedProfile, v);
-                const pdfBase64 = await payslipToDataUrl(payload);
-                label.textContent = 'Saving & emailing...';
-                const body = { ...v, pdfBase64 };
-                const r = await apiCall('/payroll/generate', 'POST', body);
+                const r = await apiCall('/payroll/generate', 'POST', { ...v });
                 if (r && r.success) {
-                    const emailMsg = r.email_sent && r.email_sent.success
-                        ? 'Payslip generated and emailed to ' + (r.email_sent.to || selectedProfile.personal_email || 'personal email')
-                        : 'Payslip generated. ' + (((r.email_sent && r.email_sent.reason) || 'No personal email set on employee profile - email skipped'));
-                    showToast(emailMsg, r.email_sent && r.email_sent.success ? 'success' : 'warning');
+                    showToast('Payslip generated successfully', 'success');
                     setTimeout(() => { window.location.href = 'payroll.html'; }, 1800);
                 } else {
                     showToast(r && r.message ? r.message : 'Error generating payslip', 'error');
@@ -469,6 +463,37 @@
             } finally {
                 btn.disabled = false;
                 label.textContent = original;
+            }
+        }
+
+        async function onEmail() {
+            if (!selectedProfile) { showToast('Select an employee first', 'warning'); return; }
+            const v = currentFormValues();
+            if (!v.month || !v.year) { showToast('Select month and year', 'warning'); return; }
+            if (!ppNum(v.basic_salary)) { showToast('Enter Basic Salary', 'warning'); return; }
+            if (!ppCompute(v).attendanceValid) { showToast('Attendance calculation is incorrect.', 'error'); return; }
+
+            const btn = document.getElementById('btnEmail');
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            try {
+                const payload = buildDisplayPayload(selectedProfile, v);
+                const pdfBase64 = await payslipToDataUrl(payload);
+                const r = await apiCall('/payroll/generate', 'POST', { ...v, pdfBase64 });
+                if (r && r.success) {
+                    const emailMsg = r.email_sent && r.email_sent.success
+                        ? 'Payslip emailed to ' + (r.email_sent.to || selectedProfile.personal_email)
+                        : 'Email failed: ' + (r.email_sent && r.email_sent.reason ? r.email_sent.reason : 'No personal email set');
+                    showToast(emailMsg, r.email_sent && r.email_sent.success ? 'success' : 'warning');
+                } else {
+                    showToast(r && r.message ? r.message : 'Error sending email', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
             }
         }
 
