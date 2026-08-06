@@ -371,11 +371,11 @@
                 leave_days: get('leave_days'), lop_days: get('lop_days'),
                 basic_salary: get('basic_salary'), hra: get('hra'), conveyance: get('conveyance'),
                 monthly_gross: selectedProfile ? ppNum(selectedProfile.basic_salary != null ? selectedProfile.basic_salary : selectedProfile.salary) + ppNum(selectedProfile.hra) + ppNum(selectedProfile.conveyance) + ppNum(selectedProfile.other_allowance) + ppNum(selectedProfile.special_allowance) : 0,
-                medical: get('medical'), special_allowance: get('special_allowance'),
+                special_allowance: get('special_allowance'),
                 bonus: get('bonus'), incentive: get('incentive'), extra_work: get('extra_work'), other_allowance: get('other_allowance'),
                 pf: get('pf'), esi: get('esi'), professional_tax: get('professional_tax'),
-                income_tax: get('income_tax'), loan_deduction: get('loan_deduction'),
-                advance_salary: get('advance_salary'), other_deduction: get('other_deduction'),
+                income_tax: get('income_tax'),
+                other_deduction: get('other_deduction'),
                 employer_pf: get('employer_pf'), employer_esi: get('employer_esi'), employer_contribution: get('employer_contribution')
             };
             return v;
@@ -410,12 +410,11 @@
                 month: v.month, year: v.year,
                 working_days: v.working_days, present_days: v.present_days,
                 leave_days: v.leave_days, lop_days: v.lop_days,
-                 basic_salary: v.basic_salary, hra: v.hra, conveyance: v.conveyance, monthly_gross: v.monthly_gross,
-                medical: v.medical, special_allowance: v.special_allowance,
+                basic_salary: v.basic_salary, hra: v.hra, conveyance: v.conveyance, monthly_gross: v.monthly_gross,
+                special_allowance: v.special_allowance,
                 bonus: v.bonus, incentive: v.incentive, extra_work: v.extra_work, other_allowance: v.other_allowance,
                 pf: v.pf, esi: v.esi, professional_tax: v.professional_tax,
-                income_tax: v.income_tax, loan_deduction: v.loan_deduction,
-                advance_salary: v.advance_salary, other_deduction: v.other_deduction,
+                income_tax: v.income_tax, other_deduction: v.other_deduction,
                 employer_pf: v.employer_pf, employer_esi: v.employer_esi, employer_contribution: v.employer_contribution,
                 gross_salary: t.gross, total_deductions: t.totalDeductions, net_salary: t.net,
                 company: company || { name: 'Gensar IT Solutions' }

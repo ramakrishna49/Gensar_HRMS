@@ -242,8 +242,8 @@ body:not(.admin-app) .pp-page {
 /* ---------- Summary strip ---------- */
 .pp-summary-strip {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
     margin: 18px 0;
 }
 
