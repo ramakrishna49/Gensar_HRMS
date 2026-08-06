@@ -3,8 +3,10 @@ name: Deploy to Vercel
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
+
+permissions:
+  contents: read
+  deployments: write
 
 jobs:
   deploy:
@@ -23,22 +25,12 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run tests
-      run: npm test 2>/dev/null || echo "No tests configured"
-
-    - name: Deploy to Vercel (Production)
-      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    - name: Deploy to Vercel
       uses: amondnet/vercel-action@v25
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
         vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
         vercel-args: '--prod'
-
-    - name: Deploy to Vercel (Preview)
-      if: github.event_name == 'pull_request'
-      uses: amondnet/vercel-action@v25
-      with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-comment: true
