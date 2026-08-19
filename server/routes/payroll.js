@@ -227,9 +227,9 @@ async function renderPayslipPdf(p, company) {
         if (/^https?:\/\//i.test(logo)) {
             resolvedLogoPath = await downloadLogoToTemp(logo);
         } else {
-            const lp = path.isAbsolute(logo)
-                ? logo
-                : path.join(__dirname, '../../public', logo.replace(/^\/+/, ''));
+            // logo is always a web-relative path (e.g. /assets/images/gensar_logo.png),
+            // not a filesystem path. Always resolve against the public/ directory.
+            const lp = path.join(__dirname, '../../public', logo.replace(/^\/+/, ''));
             if (fs.existsSync(lp)) resolvedLogoPath = lp;
         }
     } catch (e) { /* logo is optional */ }
