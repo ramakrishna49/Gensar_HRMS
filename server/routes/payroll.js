@@ -277,7 +277,7 @@ async function renderPayslipPdf(p, company) {
                 const h = BAR_H;
                 doc.rect(x, y, 4 * S, h).fill(PURPLE);
                 doc.rect(x + 4 * S, y, w - 4 * S, h).fill(BAR);
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).rect(x, y, w, h).stroke();
+                doc.strokeColor(BORDER).lineWidth(1 * S).rect(x, y, w, h).stroke();
                 doc.fill(DARK).font(FB).fontSize(F(11.5)).text(title, x + 10 * S, centerY(y, h, 11.5));
                 return y + h;
             };
@@ -288,7 +288,7 @@ async function renderPayslipPdf(p, company) {
                 const AMT_W = 95 * S;
                 const vcol = x + w - AMT_W;
                 let ty = baseY;
-                const bw = 0.5 * S;
+                const bw = 1 * S;
                 const headerText = (txt, x0, w0, right) => {
                     doc.fill(DARK).font(FB).fontSize(F(11.5));
                     doc.text(txt, x0 + 10 * S, centerY(ty, ROW, 11.5), { width: w0 - 20 * S, align: right ? 'right' : 'left' });
@@ -397,13 +397,13 @@ async function renderPayslipPdf(p, company) {
                     doc.fill(isVal ? BODY : '#333333').font(isVal ? FB : FL).fontSize(F(11.5));
                     doc.text(String(pair[isVal ? 1 : 0]), ecol(c) + 10 * S, centerY(y, ROW, 11.5), { width: colW - 20 * S });
                     if (c < 3) {
-                        doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(ecol(c + 1), y).lineTo(ecol(c + 1), y + ROW).stroke();
+                        doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ecol(c + 1), y).lineTo(ecol(c + 1), y + ROW).stroke();
                     }
                 }
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(ML, y + ROW).lineTo(ML + CW, y + ROW).stroke();
+                doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ML, y + ROW).lineTo(ML + CW, y + ROW).stroke();
                 y += ROW;
             }
-            doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(ML, t0, CW, 7 * ROW).stroke();
+            doc.strokeColor(BORDER).lineWidth(1 * S).rect(ML, t0, CW, 7 * ROW).stroke();
             y += 12 * S;
 
             // ---- Earnings (A) / Deductions (B) tables ----
@@ -438,7 +438,7 @@ async function renderPayslipPdf(p, company) {
             cards.forEach(card => {
                 const ch = 65 * S;
                 doc.roundedRect(cx, y, cardW, ch, 5 * S).fill(CARD);
-                doc.strokeColor(BORDER).lineWidth(0.8 * S).roundedRect(cx, y, cardW, ch, 5 * S).stroke();
+                doc.strokeColor(BORDER).lineWidth(1 * S).roundedRect(cx, y, cardW, ch, 5 * S).stroke();
                 const cPad = 8 * S;
                 const labelFontSize = 13.5;
                 const valueFontSize = 19;
@@ -455,11 +455,10 @@ async function renderPayslipPdf(p, company) {
             // ---- Net salary in words ----
             const wH = 28 * S;
             doc.rect(ML, y, CW, wH).fill(CARD);
-            doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(ML, y, CW, wH).stroke();
+            doc.strokeColor(BORDER).lineWidth(1 * S).rect(ML, y, CW, wH).stroke();
             const wordsLabel = 'NET SALARY IN WORDS:';
-            const labelW = doc.font(FB).fontSize(F(11.5)).widthOfString(wordsLabel);
-            doc.fill(DARK).font(FB).fontSize(F(11.5)).text(wordsLabel, ML + 12 * S, centerY(y, wH, 11.5));
-            doc.fill(BODY).font(FL).fontSize(F(11.5)).text(amountToWords(totals.net), ML + 12 * S + labelW + 12 * S, centerY(y, wH, 11.5), { width: CW - 24 * S - labelW - 12 * S });
+            doc.fill(DARK).font(FB).fontSize(F(11.5)).text(wordsLabel + '  ', ML + 12 * S, centerY(y, wH, 11.5), { continued: true, width: CW - 24 * S });
+            doc.fill(BODY).font('Helvetica-Oblique').fontSize(F(11.5)).text(amountToWords(totals.net));
             y += wH + 12 * S;
 
             // ---- Attendance summary (4-col) + Bonus (C) side by side ----
@@ -483,20 +482,23 @@ async function renderPayslipPdf(p, company) {
             doc.fill(BAR);
             for (let c = 0; c < 4; c++) {
                 doc.rect(attX + c * attColW, ay, attColW, attHeadH).fill();
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attHeadH).stroke();
+                doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attHeadH).stroke();
             }
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attHeadH).lineTo(attX + attW, ay + attHeadH).stroke();
+            doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(attX, ay + attHeadH).lineTo(attX + attW, ay + attHeadH).stroke();
             attHeads.forEach((h, c) => {
                 doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, attHeadH, 11.5), { width: attColW, align: 'center' });
             });
             ay += attHeadH;
             doc.fill('#FFFFFF').rect(attX, ay, attW, attValueH).fill();
             attVals.forEach((v, c) => {
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attValueH).stroke();
+                doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attValueH).stroke();
                 doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attValueH, 11.5), { width: attColW, align: 'center' });
             });
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attValueH).lineTo(attX + attW, ay + attValueH).stroke();
-            doc.strokeColor(BORDER).lineWidth(0.5 * S).rect(attX, attBarY, attW, attBarH + attHeadH + attValueH).stroke();
+            doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(attX, ay + attValueH).lineTo(attX + attW, ay + attValueH).stroke();
+            doc.strokeColor(BORDER).lineWidth(1 * S);
+            doc.moveTo(attX, attBarY).lineTo(attX + attW, attBarY).stroke();
+            doc.moveTo(attX, attBarY).lineTo(attX, ay + attValueH).stroke();
+            doc.moveTo(attX + attW, attBarY).lineTo(attX + attW, ay + attValueH).stroke();
             ay += attValueH;
 
             const bonusRows = [
