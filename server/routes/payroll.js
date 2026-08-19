@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const http = require('http');
 const PDFDocument = require('pdfkit');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
@@ -119,6 +121,26 @@ function computeTotals(v) {
     return { gross, totalDeductions, totalDeductionsWithEmployer, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, actualPayableGross, netPayable, perDaySalary, lopDeduction, attendanceValid, net };
 }
 
+// Download a remote image (HTTP/HTTPS) to a temp file path, returns the local path or null.
+function downloadLogoToTemp(url) {
+    return new Promise((resolve) => {
+        try {
+            const client = url.startsWith('https') ? https : http;
+            const tmpPath = path.join(__dirname, '..', 'assets', 'fonts', '_logo_tmp.png');
+            client.get(url, { timeout: 5000 }, (res) => {
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    return downloadLogoToTemp(res.headers.location).then(resolve);
+                }
+                if (res.statusCode !== 200) { resolve(null); return; }
+                const file = fs.createWriteStream(tmpPath);
+                res.pipe(file);
+                file.on('finish', () => { file.close(); resolve(tmpPath); });
+                file.on('error', () => { resolve(null); });
+            }).on('error', () => { resolve(null); });
+        } catch (e) { resolve(null); }
+    });
+}
+
 async function getProfileSalaryValues(employeeId, values) {
     const result = await query(
         `SELECT salary, basic_salary, hra, conveyance, special_allowance, other_allowance,
@@ -198,6 +220,20 @@ async function fetchPayslipWithProfile(id, userId, isPrivileged) {
 // Attendance + Bonus (C) bottom row, Employer Contributions single column,
 // footer with notes + signature. Single A4 page.
 async function renderPayslipPdf(p, company) {
+    // Resolve logo path before entering the synchronous PDF generation
+    const logo = (company && company.logo) || '/assets/images/gensar_logo.png';
+    let resolvedLogoPath = null;
+    try {
+        if (/^https?:\/\//i.test(logo)) {
+            resolvedLogoPath = await downloadLogoToTemp(logo);
+        } else {
+            const lp = path.isAbsolute(logo)
+                ? logo
+                : path.join(__dirname, '../../public', logo.replace(/^\/+/, ''));
+            if (fs.existsSync(lp)) resolvedLogoPath = lp;
+        }
+    } catch (e) { /* logo is optional */ }
+
     return new Promise((resolve, reject) => {
         try {
             const doc = new PDFDocument({ size: 'A4', margin: 0 });
@@ -287,16 +323,9 @@ async function renderPayslipPdf(p, company) {
             const badgeW = 150 * S;
             const badgeX = ML + CW - badgeW;
             const logoW = 175 * S;
-
-            const logo = company.logo || '/assets/images/gensar_logo.png';
-            try {
-                const logoPath = path.isAbsolute(logo)
-                    ? logo
-                    : path.join(__dirname, '../../public', logo.replace(/^\/+/, ''));
-                if (fs.existsSync(logoPath)) {
-                    doc.image(logoPath, ML, y, { width: logoW });
-                }
-            } catch (e) { /* logo is optional */ }
+            if (resolvedLogoPath) {
+                try { doc.image(resolvedLogoPath, ML, y, { width: logoW }); } catch (e) { /* logo is optional */ }
+            }
 
             const divX = ML + logoW + 15 * S;
             doc.rect(divX, y, 1, 95 * S).fill(PURPLE);
@@ -327,10 +356,10 @@ async function renderPayslipPdf(p, company) {
 
             y += divH + 16 * S;
             doc.strokeColor(PURPLE).lineWidth(2 * S).moveTo(ML, y).lineTo(ML + CW, y).stroke();
-            y += 16 * S;
+            y += 2 * S + 16 * S;
 
             // ---- Employee details (4 equal columns) ----
-            y = sectionBar('EMPLOYEE DETAILS', ML, y, CW);
+            y = sectionBar('EMPLOYEE DETAILS', ML, y, CW) + 8 * S;
             const colW = CW / 4;
             const empCells = [
                 ['Employee ID', p.emp_id || '-'],
@@ -387,7 +416,7 @@ async function renderPayslipPdf(p, company) {
             const halfW = (CW - 12 * S) / 2;
             const eyE = finTable(ML, 'EARNINGS', earningsRows, 'TOTAL EARNINGS (A)', totals.gross, y);
             const eyD = finTable(ML + halfW + 12 * S, 'DEDUCTIONS', deductionRows, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions, y);
-            y = Math.max(eyE, eyD) + 14 * S;
+            y = Math.max(eyE, eyD) + 2 * S;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
             const cardW = (CW - 20 * S) / 3;
@@ -399,10 +428,17 @@ async function renderPayslipPdf(p, company) {
             let cx = ML;
             cards.forEach(card => {
                 const ch = 65 * S;
-                doc.rect(cx, y, cardW, ch).fill(CARD);
-                doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(cx, y, cardW, ch).stroke();
-                doc.fill('#444444').font(FB).fontSize(F(13.5)).text(card.label, cx + 4 * S, y + 7 * S, { width: cardW - 8 * S, align: 'center', lineBreak: false });
-                doc.font(FB).fontSize(F(19)).text('\u20B9 ' + plainINR(card.value), cx + 4 * S, y + 29 * S, { width: cardW - 8 * S, align: 'center' });
+                doc.roundedRect(cx, y, cardW, ch, 5 * S).fill(CARD);
+                doc.strokeColor(BORDER).lineWidth(0.8 * S).roundedRect(cx, y, cardW, ch, 5 * S).stroke();
+                const cPad = 8 * S;
+                const labelFontSize = 13.5;
+                const valueFontSize = 19;
+                const labelMargin = 5;
+                const textBlockH = F(labelFontSize) + F(labelMargin) + F(valueFontSize);
+                const textOffset = (ch - cPad * 2 - textBlockH) / 2;
+                const labelY = y + cPad + textOffset;
+                doc.fill('#444444').font(FB).fontSize(F(labelFontSize)).text(card.label, cx + 5 * S, labelY, { width: cardW - 10 * S, align: 'center', lineBreak: false });
+                doc.font(FB).fontSize(F(valueFontSize)).text('\u20B9 ' + plainINR(card.value), cx + 5 * S, labelY + F(labelFontSize) + F(labelMargin), { width: cardW - 10 * S, align: 'center' });
                 cx += cardW + 10 * S;
             });
             y += 65 * S + 10 * S;
@@ -459,32 +495,19 @@ async function renderPayslipPdf(p, company) {
                 ['Extra Work', num(p.extra_work)]
             ];
             const by = finTable(bnsX, 'BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, attBarY, bnsW);
-            y = Math.max(ay, by) + 14 * S;
+            y = Math.max(ay, by) + 2 * S;
 
-            // ---- Employer Contributions (single column) ----
-            y = sectionBar('EMPLOYER CONTRIBUTIONS', ML, y, CW);
+            // ---- Employer Contributions (single column, full width finTable) ----
             const empTotal = totals.employerTotal;
             const eRows = [
                 ['Employer PF Contribution', num(p.employer_pf)],
                 ['Employer ESI Contribution', num(p.employer_esi)],
                 ['Employer Other Contribution', num(p.employer_contribution)]
             ];
-            const er0 = y;
-            const eAmt = ML + CW - 95 * S;
-            eRows.forEach(([k, v]) => {
-                doc.fill(BODY).font(FL).fontSize(F(11.5)).text(k, ML + 10 * S, centerY(y, ROW, 11.5), { width: CW - 105 * S - 20 * S });
-                doc.font(FB).text(plainINR(v), eAmt + 10 * S, centerY(y, ROW, 11.5), { width: 75 * S, align: 'right' });
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(ML, y + ROW).lineTo(ML + CW, y + ROW).stroke();
-                y += ROW;
-            });
-            doc.rect(ML, y, CW, ROW).fill(TOTAL);
-            doc.fill(DARK).font(FB).fontSize(F(11.5)).text('TOTAL EMPLOYER CONTRIBUTION (D)', ML + 10 * S, centerY(y, ROW, 11.5));
-            doc.text(plainINR(empTotal), eAmt + 10 * S, centerY(y, ROW, 11.5), { width: 75 * S, align: 'right' });
-            doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(ML, er0, CW, (y + ROW) - er0).stroke();
-            y += ROW + 8 * S;
+            y = finTable(ML, 'EMPLOYER CONTRIBUTIONS', eRows, 'TOTAL EMPLOYER CONTRIBUTION (D)', empTotal, y, CW) + 2 * S;
 
             // ---- Footer: notes + signature ----
-            y = Math.max(y, 924 * S);
+            y += 8 * S;
             doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ML, y).lineTo(ML + CW, y).stroke();
             let fy = y + 6 * S;
             doc.fill('#555555').font(FB).fontSize(F(10.5)).text('Note:', ML, fy);
