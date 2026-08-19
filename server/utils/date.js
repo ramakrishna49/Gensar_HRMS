@@ -1,12 +1,4 @@
-let TIMEZONE = process.env.TIMEZONE || 'Asia/Kolkata';
-
-function setTimezone(tz) {
-    if (tz) TIMEZONE = tz;
-}
-
-function getTimezone() {
-    return TIMEZONE;
-}
+const TIMEZONE = process.env.TIMEZONE || 'Asia/Kolkata';
 
 // Current date as YYYY-MM-DD in the office timezone (IST by default).
 // Server may run on UTC (Vercel), so Date.toISOString() would give the wrong day.
@@ -31,4 +23,4 @@ function istYear() {
     return parseInt(new Date().toLocaleDateString('en-US', { timeZone: TIMEZONE, year: 'numeric' }), 10);
 }
 
-module.exports = { TIMEZONE, setTimezone, getTimezone, istDateString, istTimeString, istMonth, istYear };
+module.exports = { TIMEZONE, istDateString, istTimeString, istMonth, istYear };

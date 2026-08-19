@@ -47,7 +47,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Document Management</h2>
             </div>
             <div class="header-right">
@@ -72,13 +72,13 @@
             <div class="card" style="margin-bottom:24px;">
                 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
                     <div class="form-group" style="margin:0;">
-                        <label for="filterEmployee" style="margin-bottom:4px;">Employee</label>
+                        <label style="margin-bottom:4px;">Employee</label>
                         <select id="filterEmployee" class="form-control" style="min-width:200px;" onchange="applyFilters()">
                             <option value="">All Employees</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin:0;">
-                        <label for="filterType" style="margin-bottom:4px;">Document Type</label>
+                        <label style="margin-bottom:4px;">Document Type</label>
                         <select id="filterType" class="form-control" style="min-width:160px;" onchange="applyFilters()">
                             <option value="">All Types</option>
                         </select>

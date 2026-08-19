@@ -50,7 +50,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">My Documents</h2>
             </div>
             <div class="header-right">
@@ -75,7 +75,7 @@
         <div style="padding:30px;">
             <div class="card slide-up stagger-1 mb-3">
                 <div class="filter-bar">
-                    <label for="typeFilter" style="font-weight:500;font-size:0.9rem;">Filter by type:</label>
+                    <label style="font-weight:500;font-size:0.9rem;">Filter by type:</label>
                     <select id="typeFilter" class="form-control" style="width:auto;" onchange="renderDocs()">
                         <option value="all">All Types</option>
                         <option value="id_proof">ID Proof</option>
@@ -96,7 +96,7 @@
         </div>
     </main>
 
-    <div class="modal" id="uploadModal" role="dialog" aria-modal="true">
+    <div class="modal" id="uploadModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Upload Document</h2>
@@ -105,11 +105,11 @@
             <div class="modal-body">
                 <form id="uploadForm" onsubmit="uploadDocument(event)">
                     <div class="form-group">
-                        <label for="docTitle">Title *</label>
+                        <label>Title *</label>
                         <input type="text" class="form-control" id="docTitle" required placeholder="Enter document title">
                     </div>
                     <div class="form-group">
-                        <label for="docType">Document Type</label>
+                        <label>Document Type</label>
                         <select class="form-control" id="docType">
                             <option value="id_proof">ID Proof</option>
                             <option value="address_proof">Address Proof</option>
@@ -121,7 +121,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="docFile">File *</label>
+                        <label>File *</label>
                         <input type="file" class="form-control" id="docFile" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                         <p style="font-size:0.8rem;color:var(--text-tertiary);margin-top:4px;">Accepted: PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)</p>
                     </div>

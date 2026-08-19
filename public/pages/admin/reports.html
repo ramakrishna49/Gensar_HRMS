@@ -48,7 +48,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Reports & Analytics</h2>
             </div>
             <div class="header-right">
@@ -137,7 +137,7 @@
         async function loadDeptReport() {
             const d = await apiCall('/reports/employees');
             const t = document.getElementById('deptTable');
-            if (d && d.success && d.report && d.report.length > 0) {
+            if (d && d.success && d.report.length > 0) {
                 const total = d.report.reduce((s, r) => s + parseInt(r.count), 0);
                 const colors = ['#4F46E5','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16','#F97316','#6366F1'];
                 const chartColors = getChartColors();
@@ -194,7 +194,7 @@
             const year = document.getElementById('attYear').value;
             const d = await apiCall(`/reports/attendance?month=${month}&year=${year}`);
             const chartColors = getChartColors();
-            if (d && d.success && d.report && d.report.length > 0) {
+            if (d && d.success && d.report.length > 0) {
                 const colors = { present: '#10B981', absent: '#EF4444', late: '#F59E0B', 'half-day': '#8B5CF6' };
                 if (attendanceChartInstance) attendanceChartInstance.destroy();
                 attendanceChartInstance = new Chart(document.getElementById('attendanceChart'), {

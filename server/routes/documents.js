@@ -7,27 +7,6 @@ const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { uploadBuffer, deleteFile, getStorageClient } = require('../services/storage');
 
-router.get('/', verifyToken, async (req, res) => {
-    try {
-        if (req.user.role === 'admin') {
-            const result = await query(
-                `SELECT d.*, e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
-                FROM documents d
-                JOIN employees e ON d.employee_id = e.id
-                ORDER BY d.created_at DESC`
-            );
-            return res.json({ success: true, documents: result.rows });
-        }
-        const result = await query(
-            'SELECT * FROM documents WHERE employee_id = $1 ORDER BY created_at DESC',
-            [req.user.id]
-        );
-        res.json({ success: true, documents: result.rows });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
-
 const ALLOWED_MIME = new Set([
     'application/pdf',
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',

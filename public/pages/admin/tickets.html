@@ -52,7 +52,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Query Management</h2>
             </div>
             <div class="header-right">
@@ -122,7 +122,7 @@
         </div>
     </main>
 
-    <div class="modal" id="respondModal" role="dialog" aria-modal="true">
+    <div class="modal" id="respondModal">
         <div class="modal-content" style="max-width:500px;">
             <div class="modal-header">
                 <h2 id="respondModalTitle">Respond to Query</h2>
@@ -134,7 +134,7 @@
                     <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;" id="respondTicketDesc"></div>
                 </div>
                 <div class="form-group">
-                    <label for="respondStatus">Status</label>
+                    <label>Status</label>
                     <select class="form-control" id="respondStatus">
                         <option value="open">Open</option>
                         <option value="in_progress">In Progress</option>
@@ -143,7 +143,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="respondInput">Response</label>
+                    <label>Response</label>
                     <textarea class="form-control" id="respondInput" rows="3" placeholder="Write your response to the employee..."></textarea>
                 </div>
                 <div class="modal-footer">

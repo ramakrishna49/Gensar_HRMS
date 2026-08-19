@@ -47,7 +47,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">WFH Management</h2>
             </div>
             <div class="header-right">
@@ -112,7 +112,7 @@
         </div>
     </main>
 
-    <div class="modal" id="remarkModal" role="dialog" aria-modal="true">
+    <div class="modal" id="remarkModal">
         <div class="modal-content" style="max-width:450px;">
             <div class="modal-header">
                 <h2 id="remarkModalTitle">WFH Remarks</h2>
@@ -120,7 +120,7 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="remarkInput">Remarks</label>
+                    <label>Remarks</label>
                     <textarea class="form-control" id="remarkInput" rows="3" placeholder="Enter your remarks (optional)..."></textarea>
                 </div>
                 <div class="modal-footer">

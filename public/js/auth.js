@@ -285,6 +285,19 @@ function formatDate(dateString, options = {}) {
 }
 
 // Escape HTML for both text and attribute contexts.
+// div.textContent/div.innerHTML escapes &, <, > and (in browsers) " and ',
+// but relying on the browser mapping is fragile, so we also escape quotes
+// and '/' explicitly for safe use inside single/double-quoted attributes.
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Load saved theme
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme');

@@ -55,7 +55,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Announcements</h2>
             </div>
             <div class="header-right">
@@ -126,7 +126,6 @@
         function showUnreadPopup(count) {
             const container = document.getElementById('announcementsContainer');
             const popup = document.createElement('div');
-            popup.setAttribute('data-unread-popup', '1');
             popup.style.cssText = 'background:var(--primary);color:white;padding:14px 20px;border-radius:var(--radius);margin-bottom:16px;display:flex;align-items:center;gap:12px;animation:slideUp 0.3s ease;';
             popup.innerHTML = '<i class="fas fa-bell" style="font-size:1.2rem;"></i><span style="font-weight:500;">You have <strong>' + count + '</strong> unread announcement' + (count > 1 ? 's' : '') + '</span><button onclick="this.parentElement.remove()" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 10px;border-radius:var(--radius);cursor:pointer;">Dismiss</button>';
             container.insertBefore(popup, container.firstChild);

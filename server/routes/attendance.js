@@ -138,8 +138,7 @@ router.post('/check-out', verifyToken, async (req, res) => {
             `SELECT setting_key, setting_value FROM company_settings WHERE setting_key = 'office_end_time'`
         );
         const officeEnd = (endSettings.rows.length > 0 && endSettings.rows[0].setting_value) || '18:30:00';
-        const normalizeTime = (t) => { const p = t.split(':'); while (p.length < 3) p.push('00'); return p.map(s => s.padStart(2, '0')).join(':'); };
-        if (checkInTime && normalizeTime(now) > normalizeTime(officeEnd)) {
+        if (checkInTime && now > officeEnd) {
             const endParts = officeEnd.split(':').map(Number);
             const nowParts = now.split(':').map(Number);
             const endMins = endParts[0] * 60 + endParts[1];

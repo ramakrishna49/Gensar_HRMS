@@ -48,7 +48,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Employee Management</h2>
             </div>
             <div class="header-right">
@@ -123,7 +123,7 @@
         </div>
     </main>
 
-    <div class="modal" id="addEmployeeModal" role="dialog" aria-modal="true">
+    <div class="modal" id="addEmployeeModal">
         <div class="modal-content" style="max-width:600px;">
             <div class="modal-header">
                 <h2>Add New Employee</h2>
@@ -132,48 +132,48 @@
             <div class="modal-body">
                 <form id="addEmployeeForm" onsubmit="addEmployee(event)">
                     <div class="grid grid-2">
-                        <div class="form-group"><label for="add_emp_id">Employee ID *</label><input type="text" class="form-control" id="add_emp_id" name="employee_id" required></div>
-                        <div class="form-group"><label for="add_first_name">First Name *</label><input type="text" class="form-control" id="add_first_name" name="first_name" required></div>
-                        <div class="form-group"><label for="add_last_name">Last Name *</label><input type="text" class="form-control" id="add_last_name" name="last_name" required></div>
-                        <div class="form-group"><label for="add_phone">Phone</label><input type="tel" class="form-control" id="add_phone" name="phone"></div>
+                        <div class="form-group"><label>Employee ID *</label><input type="text" class="form-control" name="employee_id" required></div>
+                        <div class="form-group"><label>First Name *</label><input type="text" class="form-control" name="first_name" required></div>
+                        <div class="form-group"><label>Last Name *</label><input type="text" class="form-control" name="last_name" required></div>
+                        <div class="form-group"><label>Phone</label><input type="tel" class="form-control" name="phone"></div>
                     </div>
                     <div class="grid grid-2">
-                        <div class="form-group"><label for="add_email">Email (Official) *</label><input type="email" class="form-control" id="add_email" name="email" required></div>
-                        <div class="form-group"><label for="add_personal_email">Personal Email</label><input type="email" class="form-control" id="add_personal_email" name="personal_email"></div>
+                        <div class="form-group"><label>Email (Official) *</label><input type="email" class="form-control" name="email" required></div>
+                        <div class="form-group"><label>Personal Email</label><input type="email" class="form-control" name="personal_email"></div>
                     </div>
                     <div class="grid grid-2">
-                        <div class="form-group"><label for="departmentSelect">Department</label><select class="form-control" name="department_id" id="departmentSelect"><option value="">Select Department</option></select></div>
-                        <div class="form-group"><label for="designationSelect">Designation</label><select class="form-control" name="designation_id" id="designationSelect"><option value="">Select Designation</option></select></div>
-                        <div class="form-group"><label for="addRole">Role</label><select class="form-control" name="role" id="addRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
-                        <div class="form-group"><label for="reportingManagerSelect">Reporting Person</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Person</option></select>
+                        <div class="form-group"><label>Department</label><select class="form-control" name="department_id" id="departmentSelect"><option value="">Select Department</option></select></div>
+                        <div class="form-group"><label>Designation</label><select class="form-control" name="designation_id" id="designationSelect"><option value="">Select Designation</option></select></div>
+                        <div class="form-group"><label>Role</label><select class="form-control" name="role" id="addRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label>Reporting Person</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Person</option></select>
                             <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
-                        <div class="form-group"><label for="add_joining_date">Joining Date *</label><input type="date" class="form-control" id="add_joining_date" name="joining_date" required></div>
-                        <div class="form-group"><label for="add_salary">Total Compensation</label><input type="number" class="form-control" id="add_salary" name="salary"></div>
-                        <div class="form-group"><label for="add_uan">UAN Number</label><input type="text" class="form-control" id="add_uan" name="uan_number" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
-                        <div class="form-group"><label for="add_password">Password (default: welcome123)</label><input type="password" class="form-control" id="add_password" name="password" value="welcome123"></div>
+                        <div class="form-group"><label>Joining Date *</label><input type="date" class="form-control" name="joining_date" required></div>
+                        <div class="form-group"><label>Total Compensation</label><input type="number" class="form-control" name="salary"></div>
+                        <div class="form-group"><label>UAN Number</label><input type="text" class="form-control" name="uan_number" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
+                        <div class="form-group"><label>Password (default: welcome123)</label><input type="password" class="form-control" name="password" value="welcome123"></div>
                     </div>
                     <div class="card" style="padding:14px 16px;margin-bottom:8px;background:var(--bg-light);">
                         <p style="font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:10px;"><i class="fas fa-calculator" style="margin-right:6px;color:#7c6ca8;"></i>Salary Structure (set once here; used on every payslip)</p>
                         <div class="grid grid-2">
-                            <div class="form-group"><label for="add_basic_salary">Basic Salary</label><input type="number" step="0.01" class="form-control" id="add_basic_salary" name="basic_salary"></div>
-                            <div class="form-group"><label for="add_hra">HRA</label><input type="number" step="0.01" class="form-control" id="add_hra" name="hra"></div>
-                            <div class="form-group"><label for="add_conveyance">Conveyance</label><input type="number" step="0.01" class="form-control" id="add_conveyance" name="conveyance"></div>
-                            <div class="form-group"><label for="add_other_allowance">Medical Allowance</label><input type="number" step="0.01" class="form-control" id="add_other_allowance" name="other_allowance"></div>
-                            <div class="form-group"><label for="add_special_allowance">Special Allowance</label><input type="number" step="0.01" class="form-control" id="add_special_allowance" name="special_allowance"></div>
+                            <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" name="basic_salary"></div>
+                            <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" name="hra"></div>
+                            <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" name="conveyance"></div>
+                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" name="other_allowance"></div>
+                            <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" name="special_allowance"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label for="add_pf">Employee PF</label><input type="number" step="0.01" class="form-control" id="add_pf" name="pf"></div>
-                            <div class="form-group"><label for="add_esi">Employee ESI</label><input type="number" step="0.01" class="form-control" id="add_esi" name="esi"></div>
-                            <div class="form-group"><label for="add_professional_tax">Professional Tax</label><input type="number" step="0.01" class="form-control" id="add_professional_tax" name="professional_tax"></div>
-                            <div class="form-group"><label for="add_income_tax">Income Tax</label><input type="number" step="0.01" class="form-control" id="add_income_tax" name="income_tax"></div>
-                            <div class="form-group"><label for="add_other_deduction">Other Deduction</label><input type="number" step="0.01" class="form-control" id="add_other_deduction" name="other_deduction"></div>
+                            <div class="form-group"><label>Employee PF</label><input type="number" step="0.01" class="form-control" name="pf"></div>
+                            <div class="form-group"><label>Employee ESI</label><input type="number" step="0.01" class="form-control" name="esi"></div>
+                            <div class="form-group"><label>Professional Tax</label><input type="number" step="0.01" class="form-control" name="professional_tax"></div>
+                            <div class="form-group"><label>Income Tax</label><input type="number" step="0.01" class="form-control" name="income_tax"></div>
+                            <div class="form-group"><label>Other Deduction</label><input type="number" step="0.01" class="form-control" name="other_deduction"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Employer Contributions</div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label for="add_employer_pf">Employer PF</label><input type="number" step="0.01" class="form-control" id="add_employer_pf" name="employer_pf"></div>
-                            <div class="form-group"><label for="add_employer_esi">Employer ESI</label><input type="number" step="0.01" class="form-control" id="add_employer_esi" name="employer_esi"></div>
-                            <div class="form-group"><label for="add_employer_contribution">Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" id="add_employer_contribution" name="employer_contribution"></div>
+                            <div class="form-group"><label>Employer PF</label><input type="number" step="0.01" class="form-control" name="employer_pf"></div>
+                            <div class="form-group"><label>Employer ESI</label><input type="number" step="0.01" class="form-control" name="employer_esi"></div>
+                            <div class="form-group"><label>Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" name="employer_contribution"></div>
                         </div>
                     </div>
                     <div class="card" style="padding:14px 16px;margin-bottom:8px;background:var(--bg-light);">
@@ -188,7 +188,7 @@
         </div>
     </div>
 
-    <div class="modal" id="editEmployeeModal" role="dialog" aria-modal="true">
+    <div class="modal" id="editEmployeeModal">
         <div class="modal-content" style="max-width:600px;">
             <div class="modal-header">
                 <h2>Edit Employee</h2>
@@ -198,72 +198,72 @@
                 <form id="editEmployeeForm" onsubmit="updateEmployee(event)">
                     <input type="hidden" id="editId">
                     <div class="grid grid-2">
-                        <div class="form-group"><label for="editEmpId">Employee ID</label><input type="text" class="form-control" id="editEmpId" readonly></div>
-                        <div class="form-group"><label for="editEmail">Email</label><input type="email" class="form-control" id="editEmail" required></div>
-                        <div class="form-group"><label for="editFirstName">First Name *</label><input type="text" class="form-control" id="editFirstName" required></div>
-                        <div class="form-group"><label for="editLastName">Last Name *</label><input type="text" class="form-control" id="editLastName" required></div>
-                        <div class="form-group"><label for="editPhone">Phone</label><input type="tel" class="form-control" id="editPhone"></div>
-                        <div class="form-group"><label for="editJoiningDate">Joining Date</label><input type="date" class="form-control" id="editJoiningDate"></div>
-                        <div class="form-group"><label for="editDepartment">Department</label><select class="form-control" id="editDepartment"><option value="">Select Department</option></select></div>
-                        <div class="form-group"><label for="editDesignation">Designation</label><select class="form-control" id="editDesignation"><option value="">Select Designation</option></select></div>
-                        <div class="form-group"><label for="editRole">Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
-                        <div class="form-group"><label for="editReportingManager">Reporting Person</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Person</option></select>
+                        <div class="form-group"><label>Employee ID</label><input type="text" class="form-control" id="editEmpId" readonly></div>
+                        <div class="form-group"><label>Email</label><input type="email" class="form-control" id="editEmail" required></div>
+                        <div class="form-group"><label>First Name *</label><input type="text" class="form-control" id="editFirstName" required></div>
+                        <div class="form-group"><label>Last Name *</label><input type="text" class="form-control" id="editLastName" required></div>
+                        <div class="form-group"><label>Phone</label><input type="tel" class="form-control" id="editPhone"></div>
+                        <div class="form-group"><label>Joining Date</label><input type="date" class="form-control" id="editJoiningDate"></div>
+                        <div class="form-group"><label>Department</label><select class="form-control" id="editDepartment"><option value="">Select Department</option></select></div>
+                        <div class="form-group"><label>Designation</label><select class="form-control" id="editDesignation"><option value="">Select Designation</option></select></div>
+                        <div class="form-group"><label>Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label>Reporting Person</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Person</option></select>
                             <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
-                        <div class="form-group"><label for="editSalary">Total Compensation</label><input type="number" class="form-control" id="editSalary"></div>
-                        <div class="form-group"><label for="editUAN">UAN Number</label><input type="text" class="form-control" id="editUAN" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
-                        <div class="form-group"><label for="editStatus">Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
-                        <div class="form-group"><label for="editGender">Gender</label><select class="form-control" id="editGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
-                        <div class="form-group"><label for="editBloodGroup">Blood Group</label><input type="text" class="form-control" id="editBloodGroup"></div>
-                        <div class="form-group"><label for="editDOB">Date of Birth</label><input type="date" class="form-control" id="editDOB"></div>
-                        <div class="form-group"><label for="editMaritalStatus">Marital Status</label><select class="form-control" id="editMaritalStatus"><option value="">Select</option><option value="single">Single</option><option value="married">Married</option><option value="divorced">Divorced</option><option value="widowed">Widowed</option></select></div>
-                        <div class="form-group"><label for="editLanguages">Languages Spoken</label><input type="text" class="form-control" id="editLanguages"></div>
-                        <div class="form-group"><label for="editPersonalEmail">Personal Email</label><input type="email" class="form-control" id="editPersonalEmail"></div>
+                        <div class="form-group"><label>Total Compensation</label><input type="number" class="form-control" id="editSalary"></div>
+                        <div class="form-group"><label>UAN Number</label><input type="text" class="form-control" id="editUAN" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
+                        <div class="form-group"><label>Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
+                        <div class="form-group"><label>Gender</label><select class="form-control" id="editGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+                        <div class="form-group"><label>Blood Group</label><input type="text" class="form-control" id="editBloodGroup"></div>
+                        <div class="form-group"><label>Date of Birth</label><input type="date" class="form-control" id="editDOB"></div>
+                        <div class="form-group"><label>Marital Status</label><select class="form-control" id="editMaritalStatus"><option value="">Select</option><option value="single">Single</option><option value="married">Married</option><option value="divorced">Divorced</option><option value="widowed">Widowed</option></select></div>
+                        <div class="form-group"><label>Languages Spoken</label><input type="text" class="form-control" id="editLanguages"></div>
+                        <div class="form-group"><label>Personal Email</label><input type="email" class="form-control" id="editPersonalEmail"></div>
                     </div>
-                    <div class="form-group"><label for="editAddress">Address</label><textarea class="form-control" id="editAddress" rows="2"></textarea></div>
-                    <div class="form-group"><label for="editPermanentAddress">Permanent Address</label><textarea class="form-control" id="editPermanentAddress" rows="2"></textarea></div>
-                    <div class="form-group"><label for="editEmergencyName">Emergency Contact Name</label><input type="text" class="form-control" id="editEmergencyName"></div>
-                    <div class="form-group"><label for="editEmergencyContact">Emergency Contact</label><input type="text" class="form-control" id="editEmergencyContact"></div>
+                    <div class="form-group"><label>Address</label><textarea class="form-control" id="editAddress" rows="2"></textarea></div>
+                    <div class="form-group"><label>Permanent Address</label><textarea class="form-control" id="editPermanentAddress" rows="2"></textarea></div>
+                    <div class="form-group"><label>Emergency Contact Name</label><input type="text" class="form-control" id="editEmergencyName"></div>
+                    <div class="form-group"><label>Emergency Contact</label><input type="text" class="form-control" id="editEmergencyContact"></div>
                     <div class="card" style="padding:16px;margin-bottom:16px;">
                         <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-graduation-cap" style="margin-right:8px;color:var(--accent);"></i>Qualifications &amp; IDs</div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label for="editQualification">Qualification</label><select class="form-control" id="editQualification"><option value="">Select</option><option value="10th">10th</option><option value="Intermediate">Intermediate</option><option value="Graduate">Graduate</option><option value="Post Graduate">Post Graduate</option><option value="Diploma">Diploma</option><option value="Other">Other</option></select></div>
-                            <div class="form-group"><label for="editSpecialization">Specialization</label><input type="text" class="form-control" id="editSpecialization"></div>
-                            <div class="form-group"><label for="editPAN">PAN Number</label><input type="text" class="form-control" id="editPAN" placeholder="e.g. ABCDE1234F" pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" title="Format: ABCDE1234F (5 letters, 4 digits, 1 letter)"></div>
-                            <div class="form-group"><label for="editAadhaar">Aadhaar Number</label><input type="text" class="form-control" id="editAadhaar" maxlength="12" pattern="[0-9]{12}" title="Must be exactly 12 digits"></div>
-                            <div class="form-group"><label for="editPassport">Passport Number</label><input type="text" class="form-control" id="editPassport"></div>
+                            <div class="form-group"><label>Qualification</label><select class="form-control" id="editQualification"><option value="">Select</option><option value="10th">10th</option><option value="Intermediate">Intermediate</option><option value="Graduate">Graduate</option><option value="Post Graduate">Post Graduate</option><option value="Diploma">Diploma</option><option value="Other">Other</option></select></div>
+                            <div class="form-group"><label>Specialization</label><input type="text" class="form-control" id="editSpecialization"></div>
+                            <div class="form-group"><label>PAN Number</label><input type="text" class="form-control" id="editPAN" placeholder="e.g. ABCDE1234F" pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" title="Format: ABCDE1234F (5 letters, 4 digits, 1 letter)"></div>
+                            <div class="form-group"><label>Aadhaar Number</label><input type="text" class="form-control" id="editAadhaar" maxlength="12" pattern="[0-9]{12}" title="Must be exactly 12 digits"></div>
+                            <div class="form-group"><label>Passport Number</label><input type="text" class="form-control" id="editPassport"></div>
                         </div>
                     </div>
                     <div class="card" style="padding:16px;margin-bottom:16px;">
                         <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-university" style="margin-right:8px;color:var(--info);"></i>Bank Details</div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label for="editBankName">Bank Name</label><input type="text" class="form-control" id="editBankName"></div>
-                            <div class="form-group"><label for="editBankBranch">Branch</label><input type="text" class="form-control" id="editBankBranch"></div>
-                            <div class="form-group"><label for="editBankAccount">Account Number</label><input type="text" class="form-control" id="editBankAccount"></div>
-                            <div class="form-group"><label for="editBankIFSC">IFSC Code</label><input type="text" class="form-control" id="editBankIFSC" placeholder="e.g. ABCD0123456" pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" title="Format: ABCD0123456 (4 letters, 0, 6 alphanumeric)"></div>
+                            <div class="form-group"><label>Bank Name</label><input type="text" class="form-control" id="editBankName"></div>
+                            <div class="form-group"><label>Branch</label><input type="text" class="form-control" id="editBankBranch"></div>
+                            <div class="form-group"><label>Account Number</label><input type="text" class="form-control" id="editBankAccount"></div>
+                            <div class="form-group"><label>IFSC Code</label><input type="text" class="form-control" id="editBankIFSC" placeholder="e.g. ABCD0123456" pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" title="Format: ABCD0123456 (4 letters, 0, 6 alphanumeric)"></div>
                         </div>
                     </div>
                     <div class="card" style="padding:16px;margin-bottom:16px;">
                         <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-calculator" style="margin-right:8px;color:#7c6ca8;"></i>Salary Structure <span style="font-weight:400;color:var(--text-secondary);font-size:0.8rem;">(used on every payslip)</span></div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label for="editBasicSalary">Basic Salary</label><input type="number" step="0.01" class="form-control" id="editBasicSalary"></div>
-                            <div class="form-group"><label for="editHRA">HRA</label><input type="number" step="0.01" class="form-control" id="editHRA"></div>
-                            <div class="form-group"><label for="editConveyance">Conveyance</label><input type="number" step="0.01" class="form-control" id="editConveyance"></div>
-                            <div class="form-group"><label for="editOtherAllowance">Medical Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
-                            <div class="form-group"><label for="editSpecialAllowance">Special Allowance</label><input type="number" step="0.01" class="form-control" id="editSpecialAllowance"></div>
+                            <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" id="editBasicSalary"></div>
+                            <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" id="editHRA"></div>
+                            <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" id="editConveyance"></div>
+                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
+                            <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" id="editSpecialAllowance"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label for="editEmployeePF">Employee PF</label><input type="number" step="0.01" class="form-control" id="editEmployeePF"></div>
-                            <div class="form-group"><label for="editEmployeeESI">Employee ESI</label><input type="number" step="0.01" class="form-control" id="editEmployeeESI"></div>
-                            <div class="form-group"><label for="editProfessionalTax">Professional Tax</label><input type="number" step="0.01" class="form-control" id="editProfessionalTax"></div>
-                            <div class="form-group"><label for="editIncomeTax">Income Tax</label><input type="number" step="0.01" class="form-control" id="editIncomeTax"></div>
-                            <div class="form-group"><label for="editOtherDeduction">Other Deduction</label><input type="number" step="0.01" class="form-control" id="editOtherDeduction"></div>
+                            <div class="form-group"><label>Employee PF</label><input type="number" step="0.01" class="form-control" id="editEmployeePF"></div>
+                            <div class="form-group"><label>Employee ESI</label><input type="number" step="0.01" class="form-control" id="editEmployeeESI"></div>
+                            <div class="form-group"><label>Professional Tax</label><input type="number" step="0.01" class="form-control" id="editProfessionalTax"></div>
+                            <div class="form-group"><label>Income Tax</label><input type="number" step="0.01" class="form-control" id="editIncomeTax"></div>
+                            <div class="form-group"><label>Other Deduction</label><input type="number" step="0.01" class="form-control" id="editOtherDeduction"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Employer Contributions</div>
                         <div class="grid grid-2">
-                            <div class="form-group"><label for="editEmployerPF">Employer PF</label><input type="number" step="0.01" class="form-control" id="editEmployerPF"></div>
-                            <div class="form-group"><label for="editEmployerESI">Employer ESI</label><input type="number" step="0.01" class="form-control" id="editEmployerESI"></div>
-                            <div class="form-group"><label for="editEmployerContribution">Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" id="editEmployerContribution"></div>
+                            <div class="form-group"><label>Employer PF</label><input type="number" step="0.01" class="form-control" id="editEmployerPF"></div>
+                            <div class="form-group"><label>Employer ESI</label><input type="number" step="0.01" class="form-control" id="editEmployerESI"></div>
+                            <div class="form-group"><label>Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" id="editEmployerContribution"></div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -275,7 +275,7 @@
         </div>
     </div>
 
-    <div class="modal" id="viewEmployeeModal" role="dialog" aria-modal="true">
+    <div class="modal" id="viewEmployeeModal">
         <div class="modal-content" style="max-width:900px;">
             <div class="modal-header">
                 <h2 id="viewEmpTitle">Employee Details</h2>
@@ -301,7 +301,7 @@
         </div>
     </div>
 
-    <div class="modal" id="deletePermanentModal" role="dialog" aria-modal="true">
+    <div class="modal" id="deletePermanentModal">
         <div class="modal-content" style="max-width:440px;">
             <div class="modal-header">
                 <h2 style="color:var(--danger);"><i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>Permanent Delete</h2>
@@ -310,7 +310,7 @@
             <div class="modal-body">
                 <p style="line-height:1.6;margin-bottom:12px;">This will <strong style="color:var(--danger);">permanently delete</strong> <strong id="delPermanentName"></strong> and <strong>ALL</strong> their data from the database (attendance, leave, payroll, documents, profile requests, etc.). This <strong>cannot be undone</strong>.</p>
                 <div class="form-group">
-                    <label for="delPermanentConfirm">Type <strong>DELETE</strong> to confirm</label>
+                    <label>Type <strong>DELETE</strong> to confirm</label>
                     <input type="text" id="delPermanentConfirm" class="form-control" placeholder="DELETE">
                 </div>
                 <div class="modal-footer" style="padding:0;margin-top:16px;">
@@ -321,14 +321,14 @@
         </div>
     </div>
 
-    <div class="modal" id="rejectModal" role="dialog" aria-modal="true">
+    <div class="modal" id="rejectModal">
         <div class="modal-content" style="max-width:440px;">
             <div class="modal-header">
                 <h2>Reject Update</h2>
                 <button onclick="closeModal('rejectModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="form-group"><label for="rejectRemarks">Remarks (optional)</label><textarea class="form-control" id="rejectRemarks" rows="3"></textarea></div>
+                <div class="form-group"><label>Remarks (optional)</label><textarea class="form-control" id="rejectRemarks" rows="3"></textarea></div>
                 <div class="modal-footer" style="padding:0;margin-top:12px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('rejectModal')">Cancel</button>
                     <button type="button" class="btn btn-danger" onclick="confirmReject()">Reject Request</button>
@@ -364,9 +364,8 @@
                 const empId = params.get('emp');
                 const tab = params.get('tab') || 'overview';
                 if (empId) {
-                    const validTabs = ['overview', 'personal', 'qualifications', 'bank', 'job', 'requests'];
                     viewEmployee(Number(empId)).then(() => {
-                        showViewTab(validTabs.includes(tab) ? tab : 'overview');
+                        showViewTab(tab === 'requests' ? 'requests' : 'overview');
                     });
                 }
             });
@@ -488,14 +487,7 @@
             });
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(rows);
-            ws['!cols'] = [
-                { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 22 },
-                { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 10 }, { wch: 10 },
-                { wch: 14 }, { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 12 },
-                { wch: 14 }, { wch: 20 }, { wch: 22 }, { wch: 22 }, { wch: 20 },
-                { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 16 },
-                { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }
-            ];
+            ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 12 }];
             XLSX.utils.book_append_sheet(wb, ws, 'Employees');
             XLSX.writeFile(wb, 'Employees_' + new Date().toISOString().split('T')[0] + '.xlsx');
             showToast('Excel downloaded!', 'success');

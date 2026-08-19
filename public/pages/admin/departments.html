@@ -47,7 +47,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Department Management</h2>
             </div>
             <div class="header-right">
@@ -76,7 +76,7 @@
         </div>
     </main>
 
-    <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal" id="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle">Add Department</h2>
@@ -85,8 +85,8 @@
             <div class="modal-body">
                 <form id="form" onsubmit="saveDepartment(event)">
                     <input type="hidden" id="editId">
-                    <div class="form-group"><label for="name">Name *</label><input type="text" class="form-control" id="name" required></div>
-                    <div class="form-group"><label for="description">Description</label><textarea class="form-control" id="description" rows="3"></textarea></div>
+                    <div class="form-group"><label>Name *</label><input type="text" class="form-control" id="name" required></div>
+                    <div class="form-group"><label>Description</label><textarea class="form-control" id="description" rows="3"></textarea></div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save Department</button>

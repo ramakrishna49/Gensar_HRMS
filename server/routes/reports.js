@@ -22,9 +22,12 @@ router.get('/dashboard', verifyToken, isAdmin, async (req, res) => {
                         WHERE date = $1 AND status = 'absent'
                         AND (remarks IS NULL OR remarks NOT LIKE 'On leave%')
                     )
-                    OR id NOT IN (SELECT employee_id FROM attendance WHERE date = $1)
+                    OR (
+                        id NOT IN (SELECT employee_id FROM attendance WHERE date = $1)
+                        AND $2 > COALESCE((SELECT setting_value FROM company_settings WHERE setting_key = 'office_end_time'), '18:30')
+                    )
                 )`,
-                [today]
+                [today, now]
             ),
             query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'"),
             query("SELECT COUNT(*) as count FROM departments"),

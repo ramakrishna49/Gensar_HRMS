@@ -55,7 +55,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">My Team</h2>
             </div>
             <div class="header-right">
@@ -119,14 +119,14 @@
         </div>
     </main>
 
-    <div class="modal" id="decisionModal" role="dialog" aria-modal="true">
+    <div class="modal" id="decisionModal">
         <div class="modal-content" style="max-width:440px;">
             <div class="modal-header">
                 <h2 id="decisionTitle">Decision</h2>
                 <button onclick="closeDecisionModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="form-group"><label for="decisionRemarks">Remarks (optional)</label><textarea class="form-control" id="decisionRemarks" rows="3"></textarea></div>
+                <div class="form-group"><label>Remarks (optional)</label><textarea class="form-control" id="decisionRemarks" rows="3"></textarea></div>
                 <div class="modal-footer" style="padding:0;margin-top:12px;">
                     <button type="button" class="btn btn-secondary" onclick="closeDecisionModal()">Cancel</button>
                     <button type="button" class="btn btn-success" id="decisionConfirmBtn" onclick="confirmDecision()"><i class="fas fa-check"></i> Confirm</button>
@@ -135,7 +135,7 @@
         </div>
     </div>
 
-    <div class="modal" id="ticketModal" role="dialog" aria-modal="true">
+    <div class="modal" id="ticketModal">
         <div class="modal-content" style="max-width:480px;">
             <div class="modal-header">
                 <h2>Respond to Query</h2>
@@ -143,7 +143,7 @@
             </div>
             <div class="modal-body">
                 <div style="font-size:0.9rem;margin-bottom:12px;" id="ticketInfo"></div>
-                <div class="form-group"><label for="ticketResponse">Response *</label><textarea class="form-control" id="ticketResponse" rows="4" placeholder="Write your response to the employee"></textarea></div>
+                <div class="form-group"><label>Response *</label><textarea class="form-control" id="ticketResponse" rows="4" placeholder="Write your response to the employee"></textarea></div>
                 <div class="form-group"><label>Status</label><select class="form-control" id="ticketStatus"><option value="in_progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select></div>
                 <div class="modal-footer" style="padding:0;margin-top:12px;">
                     <button type="button" class="btn btn-secondary" onclick="closeTicketModal()">Cancel</button>
@@ -269,15 +269,10 @@
                         '</div>' +
                         '<span class="badge badge-warning">' + escapeHtml(t.status) + '</span></div>' +
                         '<div class="req-actions">' +
-                            '<button class="btn btn-sm btn-primary ticket-respond-btn" data-id="' + t.id + '" data-name="' + escapeAttr(t.employee_name) + '" data-subject="' + escapeAttr(t.subject) + '"><i class="fas fa-reply"></i> Respond</button>' +
+                            '<button class="btn btn-sm btn-primary" onclick="openTicket(' + t.id + ', \'' + escapeHtml(t.employee_name) + '\', \'' + escapeHtml(t.subject) + '\')"><i class="fas fa-reply"></i> Respond</button>' +
                         '</div>' +
                     '</div>'
                 ).join('');
-                container.querySelectorAll('.ticket-respond-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        openTicket(parseInt(this.dataset.id), this.dataset.name, this.dataset.subject);
-                    });
-                });
             } else {
                 showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load queries');
             }
@@ -297,9 +292,7 @@
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            const tabMap = { leaves: 'tabLeaves', wfh: 'tabWfh', tickets: 'tabTickets' };
-            const targetBtn = document.querySelector('.tab-btn[onclick*="\'' + tab + '\'"]');
-            if (targetBtn) targetBtn.classList.add('active');
+            event.target.classList.add('active');
             document.getElementById('tabLeaves').style.display = tab === 'leaves' ? 'block' : 'none';
             document.getElementById('tabWfh').style.display = tab === 'wfh' ? 'block' : 'none';
             document.getElementById('tabTickets').style.display = tab === 'tickets' ? 'block' : 'none';

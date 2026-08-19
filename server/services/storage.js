@@ -36,7 +36,6 @@ async function uploadBuffer(bucket, fileName, buffer, contentType, opts = {}) {
         upsert: true
     });
     if (error) throw error;
-    if (opts.public === false) return fileName;
     const { data } = sb.storage.from(bucket).getPublicUrl(fileName);
     return data.publicUrl;
 }

@@ -68,7 +68,6 @@ router.post('/login', validateLogin, async (req, res) => {
         
         // Return user info (without password)
         const { password_hash, ...userWithoutPassword } = user;
-        userWithoutPassword.must_change_password = user.must_change_password === 1 || user.must_change_password === true;
         
         res.json({
             success: true,

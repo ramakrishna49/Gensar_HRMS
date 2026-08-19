@@ -81,7 +81,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Attendance Matrix</h2>
             </div>
             <div class="header-right">
@@ -161,7 +161,7 @@
     <div class="cell-tooltip" id="cellTooltip"></div>
 
     <!-- Mark Present Modal -->
-    <div class="modal" id="markPresentModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeMarkPresentModal()">
+    <div class="modal" id="markPresentModal" onclick="if(event.target===this)closeMarkPresentModal()">
         <div class="modal-content" style="max-width:450px;">
             <div class="modal-header">
                 <h2>Mark Employee Present</h2>
@@ -169,13 +169,13 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="presentEmployee">Employee</label>
+                    <label>Employee</label>
                     <select id="presentEmployee" class="form-control">
                         <option value="">Select Employee</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="presentDate">Date</label>
+                    <label>Date</label>
                     <input type="date" id="presentDate" class="form-control">
                 </div>
                 <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;"><i class="fas fa-info-circle"></i> Check-in time will be set to office start time.</p>
@@ -188,7 +188,7 @@
     </div>
 
     <!-- Mark Absent Modal -->
-    <div class="modal" id="markAbsentModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeMarkAbsentModal()">
+    <div class="modal" id="markAbsentModal" onclick="if(event.target===this)closeMarkAbsentModal()">
         <div class="modal-content" style="max-width:450px;">
             <div class="modal-header">
                 <h2>Mark Employee Absent</h2>
@@ -196,17 +196,17 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="absentEmployee">Employee</label>
+                    <label>Employee</label>
                     <select id="absentEmployee" class="form-control">
                         <option value="">Select Employee</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="absentDate">Date</label>
+                    <label>Date</label>
                     <input type="date" id="absentDate" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label for="absentRemarks">Remarks (optional)</label>
+                    <label>Remarks (optional)</label>
                     <textarea id="absentRemarks" class="form-control" rows="2"></textarea>
                 </div>
             </div>
@@ -218,7 +218,7 @@
     </div>
 
     <!-- Attendance Photo Lightbox -->
-    <div class="modal" id="photoModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closePhotoModal()">
+    <div class="modal" id="photoModal" onclick="if(event.target===this)closePhotoModal()">
         <div class="modal-content" style="max-width:420px;text-align:center;">
             <div class="modal-header">
                 <h2><i class="fas fa-camera" style="color:var(--primary);margin-right:8px;"></i>Attendance Photo</h2>
@@ -456,7 +456,7 @@
         async function loadRecentLogs() {
             const container = document.getElementById('recentLogsContainer');
             const data = await apiCall('/attendance/all?limit=20');
-            if (data && data.success && data.attendance && data.attendance.length > 0) {
+            if (data && data.success && data.attendance.length > 0) {
                 const records = data.attendance.slice(0, 20);
                 let html = '<div class="table-container"><table><thead><tr><th>Employee</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Check In Location</th><th>Check Out Location</th><th>Photo</th><th>Status</th></tr></thead><tbody>';
                 records.forEach(a => {

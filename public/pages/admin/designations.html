@@ -47,7 +47,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Designation Management</h2>
             </div>
             <div class="header-right">
@@ -85,7 +85,7 @@
         </div>
     </main>
 
-    <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal" id="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle">Add Designation</h2>
@@ -94,10 +94,10 @@
             <div class="modal-body">
                 <form id="form" onsubmit="save(event)">
                     <input type="hidden" id="editId">
-                    <div class="form-group"><label for="name">Name *</label><input type="text" class="form-control" id="name" required></div>
-                    <div class="form-group"><label for="level">Level</label><input type="number" class="form-control" id="level" value="1" min="1" max="10"></div>
-                    <div class="form-group"><label for="department_id">Department</label><select class="form-control" id="department_id"><option value="">Select Department</option></select></div>
-                    <div class="form-group"><label for="team_lead_id">Team Lead</label><select class="form-control" id="team_lead_id"><option value="">Select Team Lead</option></select>
+                    <div class="form-group"><label>Name *</label><input type="text" class="form-control" id="name" required></div>
+                    <div class="form-group"><label>Level</label><input type="number" class="form-control" id="level" value="1" min="1" max="10"></div>
+                    <div class="form-group"><label>Department</label><select class="form-control" id="department_id"><option value="">Select Department</option></select></div>
+                    <div class="form-group"><label>Team Lead</label><select class="form-control" id="team_lead_id"><option value="">Select Team Lead</option></select>
                         <small style="color:var(--text-secondary);">New employees in this designation auto-assign to this Team Lead.</small></div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>

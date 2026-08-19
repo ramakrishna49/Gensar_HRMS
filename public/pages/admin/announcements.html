@@ -47,7 +47,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Announcements</h2>
             </div>
             <div class="header-right">
@@ -84,7 +84,7 @@
         </div>
     </main>
 
-    <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal" id="modal">
         <div class="modal-content" style="max-width:550px;">
             <div class="modal-header">
                 <h2 id="modalTitle">New Announcement</h2>
@@ -93,11 +93,11 @@
             <div class="modal-body">
                 <form id="form" onsubmit="saveAnnouncement(event)">
                     <input type="hidden" id="editId">
-                    <div class="form-group"><label for="title">Title *</label><input type="text" class="form-control" id="title" required></div>
-                    <div class="form-group"><label for="content">Content *</label><textarea class="form-control" id="content" rows="4" required></textarea></div>
+                    <div class="form-group"><label>Title *</label><input type="text" class="form-control" id="title" required></div>
+                    <div class="form-group"><label>Content *</label><textarea class="form-control" id="content" rows="4" required></textarea></div>
                     <div class="grid grid-2">
                         <div class="form-group">
-                            <label for="priority">Priority</label>
+                            <label>Priority</label>
                             <select class="form-control" id="priority">
                                 <option value="normal">Normal</option>
                                 <option value="low">Low</option>
@@ -106,7 +106,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="targetAudience">Target Audience</label>
+                            <label>Target Audience</label>
                             <select class="form-control" id="targetAudience">
                                 <option value="all">All Employees</option>
                                 <option value="admin">Admin Only</option>

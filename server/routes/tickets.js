@@ -4,42 +4,6 @@ const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { sendToUser } = require('../services/push');
 
-router.get('/', verifyToken, async (req, res) => {
-    try {
-        if (req.user.role === 'admin') {
-            const { status } = req.query;
-            let sqlQuery = `SELECT st.*,
-                e.first_name || ' ' || e.last_name as employee_name,
-                e.employee_id as emp_id,
-                e2.first_name || ' ' || e2.last_name as responded_by_name
-                FROM support_tickets st
-                JOIN employees e ON st.employee_id = e.id
-                LEFT JOIN employees e2 ON st.responded_by = e2.id`;
-            const params = [];
-            if (status) {
-                sqlQuery += ` WHERE st.status = $1`;
-                params.push(status);
-            }
-            sqlQuery += ' ORDER BY st.created_at DESC';
-            const result = await query(sqlQuery, params);
-            return res.json({ success: true, tickets: result.rows });
-        }
-        const result = await query(
-            `SELECT st.*,
-            e.first_name || ' ' || e.last_name as responded_by_name
-            FROM support_tickets st
-            LEFT JOIN employees e ON st.responded_by = e.id
-            WHERE st.employee_id = $1
-            ORDER BY st.created_at DESC`,
-            [req.user.id]
-        );
-        res.json({ success: true, tickets: result.rows });
-    } catch (error) {
-        console.error('Tickets list error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
-
 router.post('/', verifyToken, async (req, res) => {
     try {
         const { category, subject, description, priority } = req.body;

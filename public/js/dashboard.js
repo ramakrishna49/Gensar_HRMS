@@ -175,10 +175,6 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
-function escapeAttr(str) {
-    return escapeHtml(str);
-}
-
 function formatHours(h) {
     const val = parseFloat(h) || 0;
     if (val === 0) return '0h';

@@ -78,7 +78,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Dashboard</h2>
             </div>
             <div class="header-right">
@@ -224,7 +224,7 @@
         </div>
     </main>
 
-    <div class="modal" id="cameraModal" role="dialog" aria-modal="true">
+    <div class="modal" id="cameraModal">
         <div class="modal-content" style="max-width:480px;">
             <div class="modal-header">
                 <h2 id="cameraModalTitle"><i class="fas fa-camera" style="color:var(--primary);margin-right:8px;"></i>Check-In Photo</h2>
@@ -623,7 +623,7 @@
             const container = document.getElementById('recentAttendance');
             if (data && data.success && data.attendance.length > 0) {
                 const recent = data.attendance.slice(0, 5);
-                const todayStr = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+                const todayStr = new Date().toISOString().split('T')[0];
                 let html = '<div class="table-container"><table><thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead><tbody>';
                 recent.forEach(a => {
                     const adate = a.date ? a.date.split('T')[0] : '';

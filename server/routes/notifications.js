@@ -6,7 +6,7 @@ const { verifyToken, isManager } = require('../middleware/auth');
 // @route   GET /api/notifications/counts
 // @desc    Get pending-action counts for the notification bell
 // @access  Private (Admin/HR sees all, Manager/Team Lead sees own team)
-router.get('/counts', verifyToken, async (req, res) => {
+router.get('/counts', verifyToken, isManager, async (req, res) => {
     try {
         const isAdminRole = req.user.role === 'admin';
         const scopeClause = isAdminRole ? '' : ' AND reporting_manager_id = $1';
@@ -45,7 +45,7 @@ router.get('/counts', verifyToken, async (req, res) => {
 // @route   GET /api/notifications/requests
 // @desc    Latest pending employee requests (leave / WFH / queries) for the notification bell
 // @access  Private (Admin/HR sees all, Manager/Team Lead sees own team)
-router.get('/requests', verifyToken, async (req, res) => {
+router.get('/requests', verifyToken, isManager, async (req, res) => {
     try {
         const isAdminRole = req.user.role === 'admin';
 

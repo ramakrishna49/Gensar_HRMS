@@ -11,20 +11,12 @@ function isWeekend(dateStr) {
     return day === 0 || day === 6;
 }
 
-async function calcBusinessDays(start, end) {
+function calcBusinessDays(start, end) {
     let count = 0;
     const s = new Date(start);
     const e = new Date(end);
-    const holidayRes = await query(
-        `SELECT to_char(date, 'YYYY-MM-DD') as d FROM holidays WHERE date BETWEEN $1 AND $2`,
-        [start, end]
-    ).catch(() => ({ rows: [] }));
-    const holidays = new Set((holidayRes.rows || []).map(r => r.d));
     for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() !== 0 && d.getDay() !== 6) {
-            const ds = d.toISOString().split('T')[0];
-            if (!holidays.has(ds)) count++;
-        }
+        if (d.getDay() !== 0 && d.getDay() !== 6) count++;
     }
     return count;
 }
@@ -58,26 +50,7 @@ router.post('/apply', verifyToken, async (req, res) => {
         }
         const reporting_manager_id = needsManager ? emp.reporting_manager_id : null;
 
-        const totalDays = await calcBusinessDays(start_date, end_date);
-
-        const overlapWfh = await query(
-            `SELECT id FROM wfh_requests
-            WHERE employee_id = $1 AND status IN ('approved', 'pending')
-            AND start_date <= $2 AND end_date >= $3 LIMIT 1`,
-            [req.user.id, end_date, start_date]
-        );
-        if (overlapWfh.rows.length > 0) {
-            return res.status(400).json({ success: false, message: 'You already have a WFH request that overlaps with these dates' });
-        }
-        const overlapLeave = await query(
-            `SELECT id FROM leave_applications
-            WHERE employee_id = $1 AND status IN ('approved', 'pending')
-            AND start_date <= $2 AND end_date >= $3 LIMIT 1`,
-            [req.user.id, end_date, start_date]
-        );
-        if (overlapLeave.rows.length > 0) {
-            return res.status(400).json({ success: false, message: 'You already have a leave request that overlaps with these dates' });
-        }
+        const totalDays = calcBusinessDays(start_date, end_date);
 
         const result = await query(
             `INSERT INTO wfh_requests (employee_id, reporting_manager_id, start_date, end_date, total_days, reason)

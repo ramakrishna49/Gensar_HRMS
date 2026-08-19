@@ -40,7 +40,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">My Attendance</h2>
             </div>
             <div class="header-right">
@@ -118,12 +118,6 @@
         .dark-mode .cal-cell.cal-half-day { background: #7C2D12; color: #FDBA74; }
         .dark-mode .cal-cell.cal-absent { background: #7F1D1D; color: #F87171; }
         .dark-mode .cal-cell.cal-holiday { background: #312E81; color: #A5B4FC; }
-        .legend-dot.cal-present { background: #D1FAE5; }
-        .legend-dot.cal-late { background: #FEF3C7; }
-        .legend-dot.cal-half-day { background: #FED7AA; }
-        .legend-dot.cal-absent { background: #FEE2E2; }
-        .legend-dot.cal-holiday { background: #E0E7FF; }
-        .legend-dot.cal-weekoff { background: var(--bg-light); border: 1px solid var(--border); }
         .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; font-size: 0.78rem; }
         .cal-legend .legend-item { display: flex; align-items: center; gap: 6px; }
         .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
@@ -211,7 +205,7 @@
                 return;
             }
 
-            const todayStr = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+            const todayStr = new Date().toISOString().split('T')[0];
                     let html = '<div class="table-container"><table><thead><tr><th>Date</th><th>Day</th><th>Check In</th><th>Check Out</th><th>Location</th><th>Hours Worked</th><th>Status</th><th>Overtime</th></tr></thead><tbody>';
                     records.forEach(a => {
                         const d = new Date(a.date);
@@ -279,7 +273,7 @@
             const firstDay = new Date(year, month - 1, 1);
             const lastDay = new Date(year, month, 0).getDate();
             const lead = firstDay.getDay();
-            const todayStr = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+            const todayStr = new Date().toISOString().split('T')[0];
             const padStart = new Date(year, month - 1, -(lead) + 1);
 
             let html = '<div class="cal-legend">' +

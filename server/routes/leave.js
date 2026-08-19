@@ -12,20 +12,12 @@ function isWeekend(dateStr) {
     return day === 0 || day === 6;
 }
 
-async function calcBusinessDays(start, end) {
+function calcBusinessDays(start, end) {
     let count = 0;
     const s = new Date(start);
     const e = new Date(end);
-    const holidayRes = await query(
-        `SELECT to_char(date, 'YYYY-MM-DD') as d FROM holidays WHERE date BETWEEN $1 AND $2`,
-        [start, end]
-    ).catch(() => ({ rows: [] }));
-    const holidays = new Set((holidayRes.rows || []).map(r => r.d));
     for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() !== 0 && d.getDay() !== 6) {
-            const ds = d.toISOString().split('T')[0];
-            if (!holidays.has(ds)) count++;
-        }
+        if (d.getDay() !== 0 && d.getDay() !== 6) count++;
     }
     return count;
 }
@@ -87,7 +79,7 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
             }
         }
 
-        const totalDays = await calcBusinessDays(start_date, end_date);
+        const totalDays = calcBusinessDays(start_date, end_date);
 
         // Reject overlapping approved/pending leave or WFH requests.
         const overlapLeave = await query(

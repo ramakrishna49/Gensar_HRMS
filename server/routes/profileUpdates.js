@@ -3,7 +3,6 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { sendToUser } = require('../services/push');
-const { runWithSchemaRepair } = require('../utils/schemaRepair');
 
 const EDITABLE_FIELDS = [
     'gender',
@@ -123,10 +122,10 @@ router.post('/:id/approve', verifyToken, isAdmin, async (req, res) => {
             newValue = JSON.stringify(newValue);
         }
 
-        const applyResult = await runWithSchemaRepair(() => query(
+        const applyResult = await query(
             `UPDATE employees SET ${request.field} = $1, updated_at = NOW() WHERE id = $2`,
             [newValue, request.employee_id]
-        ));
+        );
 
         const updateResult = await query(
             `UPDATE profile_update_requests SET status = 'approved', reviewed_by = $1, updated_at = NOW()

@@ -2,19 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
-const { setTimezone } = require('../utils/date');
-
-router.get('/', verifyToken, async (req, res) => {
-    try {
-        const result = await query('SELECT * FROM companies LIMIT 1');
-        const settings = await query('SELECT * FROM company_settings');
-        const settingsMap = {};
-        settings.rows.forEach(s => { settingsMap[s.setting_key] = s.setting_value; });
-        res.json({ success: true, company: result.rows[0] || null, settings: settingsMap });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
 
 router.get('/company', verifyToken, async (req, res) => {
     try {
@@ -71,7 +58,6 @@ router.put('/timing', verifyToken, isAdmin, async (req, res) => {
                 );
             }
         }
-        if (timezone) setTimezone(timezone);
         res.json({ success: true, message: 'Settings updated' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });

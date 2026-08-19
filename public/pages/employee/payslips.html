@@ -41,7 +41,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">My Payslips</h2>
             </div>
             <div class="header-right">
@@ -75,7 +75,7 @@
                 <div class="pp-card">
                     <div class="pp-form-grid" style="grid-template-columns:1fr 1fr 1fr;max-width:620px;">
                         <div class="pp-field">
-                            <label for="filterMonth">Month</label>
+                            <label>Month</label>
                             <select id="filterMonth" class="pp-select" onchange="loadData()">
                                 <option value="">All Months</option>
                                 <option value="1">January</option><option value="2">February</option><option value="3">March</option>
@@ -85,7 +85,7 @@
                             </select>
                         </div>
                         <div class="pp-field">
-                            <label for="filterYear">Year</label>
+                            <label>Year</label>
                             <input type="number" id="filterYear" class="pp-input" onchange="loadData()">
                         </div>
                         <div class="pp-field" style="justify-content:flex-end;">
@@ -131,7 +131,7 @@
         </div>
     </main>
 
-    <div class="modal" id="viewModal" role="dialog" aria-modal="true">
+    <div class="modal" id="viewModal">
         <div class="modal-content" style="max-width:920px;max-height:94vh;overflow-y:auto;">
             <div class="modal-header">
                 <h2><i class="fas fa-file-invoice" style="color:var(--primary);margin-right:8px;"></i>Payslip</h2>
@@ -153,15 +153,15 @@
     <script src="../../js/auth.js"></script>
     <script src="../../js/dashboard.js"></script>
     <script src="../../js/payroll-core.js"></script>
-    <script src="../../js/tickets.js"></script>
     <script>
+        if (!checkAuth()) throw new Error('Not authenticated');
+        const currentYear = new Date().getFullYear();
+        let currentViewPayslip = null;
+
         document.addEventListener('DOMContentLoaded', () => {
-            if (!checkAuth()) return;
             document.getElementById('filterYear').value = currentYear;
             loadData();
         });
-        const currentYear = new Date().getFullYear();
-        let currentViewPayslip = null;
 
         async function loadData() {
             const month = document.getElementById('filterMonth').value;

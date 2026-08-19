@@ -514,43 +514,6 @@ function pdfFromBase64(pdfBase64) {
     return Buffer.from(cleaned, 'base64');
 }
 
-// @route   GET /api/payroll
-// @desc    List payslips (admin sees all, employee sees own)
-// @access  Private
-router.get('/', verifyToken, async (req, res) => {
-    try {
-        const { month, year } = req.query;
-        if (req.user.role === 'admin') {
-            let sqlQuery = `
-                SELECT p.*, e.first_name, e.last_name, e.employee_id as emp_id
-                FROM payroll p
-                JOIN employees e ON p.employee_id = e.id`;
-            const params = [];
-            let paramIndex = 1;
-            if (month) { sqlQuery += ` WHERE p.month = $${paramIndex}`; params.push(month); paramIndex++; }
-            if (year) { sqlQuery += ` AND p.year = $${paramIndex}`; params.push(year); paramIndex++; }
-            sqlQuery += ' ORDER BY p.year DESC, p.month DESC, e.employee_id';
-            const result = await query(sqlQuery, params);
-            return res.json({ success: true, payslips: result.rows });
-        }
-        let sqlQuery = `
-            SELECT p.*, e.first_name, e.last_name, e.employee_id as emp_id
-            FROM payroll p
-            JOIN employees e ON p.employee_id = e.id
-            WHERE p.employee_id = $1`;
-        const params = [req.user.id];
-        let paramIndex = 2;
-        if (month) { sqlQuery += ` AND p.month = $${paramIndex}`; params.push(month); paramIndex++; }
-        if (year) { sqlQuery += ` AND p.year = $${paramIndex}`; params.push(year); paramIndex++; }
-        sqlQuery += ' ORDER BY p.year DESC, p.month DESC';
-        const result = await query(sqlQuery, params);
-        res.json({ success: true, payslips: result.rows });
-    } catch (error) {
-        console.error('Get payroll error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
-
 // @route   GET /api/payroll/my
 // @desc    Current employee's payslips
 // @access  Private

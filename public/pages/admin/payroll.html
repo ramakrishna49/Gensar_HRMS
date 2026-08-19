@@ -48,7 +48,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">Payroll Management</h2>
             </div>
             <div class="header-right">
@@ -89,7 +89,7 @@
                 <div class="pp-card">
                     <div class="pp-form-grid">
                         <div class="pp-field">
-                            <label for="filterMonth">Month</label>
+                            <label>Month</label>
                             <select id="filterMonth" class="pp-select" onchange="loadPayroll()">
                                 <option value="">All Months</option>
                                 <option value="1">January</option><option value="2">February</option><option value="3">March</option>
@@ -99,11 +99,11 @@
                             </select>
                         </div>
                         <div class="pp-field">
-                            <label for="filterYear">Year</label>
+                            <label>Year</label>
                             <input type="number" id="filterYear" class="pp-input" onchange="loadPayroll()">
                         </div>
                         <div class="pp-field">
-                            <label for="filterStatus">Status</label>
+                            <label>Status</label>
                             <select id="filterStatus" class="pp-select" onchange="loadPayroll()">
                                 <option value="">All Status</option>
                                 <option value="processed">Processed</option>
@@ -111,7 +111,7 @@
                             </select>
                         </div>
                         <div class="pp-field">
-                            <label for="filterSearch">Search</label>
+                            <label>Search</label>
                             <input type="text" id="filterSearch" class="pp-input" placeholder="Name or Employee ID" oninput="debouncedLoad()">
                         </div>
                     </div>
@@ -159,7 +159,7 @@
     </main>
 
     <!-- View modal -->
-    <div class="modal" id="viewModal" role="dialog" aria-modal="true">
+    <div class="modal" id="viewModal">
         <div class="modal-content" style="max-width:920px;max-height:94vh;overflow-y:auto;">
             <div class="modal-header">
                 <h2><i class="fas fa-file-invoice" style="color:var(--primary);margin-right:8px;"></i>Payslip Preview</h2>

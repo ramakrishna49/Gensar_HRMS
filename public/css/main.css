@@ -1412,21 +1412,6 @@ textarea.form-control {
 .stagger-2 { animation-delay: 0.1s; }
 .stagger-3 { animation-delay: 0.15s; }
 .stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 0;
-    line-height: 1;
-}
-
-.text-muted {
-    color: var(--text-secondary);
-}
 
 /* ============================================
    TOOLTIP
@@ -1841,8 +1826,6 @@ textarea.form-control {
 .req-section-title:first-child { margin-top: 0; }
 .danger-zone { border: 1px solid var(--danger); background: rgba(239, 68, 68, 0.04); border-radius: var(--radius); padding: 16px; margin-top: 18px; }
 .danger-zone h4 { color: var(--danger); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-
-/* ============================================
    LOGIN PAGE REFINEMENT (v2)
    ============================================ */
 .login-container {

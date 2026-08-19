@@ -43,7 +43,7 @@
     <main class="main-content" id="mainContent">
         <header class="header">
             <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <h2 style="font-size:1.25rem;font-weight:600;">WFH</h2>
             </div>
             <div class="header-right">
@@ -80,7 +80,7 @@
         </div>
     </main>
 
-    <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal" id="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Request WFH</h2>
@@ -89,11 +89,11 @@
             <div class="modal-body">
                 <form id="wfhForm" onsubmit="applyWfh(event)">
                     <div class="form-group">
-                        <label for="start_date">Start Date *</label>
+                        <label>Start Date *</label>
                         <input type="date" class="form-control" id="start_date" required onchange="calcBusinessDays()">
                     </div>
                     <div class="form-group">
-                        <label for="end_date">End Date *</label>
+                        <label>End Date *</label>
                         <input type="date" class="form-control" id="end_date" required onchange="calcBusinessDays()">
                     </div>
                     <div id="dateInfoBox" class="date-info" style="display:none;">
@@ -101,7 +101,7 @@
                         <span id="dateInfoText"></span>
                     </div>
                     <div class="form-group mt-2">
-                        <label for="reason">Reason</label>
+                        <label>Reason</label>
                         <textarea class="form-control" id="reason" rows="3" placeholder="Optional: provide a reason for your WFH request"></textarea>
                     </div>
                     <div id="approverInfo" class="date-info" style="display:none;margin-top:12px;">
