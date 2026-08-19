@@ -334,18 +334,18 @@ async function renderPayslipPdf(p, company) {
             const colW = CW / 4;
             const empCells = [
                 ['Employee ID', p.emp_id || '-'],
-                ['Employee Name', `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-'],
-                ['Designation', p.designation_name || '-'],
-                ['Department', p.department_name || '-'],
-                ['Date of Joining', formatDateOnly(p.joining_date)],
-                ['PAN Number', p.pan_number || '-'],
-                ['UAN Number', p.uan_number || '-'],
                 ['Pay Period', `${PP_MONTHS[p.month] || ''} ${p.year}`],
+                ['Employee Name', `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-'],
                 ['Working Days', p.working_days || 0],
+                ['Designation', p.designation_name || '-'],
                 ['Present Days', p.present_days || 0],
+                ['Department', p.department_name || '-'],
                 ['Leave Days', p.leave_days || 0],
+                ['Date of Joining', formatDateOnly(p.joining_date)],
                 ['LOP Days', p.lop_days || 0],
+                ['PAN Number', p.pan_number || '-'],
                 ['Bank Account No.', p.bank_account || '-'],
+                ['UAN Number', p.uan_number || '-'],
                 ['Bank Name', p.bank_name || '-']
             ];
             const t0 = y;

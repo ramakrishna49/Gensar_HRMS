@@ -412,7 +412,9 @@ body:not(.admin-app) .pp-page {
         border: none !important;
         margin: 0 auto !important;
         width: 210mm !important;
+        max-width: none !important;
         min-height: 297mm !important;
+        padding: 22px 28px !important;
         overflow: hidden !important;
         page-break-inside: avoid !important;
     }

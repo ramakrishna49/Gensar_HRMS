@@ -358,10 +358,10 @@ function printPayslip(p) {
         '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Payslip</title>' +
         '<style>' +
         '@page{size:A4 portrait;margin:0;}' +
-        'html,body{margin:0;padding:0;background:#FFFFFF;width:210mm;height:297mm;overflow:hidden;}' +
+        'html,body{margin:0;padding:0;background:#FFFFFF;}' +
         '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}' +
-        '.pp-sheet{width:210mm;min-height:297mm;margin:0 auto;padding:0;box-sizing:border-box;box-shadow:none;border:none;}' +
-        '@media screen{body{display:flex;justify-content:center;align-items:flex-start;}.pp-sheet{margin:10px auto;box-shadow:0 0 12px rgba(0,0,0,0.08);border:1px solid #7c6ca8;}}' +
+        '.pp-sheet{width:100% !important;max-width:none !important;min-height:297mm !important;margin:0 auto !important;padding:22px 28px !important;box-sizing:border-box !important;box-shadow:none !important;border:none !important;}' +
+        '@media screen{html,body{width:210mm;height:297mm;overflow:hidden;}body{display:flex;justify-content:center;align-items:flex-start;}.pp-sheet{max-width:794px !important;margin:10px auto !important;box-shadow:0 0 12px rgba(0,0,0,0.08) !important;border:1px solid #7c6ca8 !important;}}' +
         '</style></head><body>' +
         buildPayslipHTML(p) +
         '<script>window.onload=function(){window.focus();setTimeout(function(){window.print();},400);};<\/script>' +
