@@ -288,6 +288,7 @@ async function renderPayslipPdf(p, company) {
                 const AMT_W = 95 * S;
                 const vcol = x + w - AMT_W;
                 let ty = baseY;
+                const bw = 0.5 * S;
                 const headerText = (txt, x0, w0, right) => {
                     doc.fill(DARK).font(FB).fontSize(F(11.5));
                     doc.text(txt, x0 + 10 * S, centerY(ty, ROW, 11.5), { width: w0 - 20 * S, align: right ? 'right' : 'left' });
@@ -295,22 +296,28 @@ async function renderPayslipPdf(p, company) {
                 doc.rect(x, ty, w, ROW).fill(BAR);
                 headerText(title, x, vcol - x, false);
                 headerText('AMOUNT (\u20B9)', vcol, AMT_W, true);
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(x, ty + ROW).lineTo(x + w, ty + ROW).stroke();
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(vcol, ty).lineTo(vcol, ty + ROW).stroke();
+                doc.strokeColor(BORDER).lineWidth(bw);
+                doc.moveTo(x, ty + ROW).lineTo(x + w, ty + ROW).stroke();
+                doc.moveTo(vcol, ty).lineTo(vcol, ty + ROW).stroke();
                 ty += ROW;
                 rows.forEach(([k, v]) => {
                     doc.fill(BODY).font(FL).fontSize(F(11.5)).text(k, x + 10 * S, centerY(ty, ROW, 11.5), { width: vcol - x - 20 * S });
                     doc.font(FB).text(plainINR(v), vcol + 10 * S, centerY(ty, ROW, 11.5), { width: AMT_W - 20 * S, align: 'right' });
-                    doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(x, ty + ROW).lineTo(x + w, ty + ROW).stroke();
-                    doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(vcol, ty).lineTo(vcol, ty + ROW).stroke();
+                    doc.strokeColor(BORDER).lineWidth(bw);
+                    doc.moveTo(x, ty + ROW).lineTo(x + w, ty + ROW).stroke();
+                    doc.moveTo(vcol, ty).lineTo(vcol, ty + ROW).stroke();
                     ty += ROW;
                 });
                 doc.rect(x, ty, w, ROW).fill(TOTAL);
                 doc.fill(DARK).font(FB).fontSize(F(11.5)).text(totalLabel, x + 10 * S, centerY(ty, ROW, 11.5), { width: vcol - x - 20 * S });
                 doc.text(plainINR(total), vcol + 10 * S, centerY(ty, ROW, 11.5), { width: AMT_W - 20 * S, align: 'right' });
-                doc.strokeColor(BORDER).lineWidth(0.8 * S).rect(x, ty, w, ROW).stroke();
+                doc.strokeColor(BORDER).lineWidth(bw).rect(x, ty, w, ROW).stroke();
                 ty += ROW;
-                doc.strokeColor(BORDER).lineWidth(0.5 * S).rect(x, baseY, w, ty - baseY).stroke();
+                // Outer border: top + left + right only (bottom is the total row's own rect)
+                doc.strokeColor(BORDER).lineWidth(bw);
+                doc.moveTo(x, baseY).lineTo(x + w, baseY).stroke();
+                doc.moveTo(x, baseY).lineTo(x, ty).stroke();
+                doc.moveTo(x + w, baseY).lineTo(x + w, ty).stroke();
                 return ty;
             };
 
