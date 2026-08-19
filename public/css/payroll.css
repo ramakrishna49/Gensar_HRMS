@@ -385,7 +385,47 @@ body:not(.admin-app) .pp-page {
 
 /* ---------- Print ---------- */
 @media print {
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 210mm;
+        background: #FFFFFF !important;
+    }
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
     .payroll-module .pp-chrome { display: none !important; }
-    .payroll-module .pp-preview-frame { max-height: none; padding: 0; background: #FFFFFF; }
-    .payroll-module .pp-sheet { box-shadow: none; }
+    .payroll-module .pp-preview-frame {
+        max-height: none !important;
+        padding: 0 !important;
+        background: #FFFFFF !important;
+        overflow: visible !important;
+    }
+    .payroll-module .pp-sheet {
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 auto !important;
+        width: 210mm !important;
+        min-height: 297mm !important;
+    }
+    .pp-topbar,
+    .pp-actions,
+    .pp-stat-grid,
+    .pp-card-title,
+    .pp-form-grid,
+    .pp-banner,
+    .pp-page > .pp-card:first-child,
+    .modal-footer,
+    .header,
+    .sidebar,
+    .pp-preview-toolbar,
+    .pp-btn {
+        display: none !important;
+    }
 }

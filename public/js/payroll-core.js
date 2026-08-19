@@ -99,7 +99,7 @@ function ppCompute(v) {
     return { gross, totalDeductions, totalDeductionsWithEmployer, bonus, employerTotal, workingDays, presentDays, leaveDays, lopDays, paidDays, actualPayableGross, netPayable, perDaySalary, lopDeduction, attendanceValid, net };
 }
 
-// ---- Dynamic library loading (html2pdf, JSZip) ----
+// ---- Dynamic library loading (JSZip only – PDF is server-rendered) ----
 let ppLibsPromise = null;
 
 function ppLoadScript(src) {
@@ -115,11 +115,32 @@ function ppLoadScript(src) {
 
 function ppEnsureLibs() {
     if (ppLibsPromise) return ppLibsPromise;
-    ppLibsPromise = Promise.all([
-        ppLoadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'),
-        ppLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js')
-    ]);
+    ppLibsPromise = ppLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
     return ppLibsPromise;
+}
+
+// ---- Helper: get auth token for server API calls ----
+function ppAuthToken() {
+    return localStorage.getItem('token') || '';
+}
+
+// ---- Helper: fetch a real text-based PDF from the server (PDFKit) ----
+async function ppFetchServerPdf(p) {
+    const token = ppAuthToken();
+    let resp;
+    if (p && p.id) {
+        resp = await fetch(API_URL + '/payroll/' + p.id + '/pdf', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+    } else {
+        resp = await fetch(API_URL + '/payroll/render-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify(p)
+        });
+    }
+    if (!resp.ok) throw new Error('PDF generation failed (status ' + resp.status + ')');
+    return await resp.blob();
 }
 
 // ---- Single-source payslip template (matches designer reference) ----
@@ -296,28 +317,9 @@ function renderPayslipPreview(p, container) {
     container.innerHTML = buildPayslipHTML(p);
 }
 
-// html2pdf: generate PDF blob from the template
+// Server-side PDF: generate a real text-based PDF blob from the payslip data
 async function payslipHtmlToPdfBlob(p) {
-    await ppEnsureLibs();
-    const holder = document.createElement('div');
-    holder.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1;';
-    holder.innerHTML = buildPayslipHTML(p);
-    document.body.appendChild(holder);
-    try {
-        const el = holder.querySelector('.pp-sheet');
-        if (!el) throw new Error('Payslip template not rendered');
-        el.style.width = '794px';
-        const blob = await html2pdf().set({
-            margin: 0,
-            filename: 'payslip.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(el).outputPdf('blob');
-        return blob;
-    } finally {
-        holder.remove();
-    }
+    return await ppFetchServerPdf(p);
 }
 
 function ppBlobToBase64(blob) {
@@ -334,54 +336,51 @@ async function payslipToDataUrl(p) {
     return await ppBlobToBase64(blob);
 }
 
-// Download the payslip PDF locally (html2pdf WYSIWYG)
+// Download the payslip PDF (server-side PDFKit – real selectable text)
 async function downloadPayslip(p, filename) {
-    await ppEnsureLibs();
-    const holder = document.createElement('div');
-    holder.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1;';
-    holder.innerHTML = buildPayslipHTML(p);
-    document.body.appendChild(holder);
-    try {
-        const el = holder.querySelector('.pp-sheet');
-        el.style.width = '794px';
-        const name = filename || ('payslip_' + (p.emp_id || p.employee_id || '') + '_' + (p.month || '') + '_' + (p.year || '') + '.pdf');
-        await html2pdf().set({
-            margin: 0,
-            filename: name,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(el).save();
-    } finally {
-        holder.remove();
-    }
+    const blob = await ppFetchServerPdf(p);
+    const name = filename || ('payslip_' + (p.emp_id || p.employee_id || '') + '_' + (p.month || '') + '_' + (p.year || '') + '.pdf');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
 
-// Open print window with only the payslip
+// Open print window with only the payslip (proper A4 dimensions)
 function printPayslip(p) {
     const w = window.open('', '_blank');
     if (!w) { showToast('Popup blocked. Allow popups to print.', 'error'); return; }
     w.document.write(
         '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Payslip</title>' +
-        '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">' +
-        '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">' +
-        '<style>html,body{margin:0;padding:0;background:#FFFFFF;}@page{size:A4;margin:0;}' +
-        '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+        '<style>' +
+        '@page{size:A4 portrait;margin:0;}' +
+        'html,body{margin:0;padding:0;background:#FFFFFF;width:210mm;height:297mm;overflow:hidden;}' +
+        '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}' +
+        '.pp-sheet{width:210mm;min-height:297mm;margin:0 auto;padding:0;box-sizing:border-box;box-shadow:none;border:none;}' +
+        '@media screen{body{display:flex;justify-content:center;align-items:flex-start;}.pp-sheet{margin:10px auto;box-shadow:0 0 12px rgba(0,0,0,0.08);border:1px solid #7c6ca8;}}' +
         '</style></head><body>' +
         buildPayslipHTML(p) +
-        '<script>window.onload=function(){window.focus();setTimeout(function(){window.print();},300);};</script>' +
+        '<script>window.onload=function(){window.focus();setTimeout(function(){window.print();},400);};<\/script>' +
         '</body></html>'
     );
     w.document.close();
 }
 
-// Bulk ZIP download of payslip PDFs
+// Bulk ZIP download of payslip PDFs (server-side real text PDFs)
 async function zipPayslips(payslips, zipName) {
     await ppEnsureLibs();
     const zip = new JSZip();
     for (const p of payslips) {
-        const blob = await payslipHtmlToPdfBlob(p);
-        zip.file('Payslip_' + (p.emp_id || p.employee_id || 'emp') + '_' + (p.month || '') + '_' + (p.year || '') + '.pdf', blob);
+        try {
+            const blob = await ppFetchServerPdf(p);
+            zip.file('Payslip_' + (p.emp_id || p.employee_id || 'emp') + '_' + (p.month || '') + '_' + (p.year || '') + '.pdf', blob);
+        } catch (e) {
+            console.error('Failed to render PDF for', p.emp_id || p.employee_id, e);
+        }
     }
     const content = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(content);

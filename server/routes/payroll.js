@@ -578,6 +578,25 @@ router.get('/all', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
+// @route   POST /api/payroll/render-pdf
+// @desc    Render a PDF from payslip payload data (for unsaved / live preview downloads)
+// @access  Private
+router.post('/render-pdf', verifyToken, async (req, res) => {
+    try {
+        const p = req.body;
+        if (!p) return res.status(400).json({ success: false, message: 'No payslip data' });
+        const company = p.company || await getCompanyData();
+        const buf = await renderPayslipPdf(p, company);
+        const empId = p.emp_id || p.employee_id || 'emp';
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=payslip_${empId}_${p.month || ''}_${p.year || ''}.pdf`);
+        res.send(buf);
+    } catch (error) {
+        console.error('Render PDF error:', error);
+        res.status(500).json({ success: false, message: 'PDF generation failed' });
+    }
+});
+
 // @route   GET /api/payroll/:id
 // @desc    Full payslip payload (components + employee profile + company) for preview/PDF/print/email
 // @access  Private (owner or admin)

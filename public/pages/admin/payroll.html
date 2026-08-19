@@ -129,7 +129,7 @@
                     </div>
                     <div class="pp-stat">
                         <div class="pp-stat-icon orange"><i class="fas fa-arrow-down"></i></div>
-                        <div><h3 id="statDed">--</h3><p>Total Deductions</p></div>
+                        <div><h3 id="statDed">--</h3><p>Total Deductions (B+D)</p></div>
                     </div>
                     <div class="pp-stat">
                         <div class="pp-stat-icon green"><i class="fas fa-users"></i></div>
@@ -145,7 +145,7 @@
                     <div class="pp-table-wrap">
                         <table class="pp-table">
                             <thead>
-                                <tr><th>Employee</th><th>Period</th><th class="pp-num">Gross</th><th class="pp-num">Deductions</th><th class="pp-num">Net Pay</th><th>Status</th><th style="text-align:right;">Action</th></tr>
+                                <tr><th>Employee</th><th>Period</th><th class="pp-num">Gross</th><th class="pp-num">Deductions (B+D)</th><th class="pp-num">Net Pay</th><th>Status</th><th style="text-align:right;">Action</th></tr>
                             </thead>
                             <tbody id="tableBody">
                                 <tr><td colspan="7"><div class="pp-loading"><i class="fas fa-spinner fa-spin"></i>Loading payroll...</div></td></tr>
@@ -220,7 +220,7 @@
 
             const net = payroll.reduce((s, p) => s + (parseFloat(p.net_salary) || 0), 0);
             const gross = payroll.reduce((s, p) => s + (parseFloat(p.gross_salary) || 0), 0);
-            const ded = payroll.reduce((s, p) => s + (parseFloat(p.total_deductions) || 0), 0);
+            const ded = payroll.reduce((s, p) => s + (parseFloat(p.total_deductions) || 0) + (parseFloat(p.employer_pf) || 0) + (parseFloat(p.employer_esi) || 0) + (parseFloat(p.employer_contribution) || 0), 0);
             document.getElementById('statNet').textContent = ppFormatCurrency(net);
             document.getElementById('statGross').textContent = ppFormatCurrency(gross);
             document.getElementById('statDed').textContent = ppFormatCurrency(ded);
@@ -238,7 +238,7 @@
                         '<div><b>' + ppEsc(p.first_name) + ' ' + ppEsc(p.last_name) + '</b><small>' + ppEsc(p.emp_id) + '</small></div></div></td>' +
                     '<td style="white-space:nowrap;">' + ppEsc(period) + '</td>' +
                     '<td class="pp-num">' + ppFormatINR(p.gross_salary) + '</td>' +
-                    '<td class="pp-num">' + ppFormatINR(p.total_deductions) + '</td>' +
+                    '<td class="pp-num">' + ppFormatINR((parseFloat(p.total_deductions) || 0) + (parseFloat(p.employer_pf) || 0) + (parseFloat(p.employer_esi) || 0) + (parseFloat(p.employer_contribution) || 0)) + '</td>' +
                     '<td class="pp-num"><b style="color:#10B981;">' + ppFormatINR(p.net_salary) + '</b></td>' +
                     '<td><span class="pp-badge ' + (p.status === 'processed' ? 'green' : 'muted') + '">' + ppEsc(p.status || '-') + '</span></td>' +
                     '<td><div style="display:flex;gap:6px;justify-content:flex-end;">' +
