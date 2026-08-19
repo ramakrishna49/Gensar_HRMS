@@ -387,8 +387,10 @@ async function renderPayslipPdf(p, company) {
             const t0 = y;
             const ecol = (ci) => ML + ci * colW;
             for (let r = 0; r < 7; r++) {
-                const rowBg = r % 2 === 0 ? '#fbf9fc' : '#FFFFFF';
-                doc.fill(rowBg).rect(ML, y, CW, ROW).fill();
+                for (let c = 0; c < 4; c++) {
+                    const colBg = c % 2 === 0 ? '#fbf9fc' : '#FFFFFF';
+                    doc.fill(colBg).rect(ecol(c), y, colW, ROW).fill();
+                }
                 for (let c = 0; c < 4; c++) {
                     const pair = empCells[r * 2 + Math.floor(c / 2)];
                     const isVal = c % 2 === 1;
