@@ -191,7 +191,7 @@ async function fetchPayslipWithProfile(id, userId, isPrivileged) {
 }
 
 // Server-side A4 payslip render (used for email fallback + legacy /:id/pdf download).
-// Layout matches the designer reference exactly: 820px container, purple #7c6ca8 border,
+// Layout matches the designer reference exactly: 794px container (A4 @96dpi), purple #7c6ca8 border,
 // header with logo+divider+badge, section bars with left purple border,
 // 4-col employee table, Earnings (A) / Deductions (B) side-by-side,
 // summary cards (white bg, border), net salary in words (single line, italic),
@@ -206,12 +206,12 @@ async function renderPayslipPdf(p, company) {
             doc.on('end', () => resolve(Buffer.concat(chunks)));
             doc.on('error', reject);
 
-            // Reference template is 820px wide. Scale every metric by S = A4_width / 820
+            // Reference template is 794px wide (A4 @96dpi). Scale every metric by S = A4_width / 794
             // so the PDF output matches the reference HTML layout proportionally.
             const PW = doc.page.width;
-            const S = PW / 820;
+            const S = PW / 794;
             const ML = 29 * S;
-            const CW = 762 * S;
+            const CW = 736 * S;
             const PAD_TOP = 22 * S;
             const ROW = 24.14 * S;
             const BAR_H = 26 * S;
@@ -393,7 +393,7 @@ async function renderPayslipPdf(p, company) {
             const cardW = (CW - 20 * S) / 3;
             const cards = [
                 { label: 'GROSS SALARY (A)', value: totals.gross, color: DARK },
-                { label: 'TOTAL DEDUCTIONS (B + D)', value: totals.totalDeductionsWithEmployer, color: DED },
+                { label: 'TOTAL DEDUCTIONS', value: totals.totalDeductionsWithEmployer, color: DED },
                 { label: 'NET SALARY PAYABLE', value: totals.net, color: NET }
             ];
             let cx = ML;

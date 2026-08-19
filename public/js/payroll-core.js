@@ -197,7 +197,7 @@ function buildPayslipHTML(p) {
     const logoHtml = (company.logo || '/assets/images/gensar_logo.png')
         ? '<img src="' + ppEsc(company.logo || '/assets/images/gensar_logo.png') + '" alt="Gensar Logo" style="width:175px;height:auto;object-fit:contain;flex-shrink:0;" onerror="this.style.display=\'none\';">'
         : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
-    return '<div class="pp-sheet ppslip" style="width:100%;max-width:820px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
+    return '<div class="pp-sheet ppslip" style="width:100%;max-width:794px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
         '.ppslip{line-height:normal;}' +
         '.ppslip *{box-sizing:border-box;}' +
@@ -260,7 +260,7 @@ function buildPayslipHTML(p) {
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">GROSS SALARY (A)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#38286b;">\u20B9 ' + ppNumFmt(totals.gross) + '</div></div>' +
             '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
-                '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">TOTAL DEDUCTIONS (B + D)</div>' +
+                '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">TOTAL DEDUCTIONS</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductionsWithEmployer) + '</div></div>' +
             '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE</div>' +

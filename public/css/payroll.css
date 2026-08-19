@@ -413,6 +413,13 @@ body:not(.admin-app) .pp-page {
         margin: 0 auto !important;
         width: 210mm !important;
         min-height: 297mm !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+    }
+    .payroll-module .pp-sheet .pp-fin,
+    .payroll-module .pp-sheet .pp-sec,
+    .payroll-module .pp-sheet .total-row {
+        page-break-inside: avoid !important;
     }
     .pp-topbar,
     .pp-actions,
