@@ -343,12 +343,12 @@ async function renderPayslipPdf(p, company) {
                 iy += F(10.5) * 1.25 + 3 * S;
             });
 
-            const bH = 31 * S;
+            const bH = 66 * S;
             const bhH = bH / 2;
             doc.strokeColor(BORDER).lineWidth(1 * S);
             doc.roundedRect(badgeX, y, badgeW, bH, 6 * S).stroke();
             doc.rect(badgeX, y, badgeW, bhH).fill(PURPLE);
-            doc.fill('#FFFFFF').font(FB).fontSize(F(15)).text('PAYSLIP', badgeX, centerY(y, bhH, 15), { width: badgeW, align: 'center' });
+            doc.fill('#FFFFFF').font(FB).fontSize(F(15)).text('PAYSLIP', badgeX, centerY(y, bhH, 15), { width: badgeW, align: 'center', letterSpacing: 1 * S });
             doc.fill('#111111').font(FB).fontSize(F(13.5)).text(`${PP_MONTHS[p.month] || ''} ${p.year}`, badgeX, centerY(y + bhH, bhH, 13.5), { width: badgeW, align: 'center' });
 
             const divH = Math.max(iy - y, 95 * S);
@@ -438,7 +438,7 @@ async function renderPayslipPdf(p, company) {
                 const textOffset = (ch - cPad * 2 - textBlockH) / 2;
                 const labelY = y + cPad + textOffset;
                 doc.fill('#444444').font(FB).fontSize(F(labelFontSize)).text(card.label, cx + 5 * S, labelY, { width: cardW - 10 * S, align: 'center', lineBreak: false });
-                doc.font(FB).fontSize(F(valueFontSize)).text('\u20B9 ' + plainINR(card.value), cx + 5 * S, labelY + F(labelFontSize) + F(labelMargin), { width: cardW - 10 * S, align: 'center' });
+                doc.fill(card.color).font(FB).fontSize(F(valueFontSize)).text('\u20B9 ' + plainINR(card.value), cx + 5 * S, labelY + F(labelFontSize) + F(labelMargin), { width: cardW - 10 * S, align: 'center' });
                 cx += cardW + 10 * S;
             });
             y += 65 * S + 10 * S;
@@ -509,18 +509,28 @@ async function renderPayslipPdf(p, company) {
             // ---- Footer: notes + signature ----
             y += 8 * S;
             doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ML, y).lineTo(ML + CW, y).stroke();
-            let fy = y + 6 * S;
-            doc.fill('#555555').font(FB).fontSize(F(10.5)).text('Note:', ML, fy);
-            doc.font(FL).text('\u2022 This is a computer generated payslip.', ML + 15 * S, fy);
-            fy += 13 * S;
-            doc.text('\u2022 No signature is required.', ML + 15 * S, fy);
-            fy += 13 * S;
-            doc.text('\u2022 Please contact HR for any discrepancies.', ML + 15 * S, fy);
-            fy += 13 * S;
+            const fTop = y + 6 * S;
+            const fLineH = F(10.5) * 1.4;
 
-            const sigX = ML + CW - 170 * S;
-            doc.fill(DARK).font(FB).fontSize(F(10.5)).text('For GENSAR IT SOLUTIONS PVT. LTD.', sigX, y + 6 * S, { width: 170 * S, align: 'right' });
-            doc.fill('#555555').font(FL).fontSize(F(10.5)).text('This is a system generated document and does not require signature.', sigX, y + 27 * S, { width: 170 * S, align: 'right' });
+            // Left: Note + bullet list
+            doc.fill('#555555').font(FB).fontSize(F(10.5)).text('Note:', ML, fTop);
+            let bY = fTop + fLineH;
+            doc.font(FL);
+            ['This is a computer generated payslip.',
+                'No signature is required.',
+                'Please contact HR for any discrepancies.'].forEach(t => {
+                doc.text('\u2022 ' + t, ML + 15 * S, bY);
+                bY += fLineH;
+            });
+
+            // Right: company authorization (bottom-aligned with left block)
+            const sigW = CW * 0.48;
+            const sigX = ML + CW - sigW;
+            const leftBlockH = fLineH * 4;
+            const rightBlockH = fLineH * 2 + 8 * S;
+            const rightY = fTop + leftBlockH - rightBlockH;
+            doc.fill(DARK).font(FB).fontSize(F(10.5)).text('For GENSAR IT SOLUTIONS PVT. LTD.', sigX, rightY, { width: sigW, align: 'right' });
+            doc.fill('#555555').font(FL).fontSize(F(10.5)).text('This is a system generated document and does not require signature.', sigX, rightY + fLineH + 8 * S, { width: sigW, align: 'right' });
 
             doc.end();
         } catch (err) {
