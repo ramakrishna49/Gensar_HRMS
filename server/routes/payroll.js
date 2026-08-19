@@ -416,7 +416,7 @@ async function renderPayslipPdf(p, company) {
             const halfW = (CW - 12 * S) / 2;
             const eyE = finTable(ML, 'EARNINGS', earningsRows, 'TOTAL EARNINGS (A)', totals.gross, y);
             const eyD = finTable(ML + halfW + 12 * S, 'DEDUCTIONS', deductionRows, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions, y);
-            y = Math.max(eyE, eyD) + 2 * S;
+            y = Math.max(eyE, eyD) + 6 * S;
 
             // ---- Summary cards: Gross (A) / Deductions (B) / Net Payable (A+C-B-D) ----
             const cardW = (CW - 20 * S) / 3;
@@ -441,7 +441,7 @@ async function renderPayslipPdf(p, company) {
                 doc.fill(card.color).font(FB).fontSize(F(valueFontSize)).text('\u20B9 ' + plainINR(card.value), cx + 5 * S, labelY + F(labelFontSize) + F(labelMargin), { width: cardW - 10 * S, align: 'center' });
                 cx += cardW + 10 * S;
             });
-            y += 65 * S + 10 * S;
+            y += 65 * S + 6 * S;
 
             // ---- Net salary in words ----
             const wH = 28 * S;

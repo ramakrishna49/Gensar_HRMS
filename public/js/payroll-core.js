@@ -250,12 +250,12 @@ function buildPayslipHTML(p) {
             ppEmpRow('UAN Number', ppEsc(p.uan_number || '-'), 'Bank Name', ppEsc(p.bank_name || '-')) +
         '</table>' +
         '<!-- EARNINGS / DEDUCTIONS -->' +
-        '<div style="display:flex;gap:12px;margin-bottom:2px;">' +
+        '<div style="display:flex;gap:12px;margin-bottom:6px;">' +
             '<div style="flex:1;min-width:0;">' + finTable('EARNINGS', earnings, 'TOTAL EARNINGS (A)', totals.gross) + '</div>' +
             '<div style="flex:1;min-width:0;">' + finTable('DEDUCTIONS', deductions, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions) + '</div>' +
         '</div>' +
         '<!-- SUMMARY CARDS -->' +
-        '<div style="display:flex;justify-content:center;gap:10px;margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:center;gap:10px;margin-bottom:6px;">' +
             '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">GROSS SALARY (A)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#38286b;">\u20B9 ' + ppNumFmt(totals.gross) + '</div></div>' +
