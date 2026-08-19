@@ -1,0 +1,46 @@
+const { Pool } = require('pg');
+
+let pool = null;
+
+function getPool() {
+    if (pool) return pool;
+
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+        throw new Error('DATABASE_URL is not set. Configure it in .env (local) or Vercel environment variables.');
+    }
+
+    const isRemote = !/localhost|127\.0\.0\.1|sslmode=disable/.test(connectionString);
+    pool = new Pool({
+        connectionString,
+        ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+        max: parseInt(process.env.PGPOOL_MAX || '5', 10),
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000
+    });
+
+    pool.on('error', (err) => {
+        console.error('Unexpected pg pool error:', err.message);
+    });
+
+    return pool;
+}
+
+// Postgres-flavoured query helper. Routes were written against a SQLite shim that
+// emulated RETURNING + $N placeholders. pg supports all of these natively, so this
+// is just a thin wrapper that keeps the old result shape ({ rows, changes }).
+async function query(sql, params = []) {
+    const result = await getPool().query(sql, params);
+    return {
+        rows: result.rows || [],
+        changes: result.rowCount != null ? result.rowCount : 0,
+        lastInsertRowid: result.rows && result.rows.length > 0 ? result.rows[0].id : undefined
+    };
+}
+
+const poolLike = {
+    query: (sql, params) => query(sql, params),
+    end: () => getPool().end()
+};
+
+module.exports = { query, pool: poolLike, getPool };

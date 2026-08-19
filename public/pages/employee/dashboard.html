@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .clock-display { font-size: 2.8rem; font-weight: 800; color: var(--primary); letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+        .clock-date { font-size: 0.95rem; color: var(--text-secondary); margin-top: 4px; }
+        .checkin-widget { text-align: center; padding: 10px 0; }
+        .checkin-widget .clock-section { margin-bottom: 16px; }
+        .checkin-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+        .checkin-buttons .btn { min-width: 160px; padding: 14px 28px; font-size: 1rem; font-weight: 600; border-radius: var(--radius-md); display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+        @media (max-width: 768px) {
+            .checkin-buttons .btn, .btn-break { min-width: 0; width: 100%; max-width: 200px; padding: 14px 20px; }
+        }
+        .today-status-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+        .today-status-row:last-child { border-bottom: none; }
+        .today-status-label { color: var(--text-secondary); font-size: 0.85rem; }
+        .today-status-value { font-weight: 600; font-size: 0.95rem; }
+        .work-duration { font-size: 1.1rem; font-weight: 600; color: var(--secondary); margin-top: 8px; }
+        .btn-break { background: var(--accent); color: white; border: none; min-width: 140px; padding: 14px 28px; font-size: 1rem; font-weight: 600; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+        .btn-break:hover { opacity: 0.9; }
+        .break-duration { font-size: 0.95rem; font-weight: 500; color: var(--accent); margin-top: 4px; }
+        .quick-action-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px 16px; text-align: center; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: var(--transition); border-radius: var(--radius-md); }
+        .quick-action-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .quick-action-icon { width: 48px; height: 48px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+        .quick-action-label { font-weight: 600; font-size: 0.9rem; }
+        .quick-action-desc { font-size: 0.75rem; color: var(--text-secondary); }
+        .dark-mode .quick-action-icon { opacity: 0.9; }
+        .leave-bar-track { width: 100%; height: 8px; background: var(--border-light); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+        .leave-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .holiday-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+        .holiday-item:last-child { border-bottom: none; }
+        .holiday-date-box { min-width: 52px; text-align: center; background: var(--primary-50); border-radius: var(--radius); padding: 8px 6px; }
+        .holiday-date-box .day { font-size: 1.3rem; font-weight: 700; color: var(--primary); line-height: 1; }
+        .holiday-date-box .month { font-size: 0.65rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.5px; }
+        .announcement-item { padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+        .announcement-item:last-child { border-bottom: none; }
+        @media (max-width: 768px) {
+            .clock-display { font-size: 2.5rem; }
+            .checkin-buttons .btn { min-width: 130px; padding: 12px 20px; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/employee/dashboard.html" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">My Info</div>
+            <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
+            <a href="/pages/employee/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/pages/employee/payslips.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/employee/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
+            <div class="nav-section-title">Resources</div>
+            <a href="/pages/employee/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/employee/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">Dashboard</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/employee/profile.html" class="profile-menu-item"><i class="fas fa-user"></i> My Profile</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div style="padding:30px;">
+            <div class="mb-3 slide-up stagger-1">
+                <h1 style="font-size:1.75rem;font-weight:700;">Welcome back, <span id="welcomeName">Employee</span>!</h1>
+                <p style="color:var(--text-secondary);">Here's your daily overview.</p>
+            </div>
+
+            <div class="grid grid-2 mb-3">
+                <div class="card slide-up stagger-1 checkin-widget">
+                    <div class="clock-section">
+                        <div class="clock-display" id="liveClock">--:--:--</div>
+                        <div class="clock-date" id="liveDate"></div>
+                    </div>
+                    <div id="attendanceInfo" style="margin-bottom:8px;"></div>
+                    <div class="work-duration" id="workDuration" style="display:none;"></div>
+                    <div class="checkin-buttons">
+                        <button class="btn btn-success btn-lg" id="checkInBtn" onclick="handleCheckIn()"><i class="fas fa-sign-in-alt"></i> Check In</button>
+                        <button class="btn btn-danger btn-lg" id="checkOutBtn" onclick="handleCheckOut()" style="display:none;"><i class="fas fa-sign-out-alt"></i> Check Out</button>
+                        <button class="btn-break" id="breakStartBtn" onclick="handleBreakStart()" style="display:none;"><i class="fas fa-mug-hot"></i> Start Break</button>
+                        <button class="btn-break" id="breakEndBtn" onclick="handleBreakEnd()" style="display:none;"><i class="fas fa-redo"></i> End Break</button>
+                    </div>
+                    <div class="break-duration" id="breakDuration" style="display:none;"></div>
+                </div>
+
+                <div class="card slide-up stagger-2">
+                    <div class="card-header">
+                        <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-clipboard-check" style="color:var(--primary);margin-right:8px;"></i>Today's Status</h3>
+                    </div>
+                    <div id="todayStatus">
+                        <div class="today-status-row"><span class="today-status-label">Check In</span><span class="today-status-value" id="statusCheckIn">--</span></div>
+                        <div class="today-status-row"><span class="today-status-label">Check Out</span><span class="today-status-value" id="statusCheckOut">--</span></div>
+                        <div class="today-status-row"><span class="today-status-label">Location</span><span class="today-status-value" id="statusLocation" style="font-size:0.8rem;">--</span></div>
+                        <div class="today-status-row"><span class="today-status-label">Break Start</span><span class="today-status-value" id="statusBreakStart">--</span></div>
+                        <div class="today-status-row"><span class="today-status-label">Break End</span><span class="today-status-value" id="statusBreakEnd">--</span></div>
+                        <div class="today-status-row"><span class="today-status-label">Status</span><span class="today-status-value" id="statusBadge"></span></div>
+                        <div class="today-status-row"><span class="today-status-label">Overtime</span><span class="today-status-value" id="statusOvertime">0h</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-4 mb-3">
+                <div class="stat-card slide-up stagger-1">
+                    <div class="stat-icon green"><i class="fas fa-calendar-check"></i></div>
+                    <div class="stat-info"><h3 id="daysPresent">0</h3><p>Days Present</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-2">
+                    <div class="stat-icon red"><i class="fas fa-calendar-times"></i></div>
+                    <div class="stat-info"><h3 id="leavesTaken">0</h3><p>Leaves Taken</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-3">
+                    <div class="stat-icon yellow"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="stat-info"><h3 id="pendingLeaves">0</h3><p>Pending Leaves</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-4">
+                    <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info"><h3 id="overtimeHours">0</h3><p>Overtime Hours</p></div>
+                </div>
+            </div>
+
+            <div class="grid grid-4 mb-3">
+                <a href="/pages/employee/leave.html" class="card quick-action-card slide-up stagger-1">
+                    <div class="quick-action-icon" style="background:#D1FAE5;color:#059669;"><i class="fas fa-calendar-plus"></i></div>
+                    <span class="quick-action-label">Apply Leave</span>
+                    <span class="quick-action-desc">Request time off</span>
+                </a>
+                <a href="/pages/employee/payslips.html" class="card quick-action-card slide-up stagger-2">
+                    <div class="quick-action-icon" style="background:#DBEAFE;color:#2563EB;"><i class="fas fa-indian-rupee-sign"></i></div>
+                    <span class="quick-action-label">View Payslip</span>
+                    <span class="quick-action-desc">Check salary details</span>
+                </a>
+                <a href="/pages/employee/attendance.html" class="card quick-action-card slide-up stagger-3">
+                    <div class="quick-action-icon" style="background:#FEF3C7;color:#D97706;"><i class="fas fa-clock"></i></div>
+                    <span class="quick-action-label">My Attendance</span>
+                    <span class="quick-action-desc">View attendance history</span>
+                </a>
+                <a href="/pages/employee/documents.html" class="card quick-action-card slide-up stagger-4">
+                    <div class="quick-action-icon" style="background:#EDE9FE;color:#7C3AED;"><i class="fas fa-file-alt"></i></div>
+                    <span class="quick-action-label">My Documents</span>
+                    <span class="quick-action-desc">Manage documents</span>
+                </a>
+            </div>
+
+            <div class="grid grid-2 mb-3">
+                <div class="card slide-up stagger-1">
+                    <div class="card-header">
+                        <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-history" style="color:var(--info);margin-right:8px;"></i>Recent Attendance</h3>
+                        <a href="/pages/employee/attendance.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
+                    </div>
+                    <div id="recentAttendance">
+                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                    </div>
+                </div>
+                <div class="card slide-up stagger-2">
+                    <div class="card-header">
+                        <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-calendar-check" style="color:var(--secondary);margin-right:8px;"></i>Leave Balance</h3>
+                        <a href="/pages/employee/leave.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
+                    </div>
+                    <div id="leaveBalance">
+                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-2 mb-3">
+                <div class="card slide-up stagger-3">
+                    <div class="card-header">
+                        <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-calendar-check" style="color:var(--accent);margin-right:8px;"></i>Upcoming Holidays</h3>
+                        <a href="/pages/employee/holidays.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
+                    </div>
+                    <div id="upcomingHolidays">
+                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                    </div>
+                </div>
+                <div class="card slide-up stagger-4">
+                    <div class="card-header">
+                        <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-bullhorn" style="color:var(--danger);margin-right:8px;"></i>Latest Announcements</h3>
+                        <a href="/pages/employee/announcements.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
+                    </div>
+                    <div id="latestAnnouncements">
+                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal" id="cameraModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:480px;">
+            <div class="modal-header">
+                <h2 id="cameraModalTitle"><i class="fas fa-camera" style="color:var(--primary);margin-right:8px;"></i>Check-In Photo</h2>
+                <button onclick="closeCameraModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="cameraModalHint" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;">Take a selfie to verify your check-in.</p>
+                <div style="background:#000;border-radius:var(--radius-md);overflow:hidden;position:relative;">
+                    <video id="cameraPreview" autoplay playsinline style="width:100%;display:block;max-height:320px;object-fit:cover;"></video>
+                    <canvas id="captureCanvas" style="display:none;"></canvas>
+                    <img id="capturedPreview" alt="Captured" style="width:100%;display:none;max-height:320px;object-fit:cover;">
+                </div>
+                <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" id="captureBtn" onclick="capturePhoto()"><i class="fas fa-camera"></i> Capture</button>
+                    <button class="btn btn-secondary" id="retakeBtn" onclick="retakePhoto()" style="display:none;"><i class="fas fa-redo"></i> Retake</button>
+                    <button class="btn btn-success" id="confirmBtn" onclick="confirmCheckIn()" style="display:none;"><i class="fas fa-check"></i> Confirm &amp; Check In</button>                </div>
+                <p id="cameraError" style="display:none;color:var(--danger);font-size:0.85rem;margin-top:12px;text-align:center;"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/tickets.js"></script>
+    <script>
+        let todayAttendance = null;
+        let durationInterval = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) throw new Error('Not authenticated');
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('welcomeName').textContent = user.first_name;
+                const nameEl = document.getElementById('profileName');
+                if (nameEl) nameEl.textContent = user.first_name + ' ' + user.last_name;
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+            loadAttendanceStatus();
+            loadStats();
+            loadRecentAttendance();
+            loadLeaveBalance();
+            loadUpcomingHolidays();
+            loadLatestAnnouncements();
+        });
+
+        function getTotalBreakSeconds(attendance, now) {
+            const dateRef = new Date(attendance.check_in_date || attendance.date);
+            let total = 0;
+            const breakLog = (() => { try { return JSON.parse(attendance.break_log || '[]'); } catch { return []; } })();
+            breakLog.forEach(b => {
+                if (b.start && b.end) {
+                    const s = new Date(dateRef); const sp = b.start.split(':');
+                    s.setHours(parseInt(sp[0]), parseInt(sp[1]) || 0, parseInt(sp[2]) || 0);
+                    const e = new Date(dateRef); const ep = b.end.split(':');
+                    e.setHours(parseInt(ep[0]), parseInt(ep[1]) || 0, parseInt(ep[2]) || 0);
+                    total += Math.floor((e - s) / 1000);
+                }
+            });
+            if (attendance.break_start && !attendance.break_end) {
+                const s = new Date(dateRef); const bp = attendance.break_start.split(':');
+                s.setHours(parseInt(bp[0]), parseInt(bp[1]) || 0, parseInt(bp[2]) || 0);
+                total += Math.floor((now - s) / 1000);
+            }
+            return total;
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('liveClock').textContent = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            document.getElementById('liveDate').textContent = now.toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+            if (todayAttendance && todayAttendance.check_in && !todayAttendance.check_out) {
+                const checkInTime = new Date(todayAttendance.check_in_date || todayAttendance.date);
+                const parts = todayAttendance.check_in.split(':');
+                checkInTime.setHours(parseInt(parts[0]), parseInt(parts[1]) || 0, parseInt(parts[2]) || 0);
+                let totalSeconds = Math.floor((now - checkInTime) / 1000);
+                totalSeconds -= getTotalBreakSeconds(todayAttendance, now);
+                if (totalSeconds < 0) totalSeconds = 0;
+                const hrs = Math.floor(totalSeconds / 3600);
+                const mins = Math.floor((totalSeconds % 3600) / 60);
+                const secs = totalSeconds % 60;
+                const el = document.getElementById('workDuration');
+                el.style.display = 'block';
+                el.textContent = 'Working: ' + String(hrs).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+            }
+            if (todayAttendance && todayAttendance.break_start && !todayAttendance.break_end) {
+                const breakTime = new Date(todayAttendance.check_in_date || todayAttendance.date);
+                const bp = todayAttendance.break_start.split(':');
+                breakTime.setHours(parseInt(bp[0]), parseInt(bp[1]) || 0, parseInt(bp[2]) || 0);
+                const bdiff = Math.floor((now - breakTime) / 1000);
+                const bhrs = Math.floor(bdiff / 3600);
+                const bmins = Math.floor((bdiff % 3600) / 60);
+                const bsecs = bdiff % 60;
+                const bel = document.getElementById('breakDuration');
+                bel.style.display = 'block';
+                bel.textContent = 'On Break: ' + String(bhrs).padStart(2,'0') + ':' + String(bmins).padStart(2,'0') + ':' + String(bsecs).padStart(2,'0');
+            } else if (todayAttendance && getTotalBreakSeconds(todayAttendance, now) > 0) {
+                const total = getTotalBreakSeconds(todayAttendance, now);
+                document.getElementById('breakDuration').style.display = 'block';
+                document.getElementById('breakDuration').textContent = 'Total Break: ' + String(Math.floor(total/3600)).padStart(2,'0') + ':' + String(Math.floor((total%3600)/60)).padStart(2,'0') + ':' + String(total%60).padStart(2,'0');
+            }
+        }
+
+        async function loadAttendanceStatus() {
+            const now = new Date();
+            const data = await apiCall(`/attendance/my?month=${now.getMonth()+1}&year=${now.getFullYear()}`);
+            if (data && data.success) {
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                todayAttendance = data.attendance?.find(a => {
+                    const adate = a.date ? a.date.split('T')[0] : '';
+                    return adate === today;
+                });
+                if (todayAttendance) {
+                    document.getElementById('statusCheckIn').textContent = todayAttendance.check_in || '--';
+                    document.getElementById('statusCheckOut').textContent = todayAttendance.check_out || '--';
+                    const loc = todayAttendance.check_in_location || '';
+                    document.getElementById('statusLocation').textContent = loc || '--';
+                    if (loc) {
+                        const el = document.getElementById('statusLocation');
+                        if (loc.includes(',')) {
+                            const [lat, lon] = loc.split(',');
+                            el.innerHTML = '<a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:var(--primary);text-decoration:none;"><i class="fas fa-map-marker-alt"></i> View on Map</a>';
+                        } else {
+                            el.textContent = loc;
+                        }
+                    }
+                    const totalBreakSecs = getTotalBreakSeconds(todayAttendance, new Date());
+                    if (todayAttendance.break_start && !todayAttendance.break_end) {
+                        document.getElementById('statusBreakStart').textContent = todayAttendance.break_start;
+                        document.getElementById('statusBreakEnd').textContent = 'Running...';
+                    } else if (totalBreakSecs > 0) {
+                        document.getElementById('statusBreakStart').textContent = 'Taken';
+                        document.getElementById('statusBreakEnd').textContent = String(Math.floor(totalBreakSecs/3600)).padStart(2,'0') + ':' + String(Math.floor((totalBreakSecs%3600)/60)).padStart(2,'0');
+                    } else {
+                        document.getElementById('statusBreakStart').textContent = '--';
+                        document.getElementById('statusBreakEnd').textContent = '--';
+                    }
+                    document.getElementById('statusBadge').innerHTML = '<span class="badge badge-' + getStatusBadge(todayAttendance.status) + '">' + escapeHtml(getStatusText(todayAttendance.status)) + '</span>';
+                    document.getElementById('statusOvertime').textContent = formatHours(todayAttendance.overtime_hours);
+                    const onBreak = todayAttendance.break_start && !todayAttendance.break_end;
+                    if (!todayAttendance.check_out) {
+                        document.getElementById('checkInBtn').style.display = 'none';
+                        document.getElementById('checkOutBtn').style.display = onBreak ? 'none' : 'inline-flex';
+                        document.getElementById('breakStartBtn').style.display = onBreak ? 'none' : 'inline-flex';
+                        document.getElementById('breakEndBtn').style.display = onBreak ? 'inline-flex' : 'none';
+                        document.getElementById('breakDuration').style.display = onBreak ? 'block' : 'none';
+                        document.getElementById('attendanceInfo').innerHTML = '<p style="color:var(--secondary);font-weight:500;"><i class="fas fa-check-circle"></i> Checked in at ' + escapeHtml(todayAttendance.check_in) + '</p>';
+                        updateClock();
+                    } else {
+                        document.getElementById('checkInBtn').style.display = 'none';
+                        document.getElementById('checkOutBtn').style.display = 'none';
+                        document.getElementById('breakStartBtn').style.display = 'none';
+                        document.getElementById('breakEndBtn').style.display = 'none';
+                        document.getElementById('attendanceInfo').innerHTML = '<p style="color:var(--info);font-weight:500;"><i class="fas fa-check-double"></i> Day completed</p>';
+                        document.getElementById('workDuration').style.display = 'none';
+                    }
+                } else {
+                    document.getElementById('checkInBtn').style.display = 'inline-flex';
+                    document.getElementById('checkOutBtn').style.display = 'none';
+                    document.getElementById('breakStartBtn').style.display = 'none';
+                    document.getElementById('breakEndBtn').style.display = 'none';
+                    document.getElementById('breakDuration').style.display = 'none';
+                    document.getElementById('attendanceInfo').innerHTML = '<p style="color:var(--text-secondary);">Not checked in yet</p>';
+                    document.getElementById('statusBadge').innerHTML = '<span class="badge badge-secondary">Not Started</span>';
+                }
+            }
+        }
+
+        let cameraStream = null;
+        let capturedPhotoData = null;
+        let cameraMode = 'check-in';
+
+        function openCameraModal(mode) {
+            cameraMode = mode || 'check-in';
+            const isCheckOut = cameraMode === 'check-out';
+            document.getElementById('cameraModalTitle').innerHTML = '<i class="fas fa-camera" style="color:var(--primary);margin-right:8px;"></i>' + (isCheckOut ? 'Check-Out Photo' : 'Check-In Photo');
+            document.getElementById('cameraModalHint').textContent = isCheckOut
+                ? 'Take a selfie to verify your check-out.'
+                : 'Take a selfie to verify your check-in.';
+            document.getElementById('confirmBtn').innerHTML = '<i class="fas fa-check"></i> Confirm &amp; ' + (isCheckOut ? 'Check Out' : 'Check In');
+            document.getElementById('capturedPreview').style.display = 'none';
+            document.getElementById('cameraPreview').style.display = 'block';
+            document.getElementById('captureBtn').style.display = 'inline-flex';
+            document.getElementById('retakeBtn').style.display = 'none';
+            document.getElementById('confirmBtn').style.display = 'none';
+            document.getElementById('cameraError').style.display = 'none';
+            document.getElementById('cameraModal').classList.add('active');
+            capturedPhotoData = null;
+            document.getElementById('captureBtn').disabled = false;
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
+                    .then(stream => {
+                        cameraStream = stream;
+                        document.getElementById('cameraPreview').srcObject = stream;
+                    })
+                    .catch(err => {
+                        document.getElementById('cameraError').textContent = 'Camera unavailable: ' + (err.name === 'NotAllowedError' ? 'permission denied' : err.message);
+                        document.getElementById('cameraError').style.display = 'block';
+                        document.getElementById('captureBtn').disabled = true;
+                    });
+            } else {
+                document.getElementById('cameraError').textContent = 'Camera not supported in this browser';
+                document.getElementById('cameraError').style.display = 'block';
+                document.getElementById('captureBtn').disabled = true;
+            }
+        }
+
+        function stopCameraStream() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+            }
+        }
+
+        function closeCameraModal() {
+            stopCameraStream();
+            document.getElementById('cameraModal').classList.remove('active');
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraPreview');
+            const canvas = document.getElementById('captureCanvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            const dataSize = Math.round((dataUrl.split(',')[1].length * 3) / 4);
+            if (dataSize > 2 * 1024 * 1024) {
+                document.getElementById('cameraError').textContent = 'Photo too large. Please try again.';
+                document.getElementById('cameraError').style.display = 'block';
+                return;
+            }
+            capturedPhotoData = dataUrl;
+            const img = document.getElementById('capturedPreview');
+            img.src = dataUrl;
+            img.style.display = 'block';
+            video.style.display = 'none';
+            stopCameraStream();
+            document.getElementById('captureBtn').style.display = 'none';
+            document.getElementById('retakeBtn').style.display = 'inline-flex';
+            document.getElementById('confirmBtn').style.display = 'inline-flex';
+        }
+
+        function retakePhoto() {
+            capturedPhotoData = null;
+            document.getElementById('capturedPreview').style.display = 'none';
+            document.getElementById('cameraPreview').style.display = 'block';
+            document.getElementById('captureBtn').style.display = 'inline-flex';
+            document.getElementById('retakeBtn').style.display = 'none';
+            document.getElementById('confirmBtn').style.display = 'none';
+            document.getElementById('cameraError').style.display = 'none';
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
+                    .then(stream => {
+                        cameraStream = stream;
+                        document.getElementById('cameraPreview').srcObject = stream;
+                    }).catch(err => {
+                        document.getElementById('cameraError').textContent = 'Camera unavailable: ' + err.message;
+                        document.getElementById('cameraError').style.display = 'block';
+                    });
+            }
+        }
+
+        async function confirmCheckIn() {
+            closeCameraModal();
+            if (cameraMode === 'check-out') {
+                await doCheckOut(capturedPhotoData || undefined);
+            } else {
+                await doCheckIn(capturedPhotoData || undefined);
+            }
+        }
+
+        function handleCheckIn() {
+            openCameraModal('check-in');
+        }
+
+        function handleCheckOut() {
+            openCameraModal('check-out');
+        }
+
+        // Best-effort geolocation: try high accuracy, retry with low accuracy,
+        // return null if the user denies permission or it times out.
+        async function getLocation() {
+            if (!navigator.geolocation) return null;
+            const attempt = (enableHighAccuracy) => new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => resolve(pos.coords.latitude + ',' + pos.coords.longitude),
+                    () => resolve(null),
+                    { timeout: enableHighAccuracy ? 8000 : 12000, enableHighAccuracy }
+                );
+            });
+            let loc = await attempt(true);
+            if (!loc) loc = await attempt(false);
+            return loc;
+        }
+
+        async function doCheckIn(photo) {
+            const btn = document.getElementById('checkInBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
+            btn.disabled = true;
+            const location = await getLocation();
+            if (!location) {
+                showToast('Location not captured. Please allow location access so your check-in can be verified.', 'warning');
+            }
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking in...';
+            const data = await apiCall('/attendance/check-in', 'POST', { location: location || '', photo });
+            if (data && data.success) {
+                showToast('Checked in successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
+                todayAttendance = null;
+                await loadAttendanceStatus();
+            } else {
+                showToast(data?.message || 'Check-in failed', 'error');
+            }
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check In';
+            btn.disabled = false;
+        }
+
+        async function doCheckOut(photo) {
+            const btn = document.getElementById('checkOutBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
+            btn.disabled = true;
+            const location = await getLocation();
+            if (!location) {
+                showToast('Location not captured. Please allow location access so your check-out can be verified.', 'warning');
+            }
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking out...';
+            const data = await apiCall('/attendance/check-out', 'POST', { location: location || '', photo });
+            if (data && data.success) {
+                showToast('Checked out successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
+                todayAttendance = null;
+                await loadAttendanceStatus();
+            } else {
+                showToast(data?.message || 'Check-out failed', 'error');
+            }
+            btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Check Out';
+            btn.disabled = false;
+        }
+
+        async function handleBreakStart() {
+            const btn = document.getElementById('breakStartBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+            btn.disabled = true;
+            const data = await apiCall('/attendance/break-start', 'POST');
+            if (data && data.success) {
+                showToast('Break started!', 'success');
+                todayAttendance = null;
+                await loadAttendanceStatus();
+            } else {
+                showToast(data?.message || 'Failed to start break', 'error');
+            }
+            btn.innerHTML = '<i class="fas fa-mug-hot"></i> Start Break';
+            btn.disabled = false;
+        }
+
+        async function handleBreakEnd() {
+            const btn = document.getElementById('breakEndBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ending...';
+            btn.disabled = true;
+            const data = await apiCall('/attendance/break-end', 'POST');
+            if (data && data.success) {
+                showToast('Break ended!', 'success');
+                todayAttendance = null;
+                await loadAttendanceStatus();
+            } else {
+                showToast(data?.message || 'Failed to end break', 'error');
+            }
+            btn.innerHTML = '<i class="fas fa-redo"></i> End Break';
+            btn.disabled = false;
+        }
+
+        async function loadStats() {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const year = now.getFullYear();
+            const [attData, leaveData] = await Promise.all([
+                apiCall(`/attendance/my?month=${month}&year=${year}`),
+                apiCall('/leave/my')
+            ]);
+            if (attData && attData.success) {
+                const present = attData.attendance.filter(a => a.status === 'present' || a.status === 'late').length;
+                const overtime = attData.attendance.reduce((s, a) => s + parseFloat(a.overtime_hours || 0), 0);
+                document.getElementById('daysPresent').textContent = present;
+                document.getElementById('overtimeHours').textContent = overtime.toFixed(1);
+            }
+            if (leaveData && leaveData.success && leaveData.leaves) {
+                const approved = leaveData.leaves.filter(l => l.status === 'approved').length;
+                const pending = leaveData.leaves.filter(l => l.status === 'pending').length;
+                document.getElementById('leavesTaken').textContent = approved;
+                document.getElementById('pendingLeaves').textContent = pending;
+            }
+        }
+
+        async function loadRecentAttendance() {
+            const now = new Date();
+            const data = await apiCall(`/attendance/my?month=${now.getMonth()+1}&year=${now.getFullYear()}`);
+            const container = document.getElementById('recentAttendance');
+            if (data && data.success && data.attendance.length > 0) {
+                const recent = data.attendance.slice(0, 5);
+                const todayStr = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+                let html = '<div class="table-container"><table><thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead><tbody>';
+                recent.forEach(a => {
+                    const adate = a.date ? a.date.split('T')[0] : '';
+                    const isToday = adate === todayStr;
+                    const rowStyle = isToday ? 'background:var(--primary-50);font-weight:500;' : '';
+                    html += '<tr style="' + rowStyle + '"><td>' + formatDate(a.date) + (isToday ? ' <span class="badge badge-primary" style="font-size:0.6rem;">Today</span>' : '') + '</td><td>' + escapeHtml(a.check_in || '-') + '</td><td>' + escapeHtml(a.check_out || '-') + '</td><td><span class="badge badge-' + getStatusBadge(a.status) + '">' + escapeHtml(getStatusText(a.status)) + '</span></td></tr>';
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            } else {
+                showEmptyState(container, 'fa-clock', 'No Records', 'No attendance records this month');
+            }
+        }
+
+        async function loadLeaveBalance() {
+            const data = await apiCall('/leave/balance');
+            const container = document.getElementById('leaveBalance');
+            if (data && data.success && data.balances && data.balances.length > 0) {
+                const top3 = data.balances.slice(0, 3);
+                let html = '';
+                top3.forEach(b => {
+                    const used = b.days_per_year - b.remaining_days;
+                    const pct = b.days_per_year > 0 ? (used / b.days_per_year * 100) : 0;
+                    const barColor = pct > 80 ? 'var(--danger)' : pct > 50 ? 'var(--accent)' : 'var(--secondary)';
+                    html += '<div style="margin-bottom:16px;">';
+                    html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:0.9rem;font-weight:500;">' + escapeHtml(b.name) + '</span><span style="font-size:0.85rem;font-weight:600;color:' + (b.days_per_year === 0 ? 'var(--text-secondary)' : (b.remaining_days > 0 ? 'var(--secondary)' : 'var(--danger)')) + ';">' + b.remaining_days + ' / ' + b.days_per_year + '</span></div>';
+                    html += '<div class="leave-bar-track"><div class="leave-bar-fill" style="width:' + Math.min(pct, 100) + '%;background:' + barColor + ';"></div></div>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            } else {
+                showEmptyState(container, 'fa-calendar-times', 'No Leave Types', 'No leave types configured');
+            }
+        }
+
+        async function loadUpcomingHolidays() {
+            const data = await apiCall('/holidays?year=' + new Date().getFullYear());
+            const container = document.getElementById('upcomingHolidays');
+            if (data && data.success && data.holidays && data.holidays.length > 0) {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const upcoming = data.holidays.filter(h => new Date(h.date) >= today).slice(0, 3);
+                if (upcoming.length === 0) {
+                    showEmptyState(container, 'fa-calendar-check', 'No Upcoming Holidays', 'Enjoy your work days!');
+                    return;
+                }
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                let html = '';
+                upcoming.forEach(h => {
+                    const d = new Date(h.date);
+                    html += '<div class="holiday-item">';
+                    html += '<div class="holiday-date-box"><div class="day">' + d.getDate() + '</div><div class="month">' + months[d.getMonth()] + '</div></div>';
+                    html += '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:0.95rem;">' + escapeHtml(h.name) + '</div>';
+                    if (h.description) html += '<div style="font-size:0.8rem;color:var(--text-secondary);">' + escapeHtml(h.description) + '</div>';
+                    html += '</div></div>';
+                });
+                container.innerHTML = html;
+            } else {
+                showEmptyState(container, 'fa-calendar-check', 'No Holidays', 'No holidays found');
+            }
+        }
+
+        async function loadLatestAnnouncements() {
+            const data = await apiCall('/announcements');
+            const container = document.getElementById('latestAnnouncements');
+            if (data && data.success && data.announcements && data.announcements.length > 0) {
+                const latest = data.announcements.slice(0, 3);
+                let html = '';
+                latest.forEach(a => {
+                    const borderColors = {high:'var(--danger)',normal:'var(--info)',low:'var(--secondary)'};
+                    const borderColor = borderColors[a.priority] || borderColors.normal;
+                    const isUnread = !a.is_read;
+                    html += '<div class="announcement-item" style="border-left:3px solid ' + borderColor + ';padding-left:12px;' + (isUnread ? 'background:var(--primary-50);border-radius:var(--radius);padding:12px;' : '') + '">';
+                    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
+                    if (isUnread) html += '<span style="display:inline-block;width:8px;height:8px;background:var(--primary);border-radius:50%;"></span>';
+                    html += '<span class="badge badge-' + getPriorityBadge(a.priority) + '" style="font-size:0.65rem;">' + escapeHtml(a.priority || 'normal') + '</span>';
+                    html += '<strong style="font-size:0.95rem;">' + escapeHtml(a.title) + '</strong></div>';
+                    html += '<p style="font-size:0.82rem;color:var(--text-secondary);">' + escapeHtml(a.content || '') + '</p>';
+                    html += '<p style="font-size:0.75rem;color:var(--text-tertiary);margin-top:4px;">' + escapeHtml(a.posted_by_name || 'Admin') + ' &middot; ' + formatDate(a.created_at) + '</p>';
+                    html += '</div>';
+                    if (isUnread) {
+                        apiCall('/announcements/' + a.id + '/read', 'POST');
+                    }
+                });
+                container.innerHTML = html;
+            } else {
+                showEmptyState(container, 'fa-bullhorn', 'No Announcements', 'No announcements yet');
+            }
+        }
+    </script>
+</body>
+</html>

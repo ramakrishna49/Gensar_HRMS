@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Team - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .team-stat { padding: 18px 20px; background: var(--bg-card); border-radius: var(--radius-md); box-shadow: var(--shadow); border: 1px solid transparent; }
+        .team-stat .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 10px; }
+        .team-stat .stat-num { font-size: 1.5rem; font-weight: 700; }
+        .team-stat .stat-label { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+        .tab-bar { display: flex; gap: 8px; border-bottom: 1px solid var(--border-light); margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { background: none; border: none; padding: 10px 16px; font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-btn .tab-badge { margin-left: 6px; font-size: 0.7rem; background: var(--danger); color: #fff; border-radius: 10px; padding: 1px 7px; }
+        .request-card { padding: 16px 18px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); margin-bottom: 12px; }
+        .request-card .req-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+        .request-card .req-emp { font-weight: 600; }
+        .request-card .req-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+        .request-card .req-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+        .req-meta { font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; }
+        .team-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-light); border: 1px solid var(--border-light); border-radius: 999px; font-size: 0.82rem; margin: 0 6px 8px 0; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/employee/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/pages/manager/my-team.html" class="nav-item active"><i class="fas fa-users"></i><span class="nav-text">My Team</span></a>
+            <div class="nav-section-title">My Info</div>
+            <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
+            <a href="/pages/employee/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/employee/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
+            <div class="nav-section-title">Resources</div>
+            <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">My Team</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/employee/profile.html" class="profile-menu-item"><i class="fas fa-user"></i> My Profile</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div style="padding:30px;">
+            <div class="grid grid-4" style="margin-bottom:24px;">
+                <div class="team-stat">
+                    <div class="stat-icon" style="background:var(--primary-50);color:var(--primary);"><i class="fas fa-users"></i></div>
+                    <div class="stat-num" id="teamCount">0</div>
+                    <div class="stat-label">Team Members</div>
+                </div>
+                <div class="team-stat">
+                    <div class="stat-icon" style="background:#FEF3C7;color:#B45309;"><i class="fas fa-calendar-times"></i></div>
+                    <div class="stat-num" id="leaveCount">0</div>
+                    <div class="stat-label">Pending Leaves</div>
+                </div>
+                <div class="team-stat">
+                    <div class="stat-icon" style="background:#DBEAFE;color:#1D4ED8;"><i class="fas fa-home"></i></div>
+                    <div class="stat-num" id="wfhCount">0</div>
+                    <div class="stat-label">Pending WFH</div>
+                </div>
+                <div class="team-stat">
+                    <div class="stat-icon" style="background:#FCE7F3;color:#BE185D;"><i class="fas fa-ticket-alt"></i></div>
+                    <div class="stat-num" id="ticketCount">0</div>
+                    <div class="stat-label">Open Queries</div>
+                </div>
+            </div>
+
+            <div class="card" style="padding:20px;">
+                <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-user-friends" style="color:var(--secondary);margin-right:8px;"></i>My Team Members</div>
+                <div id="teamContainer" style="min-height:40px;">
+                    <div class="spinner" style="margin:0 auto;"></div>
+                </div>
+                <div style="border-top:1px solid var(--border-light);margin:18px 0;"></div>
+
+                <div class="tab-bar">
+                    <button class="tab-btn active" onclick="switchTab('leaves')">Leave Requests <span class="tab-badge" id="leaveTabBadge" style="display:none;">0</span></button>
+                    <button class="tab-btn" onclick="switchTab('wfh')">WFH Requests <span class="tab-badge" id="wfhTabBadge" style="display:none;">0</span></button>
+                    <button class="tab-btn" onclick="switchTab('tickets')">Queries <span class="tab-badge" id="ticketTabBadge" style="display:none;">0</span></button>
+                </div>
+                <div id="tabLeaves"></div>
+                <div id="tabWfh" style="display:none;"></div>
+                <div id="tabTickets" style="display:none;"></div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal" id="decisionModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:440px;">
+            <div class="modal-header">
+                <h2 id="decisionTitle">Decision</h2>
+                <button onclick="closeDecisionModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label for="decisionRemarks">Remarks (optional)</label><textarea class="form-control" id="decisionRemarks" rows="3"></textarea></div>
+                <div class="modal-footer" style="padding:0;margin-top:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeDecisionModal()">Cancel</button>
+                    <button type="button" class="btn btn-success" id="decisionConfirmBtn" onclick="confirmDecision()"><i class="fas fa-check"></i> Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="ticketModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:480px;">
+            <div class="modal-header">
+                <h2>Respond to Query</h2>
+                <button onclick="closeTicketModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="font-size:0.9rem;margin-bottom:12px;" id="ticketInfo"></div>
+                <div class="form-group"><label for="ticketResponse">Response *</label><textarea class="form-control" id="ticketResponse" rows="4" placeholder="Write your response to the employee"></textarea></div>
+                <div class="form-group"><label>Status</label><select class="form-control" id="ticketStatus"><option value="in_progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select></div>
+                <div class="modal-footer" style="padding:0;margin-top:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeTicketModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitTicketResponse()"><i class="fas fa-paper-plane"></i> Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/tickets.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) throw new Error('Not authenticated');
+            const user = getCurrentUser();
+            if (user.role !== 'manager' && user.role !== 'team_lead') {
+                location.href = '/pages/employee/dashboard.html';
+                return;
+            }
+            loadTeam();
+            loadLeaves();
+            loadWfh();
+            loadTickets();
+        });
+
+        let pendingLeaveCount = 0;
+        let pendingWfhCount = 0;
+        let openTicketCount = 0;
+
+        async function loadTeam() {
+            const data = await apiCall('/manager/team');
+            const container = document.getElementById('teamContainer');
+            if (data && data.success) {
+                const team = data.team || [];
+                document.getElementById('teamCount').textContent = team.length;
+                if (team.length === 0) {
+                    container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:0.9rem;">No team members report to you yet.</div>';
+                    return;
+                }
+                container.innerHTML = team.map(m =>
+                    '<span class="team-chip"><span style="width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;flex-shrink:0;">' + escapeHtml(getInitials(m.first_name, m.last_name)) + '</span>' +
+                    '<span>' + escapeHtml(m.first_name + ' ' + (m.last_name || '')) + ' <span style="color:var(--text-secondary);font-size:0.75rem;">' + escapeHtml(m.employee_id) + ' · ' + escapeHtml(m.designation_name || m.role || '-') + '</span></span></span>'
+                ).join('');
+            } else {
+                container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--danger);font-size:0.9rem;">Failed to load team</div>';
+            }
+        }
+
+        async function loadLeaves() {
+            const data = await apiCall('/manager/leaves');
+            const container = document.getElementById('tabLeaves');
+            if (data && data.success) {
+                const leaves = data.leaves || [];
+                pendingLeaveCount = leaves.length;
+                renderCounts();
+                if (leaves.length === 0) {
+                    showEmptyState(container, 'fa-calendar-check', 'No Pending Leaves', 'No leave requests from your team right now');
+                    return;
+                }
+                container.innerHTML = leaves.map(l =>
+                    '<div class="request-card">' +
+                        '<div class="req-top"><div><div class="req-emp">' + escapeHtml(l.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(l.emp_id) + '</span></div>' +
+                        '<div class="req-meta">' + escapeHtml(l.leave_type_name || '-') + ' · ' + formatDate(l.start_date) + ' to ' + formatDate(l.end_date) + ' · ' + l.total_days + ' day' + (l.total_days > 1 ? 's' : '') + '</div></div>' +
+                        '<span class="badge badge-warning">Pending</span></div>' +
+                        (l.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(l.reason) + '</div>' : '') +
+                        '<div class="req-actions">' +
+                            '<button class="btn btn-sm btn-success" onclick="openDecision(' + l.id + ', \'leaves\', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
+                            '<button class="btn btn-sm btn-danger" onclick="openDecision(' + l.id + ', \'leaves\', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
+                        '</div>' +
+                    '</div>'
+                ).join('');
+            } else {
+                showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load leave requests');
+            }
+        }
+
+        async function loadWfh() {
+            const data = await apiCall('/manager/wfh');
+            const container = document.getElementById('tabWfh');
+            if (data && data.success) {
+                const wfh = data.wfhRequests || [];
+                pendingWfhCount = wfh.length;
+                renderCounts();
+                if (wfh.length === 0) {
+                    showEmptyState(container, 'fa-home', 'No Pending WFH', 'No WFH requests from your team right now');
+                    return;
+                }
+                container.innerHTML = wfh.map(w =>
+                    '<div class="request-card">' +
+                        '<div class="req-top"><div><div class="req-emp">' + escapeHtml(w.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(w.emp_id) + '</span></div>' +
+                        '<div class="req-meta">' + formatDate(w.start_date) + ' to ' + formatDate(w.end_date) + ' · ' + w.total_days + ' day' + (w.total_days > 1 ? 's' : '') + '</div></div>' +
+                        '<span class="badge badge-warning">Pending</span></div>' +
+                        (w.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(w.reason) + '</div>' : '') +
+                        '<div class="req-actions">' +
+                            '<button class="btn btn-sm btn-success" onclick="openDecision(' + w.id + ', \'wfh\', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
+                            '<button class="btn btn-sm btn-danger" onclick="openDecision(' + w.id + ', \'wfh\', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
+                        '</div>' +
+                    '</div>'
+                ).join('');
+            } else {
+                showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load WFH requests');
+            }
+        }
+
+        async function loadTickets() {
+            const data = await apiCall('/manager/tickets');
+            const container = document.getElementById('tabTickets');
+            if (data && data.success) {
+                const tickets = data.tickets || [];
+                openTicketCount = tickets.length;
+                renderCounts();
+                if (tickets.length === 0) {
+                    showEmptyState(container, 'fa-ticket-alt', 'No Open Queries', 'No queries from your team right now');
+                    return;
+                }
+                container.innerHTML = tickets.map(t =>
+                    '<div class="request-card">' +
+                        '<div class="req-top"><div><div class="req-emp">' + escapeHtml(t.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(t.emp_id) + '</span></div>' +
+                        '<div class="req-sub"><strong>' + escapeHtml(t.subject) + '</strong></div>' +
+                        '<div class="req-meta"><span class="badge badge-' + (t.priority === 'high' ? 'danger' : t.priority === 'low' ? 'secondary' : 'warning') + '" style="font-size:0.68rem;">' + escapeHtml(t.priority) + '</span> · ' + escapeHtml(t.category || 'Query') + '</div>' +
+                        (t.description ? '<div class="req-sub">' + escapeHtml(t.description) + '</div>' : '') +
+                        '</div>' +
+                        '<span class="badge badge-warning">' + escapeHtml(t.status) + '</span></div>' +
+                        '<div class="req-actions">' +
+                            '<button class="btn btn-sm btn-primary ticket-respond-btn" data-id="' + t.id + '" data-name="' + escapeAttr(t.employee_name) + '" data-subject="' + escapeAttr(t.subject) + '"><i class="fas fa-reply"></i> Respond</button>' +
+                        '</div>' +
+                    '</div>'
+                ).join('');
+                container.querySelectorAll('.ticket-respond-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        openTicket(parseInt(this.dataset.id), this.dataset.name, this.dataset.subject);
+                    });
+                });
+            } else {
+                showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load queries');
+            }
+        }
+
+        function renderCounts() {
+            document.getElementById('leaveCount').textContent = pendingLeaveCount;
+            document.getElementById('wfhCount').textContent = pendingWfhCount;
+            document.getElementById('ticketCount').textContent = openTicketCount;
+            document.getElementById('leaveTabBadge').style.display = pendingLeaveCount > 0 ? 'inline-block' : 'none';
+            document.getElementById('leaveTabBadge').textContent = pendingLeaveCount;
+            document.getElementById('wfhTabBadge').style.display = pendingWfhCount > 0 ? 'inline-block' : 'none';
+            document.getElementById('wfhTabBadge').textContent = pendingWfhCount;
+            document.getElementById('ticketTabBadge').style.display = openTicketCount > 0 ? 'inline-block' : 'none';
+            document.getElementById('ticketTabBadge').textContent = openTicketCount;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const tabMap = { leaves: 'tabLeaves', wfh: 'tabWfh', tickets: 'tabTickets' };
+            const targetBtn = document.querySelector('.tab-btn[onclick*="\'' + tab + '\'"]');
+            if (targetBtn) targetBtn.classList.add('active');
+            document.getElementById('tabLeaves').style.display = tab === 'leaves' ? 'block' : 'none';
+            document.getElementById('tabWfh').style.display = tab === 'wfh' ? 'block' : 'none';
+            document.getElementById('tabTickets').style.display = tab === 'tickets' ? 'block' : 'none';
+        }
+
+        let pendingDecision = null;
+
+        function openDecision(id, type, status) {
+            pendingDecision = { id, type, status };
+            document.getElementById('decisionTitle').textContent = (status === 'approved' ? 'Approve' : 'Reject') + (type === 'leaves' ? ' Leave' : ' WFH') + ' Request';
+            document.getElementById('decisionRemarks').value = '';
+            document.getElementById('decisionConfirmBtn').className = 'btn ' + (status === 'approved' ? 'btn-success' : 'btn-danger');
+            document.getElementById('decisionConfirmBtn').innerHTML = (status === 'approved' ? '<i class="fas fa-check"></i> Approve' : '<i class="fas fa-times"></i> Reject');
+            document.getElementById('decisionModal').classList.add('active');
+        }
+
+        function closeDecisionModal() { document.getElementById('decisionModal').classList.remove('active'); pendingDecision = null; }
+
+        async function confirmDecision() {
+            if (!pendingDecision) return;
+            const { id, type, status } = pendingDecision;
+            const remarks = document.getElementById('decisionRemarks').value.trim();
+            closeDecisionModal();
+            const data = await apiCall('/manager/' + type + '/' + id, 'PUT', { status, remarks });
+            if (data && data.success) {
+                showToast('Request ' + status + '!', 'success');
+                loadLeaves();
+                loadWfh();
+                loadNotifBadge();
+            } else {
+                showToast(data?.message || 'Failed to update request', 'error');
+            }
+        }
+
+        let currentTicket = null;
+
+        function openTicket(id, empName, subject) {
+            currentTicket = id;
+            document.getElementById('ticketInfo').innerHTML = '<strong>' + escapeHtml(empName) + '</strong> — ' + escapeHtml(subject);
+            document.getElementById('ticketResponse').value = '';
+            document.getElementById('ticketStatus').value = 'in_progress';
+            document.getElementById('ticketModal').classList.add('active');
+        }
+
+        function closeTicketModal() { document.getElementById('ticketModal').classList.remove('active'); currentTicket = null; }
+
+        async function submitTicketResponse() {
+            if (!currentTicket) return;
+            const response = document.getElementById('ticketResponse').value.trim();
+            const status = document.getElementById('ticketStatus').value;
+            if (!response) { showToast('Please write a response', 'error'); return; }
+            const id = currentTicket;
+            closeTicketModal();
+            const data = await apiCall('/manager/tickets/' + id, 'PUT', { response, status });
+            if (data && data.success) {
+                showToast('Response submitted!', 'success');
+                loadTickets();
+                loadNotifBadge();
+            } else {
+                showToast(data?.message || 'Failed to submit response', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

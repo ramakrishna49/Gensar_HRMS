@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+dist/
+build/
+
+# uploads
+uploads/
+
+# Databases & backups
+data/
+backups/
+
+# Session history
+session-history.json
+
+.vercel
+.env*

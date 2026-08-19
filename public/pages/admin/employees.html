@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employees - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="admin-app">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/admin/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">Employee Management</div>
+            <a href="/pages/admin/employees.html" class="nav-item active"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
+            <a href="/pages/admin/departments.html" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
+            <a href="/pages/admin/designations.html" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
+            <div class="nav-section-title">Time & Leave</div>
+            <a href="/pages/admin/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/admin/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <div class="nav-section-title">Finance</div>
+            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
+            <div class="nav-section-title">Communication</div>
+            <a href="/pages/admin/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <div class="nav-section-title">Analytics</div>
+            <a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">Employee Management</h2>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-success" onclick="downloadEmployeesExcel()"><i class="fas fa-file-excel"></i> <span class="btn-label">Download Excel</span></button>
+                <button class="btn btn-primary" onclick="openAddEmployeeModal()"><i class="fas fa-plus"></i> <span class="btn-label">Add Employee</span></button>
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/admin/settings.html" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-body">
+            <div class="grid grid-4" style="margin-bottom:24px;">
+                <div class="stat-card slide-up stagger-1">
+                    <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                    <div class="stat-info"><h3 id="totalCount">--</h3><p>Total Employees</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-2">
+                    <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
+                    <div class="stat-info"><h3 id="activeCount">--</h3><p>Active</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-3">
+                    <div class="stat-icon red"><i class="fas fa-user-times"></i></div>
+                    <div class="stat-info"><h3 id="inactiveCount">--</h3><p>Inactive</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-4">
+                    <div class="stat-icon purple"><i class="fas fa-user-plus"></i></div>
+                    <div class="stat-info"><h3 id="newMonthCount">--</h3><p>New This Month</p></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:24px;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="position:relative;flex:1;min-width:200px;">
+                        <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-tertiary);"></i>
+                        <input type="text" id="searchInput" class="form-control" style="padding-left:36px;" placeholder="Search by name, email, or ID..." oninput="filterEmployees()">
+                    </div>
+                    <select id="filterDept" class="form-control" style="width:auto;min-width:160px;" onchange="filterEmployees()">
+                        <option value="">All Departments</option>
+                    </select>
+                    <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="filterEmployees()">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Employee</th><th>ID</th><th>Email</th><th>Phone</th><th>Department</th><th>Designation</th><th>Reporting To</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="employeesTable">
+                            <tr><td colspan="10" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal" id="addEmployeeModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">
+                <h2>Add New Employee</h2>
+                <button onclick="closeModal('addEmployeeModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addEmployeeForm" onsubmit="addEmployee(event)">
+                    <div class="grid grid-2">
+                        <div class="form-group"><label for="add_emp_id">Employee ID *</label><input type="text" class="form-control" id="add_emp_id" name="employee_id" required></div>
+                        <div class="form-group"><label for="add_first_name">First Name *</label><input type="text" class="form-control" id="add_first_name" name="first_name" required></div>
+                        <div class="form-group"><label for="add_last_name">Last Name *</label><input type="text" class="form-control" id="add_last_name" name="last_name" required></div>
+                        <div class="form-group"><label for="add_phone">Phone</label><input type="tel" class="form-control" id="add_phone" name="phone"></div>
+                    </div>
+                    <div class="grid grid-2">
+                        <div class="form-group"><label for="add_email">Email (Official) *</label><input type="email" class="form-control" id="add_email" name="email" required></div>
+                        <div class="form-group"><label for="add_personal_email">Personal Email</label><input type="email" class="form-control" id="add_personal_email" name="personal_email"></div>
+                    </div>
+                    <div class="grid grid-2">
+                        <div class="form-group"><label for="departmentSelect">Department</label><select class="form-control" name="department_id" id="departmentSelect"><option value="">Select Department</option></select></div>
+                        <div class="form-group"><label for="designationSelect">Designation</label><select class="form-control" name="designation_id" id="designationSelect"><option value="">Select Designation</option></select></div>
+                        <div class="form-group"><label for="addRole">Role</label><select class="form-control" name="role" id="addRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label for="reportingManagerSelect">Reporting Person</label><select class="form-control" name="reporting_manager_id" id="reportingManagerSelect"><option value="">Select Reporting Person</option></select>
+                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
+                        <div class="form-group"><label for="add_joining_date">Joining Date *</label><input type="date" class="form-control" id="add_joining_date" name="joining_date" required></div>
+                        <div class="form-group"><label for="add_salary">Total Compensation</label><input type="number" class="form-control" id="add_salary" name="salary"></div>
+                        <div class="form-group"><label for="add_uan">UAN Number</label><input type="text" class="form-control" id="add_uan" name="uan_number" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
+                        <div class="form-group"><label for="add_password">Password (default: welcome123)</label><input type="password" class="form-control" id="add_password" name="password" value="welcome123"></div>
+                    </div>
+                    <div class="card" style="padding:14px 16px;margin-bottom:8px;background:var(--bg-light);">
+                        <p style="font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:10px;"><i class="fas fa-calculator" style="margin-right:6px;color:#7c6ca8;"></i>Salary Structure (set once here; used on every payslip)</p>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label for="add_basic_salary">Basic Salary</label><input type="number" step="0.01" class="form-control" id="add_basic_salary" name="basic_salary"></div>
+                            <div class="form-group"><label for="add_hra">HRA</label><input type="number" step="0.01" class="form-control" id="add_hra" name="hra"></div>
+                            <div class="form-group"><label for="add_conveyance">Conveyance</label><input type="number" step="0.01" class="form-control" id="add_conveyance" name="conveyance"></div>
+                            <div class="form-group"><label for="add_other_allowance">Medical Allowance</label><input type="number" step="0.01" class="form-control" id="add_other_allowance" name="other_allowance"></div>
+                            <div class="form-group"><label for="add_special_allowance">Special Allowance</label><input type="number" step="0.01" class="form-control" id="add_special_allowance" name="special_allowance"></div>
+                        </div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label for="add_pf">Employee PF</label><input type="number" step="0.01" class="form-control" id="add_pf" name="pf"></div>
+                            <div class="form-group"><label for="add_esi">Employee ESI</label><input type="number" step="0.01" class="form-control" id="add_esi" name="esi"></div>
+                            <div class="form-group"><label for="add_professional_tax">Professional Tax</label><input type="number" step="0.01" class="form-control" id="add_professional_tax" name="professional_tax"></div>
+                            <div class="form-group"><label for="add_income_tax">Income Tax</label><input type="number" step="0.01" class="form-control" id="add_income_tax" name="income_tax"></div>
+                            <div class="form-group"><label for="add_other_deduction">Other Deduction</label><input type="number" step="0.01" class="form-control" id="add_other_deduction" name="other_deduction"></div>
+                        </div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Employer Contributions</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label for="add_employer_pf">Employer PF</label><input type="number" step="0.01" class="form-control" id="add_employer_pf" name="employer_pf"></div>
+                            <div class="form-group"><label for="add_employer_esi">Employer ESI</label><input type="number" step="0.01" class="form-control" id="add_employer_esi" name="employer_esi"></div>
+                            <div class="form-group"><label for="add_employer_contribution">Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" id="add_employer_contribution" name="employer_contribution"></div>
+                        </div>
+                    </div>
+                    <div class="card" style="padding:14px 16px;margin-bottom:8px;background:var(--bg-light);">
+                        <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.5;"><i class="fas fa-info-circle" style="margin-right:6px;color:var(--info);"></i>Personal details (Date of Birth, Blood Group, Bank details, Qualifications, Address, etc.) will be completed by the employee from their profile after first login. Any fields submitted by the employee appear as <strong>pending requests</strong> for your approval.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('addEmployeeModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Employee</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="editEmployeeModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">
+                <h2>Edit Employee</h2>
+                <button onclick="closeModal('editEmployeeModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editEmployeeForm" onsubmit="updateEmployee(event)">
+                    <input type="hidden" id="editId">
+                    <div class="grid grid-2">
+                        <div class="form-group"><label for="editEmpId">Employee ID</label><input type="text" class="form-control" id="editEmpId" readonly></div>
+                        <div class="form-group"><label for="editEmail">Email</label><input type="email" class="form-control" id="editEmail" required></div>
+                        <div class="form-group"><label for="editFirstName">First Name *</label><input type="text" class="form-control" id="editFirstName" required></div>
+                        <div class="form-group"><label for="editLastName">Last Name *</label><input type="text" class="form-control" id="editLastName" required></div>
+                        <div class="form-group"><label for="editPhone">Phone</label><input type="tel" class="form-control" id="editPhone"></div>
+                        <div class="form-group"><label for="editJoiningDate">Joining Date</label><input type="date" class="form-control" id="editJoiningDate"></div>
+                        <div class="form-group"><label for="editDepartment">Department</label><select class="form-control" id="editDepartment"><option value="">Select Department</option></select></div>
+                        <div class="form-group"><label for="editDesignation">Designation</label><select class="form-control" id="editDesignation"><option value="">Select Designation</option></select></div>
+                        <div class="form-group"><label for="editRole">Role</label><select class="form-control" id="editRole"><option value="employee">Employee</option><option value="team_lead">Team Lead</option><option value="manager">Manager</option><option value="hr">HR</option><option value="admin">Admin</option></select></div>
+                        <div class="form-group"><label for="editReportingManager">Reporting Person</label><select class="form-control" id="editReportingManager"><option value="">Select Reporting Person</option></select>
+                            <small style="color:var(--text-secondary);">Chain: Employee &rarr; Team Lead &rarr; Manager &rarr; Admin; HR reports to a Manager. Admin is top. Set the immediate supervisor.</small></div>
+                        <div class="form-group"><label for="editSalary">Total Compensation</label><input type="number" class="form-control" id="editSalary"></div>
+                        <div class="form-group"><label for="editUAN">UAN Number</label><input type="text" class="form-control" id="editUAN" maxlength="12" pattern="[0-9]{12}" title="UAN must be exactly 12 digits" placeholder="e.g. 123456789012"></div>
+                        <div class="form-group"><label for="editStatus">Status</label><select class="form-control" id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
+                        <div class="form-group"><label for="editGender">Gender</label><select class="form-control" id="editGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+                        <div class="form-group"><label for="editBloodGroup">Blood Group</label><input type="text" class="form-control" id="editBloodGroup"></div>
+                        <div class="form-group"><label for="editDOB">Date of Birth</label><input type="date" class="form-control" id="editDOB"></div>
+                        <div class="form-group"><label for="editMaritalStatus">Marital Status</label><select class="form-control" id="editMaritalStatus"><option value="">Select</option><option value="single">Single</option><option value="married">Married</option><option value="divorced">Divorced</option><option value="widowed">Widowed</option></select></div>
+                        <div class="form-group"><label for="editLanguages">Languages Spoken</label><input type="text" class="form-control" id="editLanguages"></div>
+                        <div class="form-group"><label for="editPersonalEmail">Personal Email</label><input type="email" class="form-control" id="editPersonalEmail"></div>
+                    </div>
+                    <div class="form-group"><label for="editAddress">Address</label><textarea class="form-control" id="editAddress" rows="2"></textarea></div>
+                    <div class="form-group"><label for="editPermanentAddress">Permanent Address</label><textarea class="form-control" id="editPermanentAddress" rows="2"></textarea></div>
+                    <div class="form-group"><label for="editEmergencyName">Emergency Contact Name</label><input type="text" class="form-control" id="editEmergencyName"></div>
+                    <div class="form-group"><label for="editEmergencyContact">Emergency Contact</label><input type="text" class="form-control" id="editEmergencyContact"></div>
+                    <div class="card" style="padding:16px;margin-bottom:16px;">
+                        <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-graduation-cap" style="margin-right:8px;color:var(--accent);"></i>Qualifications &amp; IDs</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label for="editQualification">Qualification</label><select class="form-control" id="editQualification"><option value="">Select</option><option value="10th">10th</option><option value="Intermediate">Intermediate</option><option value="Graduate">Graduate</option><option value="Post Graduate">Post Graduate</option><option value="Diploma">Diploma</option><option value="Other">Other</option></select></div>
+                            <div class="form-group"><label for="editSpecialization">Specialization</label><input type="text" class="form-control" id="editSpecialization"></div>
+                            <div class="form-group"><label for="editPAN">PAN Number</label><input type="text" class="form-control" id="editPAN" placeholder="e.g. ABCDE1234F" pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" title="Format: ABCDE1234F (5 letters, 4 digits, 1 letter)"></div>
+                            <div class="form-group"><label for="editAadhaar">Aadhaar Number</label><input type="text" class="form-control" id="editAadhaar" maxlength="12" pattern="[0-9]{12}" title="Must be exactly 12 digits"></div>
+                            <div class="form-group"><label for="editPassport">Passport Number</label><input type="text" class="form-control" id="editPassport"></div>
+                        </div>
+                    </div>
+                    <div class="card" style="padding:16px;margin-bottom:16px;">
+                        <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-university" style="margin-right:8px;color:var(--info);"></i>Bank Details</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label for="editBankName">Bank Name</label><input type="text" class="form-control" id="editBankName"></div>
+                            <div class="form-group"><label for="editBankBranch">Branch</label><input type="text" class="form-control" id="editBankBranch"></div>
+                            <div class="form-group"><label for="editBankAccount">Account Number</label><input type="text" class="form-control" id="editBankAccount"></div>
+                            <div class="form-group"><label for="editBankIFSC">IFSC Code</label><input type="text" class="form-control" id="editBankIFSC" placeholder="e.g. ABCD0123456" pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" title="Format: ABCD0123456 (4 letters, 0, 6 alphanumeric)"></div>
+                        </div>
+                    </div>
+                    <div class="card" style="padding:16px;margin-bottom:16px;">
+                        <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-calculator" style="margin-right:8px;color:#7c6ca8;"></i>Salary Structure <span style="font-weight:400;color:var(--text-secondary);font-size:0.8rem;">(used on every payslip)</span></div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label for="editBasicSalary">Basic Salary</label><input type="number" step="0.01" class="form-control" id="editBasicSalary"></div>
+                            <div class="form-group"><label for="editHRA">HRA</label><input type="number" step="0.01" class="form-control" id="editHRA"></div>
+                            <div class="form-group"><label for="editConveyance">Conveyance</label><input type="number" step="0.01" class="form-control" id="editConveyance"></div>
+                            <div class="form-group"><label for="editOtherAllowance">Medical Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
+                            <div class="form-group"><label for="editSpecialAllowance">Special Allowance</label><input type="number" step="0.01" class="form-control" id="editSpecialAllowance"></div>
+                        </div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label for="editEmployeePF">Employee PF</label><input type="number" step="0.01" class="form-control" id="editEmployeePF"></div>
+                            <div class="form-group"><label for="editEmployeeESI">Employee ESI</label><input type="number" step="0.01" class="form-control" id="editEmployeeESI"></div>
+                            <div class="form-group"><label for="editProfessionalTax">Professional Tax</label><input type="number" step="0.01" class="form-control" id="editProfessionalTax"></div>
+                            <div class="form-group"><label for="editIncomeTax">Income Tax</label><input type="number" step="0.01" class="form-control" id="editIncomeTax"></div>
+                            <div class="form-group"><label for="editOtherDeduction">Other Deduction</label><input type="number" step="0.01" class="form-control" id="editOtherDeduction"></div>
+                        </div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Employer Contributions</div>
+                        <div class="grid grid-2">
+                            <div class="form-group"><label for="editEmployerPF">Employer PF</label><input type="number" step="0.01" class="form-control" id="editEmployerPF"></div>
+                            <div class="form-group"><label for="editEmployerESI">Employer ESI</label><input type="number" step="0.01" class="form-control" id="editEmployerESI"></div>
+                            <div class="form-group"><label for="editEmployerContribution">Employer Contribution (Other)</label><input type="number" step="0.01" class="form-control" id="editEmployerContribution"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editEmployeeModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="viewEmployeeModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:900px;">
+            <div class="modal-header">
+                <h2 id="viewEmpTitle">Employee Details</h2>
+                <button onclick="closeModal('viewEmployeeModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="viewEmpHeader"></div>
+                <div class="view-tabs">
+                    <button class="btn btn-sm btn-primary" data-tab="overview" onclick="showViewTab('overview')">Overview</button>
+                    <button class="btn btn-sm btn-secondary" data-tab="personal" onclick="showViewTab('personal')">Personal</button>
+                    <button class="btn btn-sm btn-secondary" data-tab="qualifications" onclick="showViewTab('qualifications')">Qualifications &amp; IDs</button>
+                    <button class="btn btn-sm btn-secondary" data-tab="bank" onclick="showViewTab('bank')">Bank Details</button>
+                    <button class="btn btn-sm btn-secondary" data-tab="job" onclick="showViewTab('job')">Job &amp; Pay</button>
+                    <button class="btn btn-sm btn-secondary" data-tab="requests" onclick="showViewTab('requests')">Update Requests<span id="viewTabRequestsBadge" style="display:none;margin-left:6px;background:var(--danger);color:#fff;border-radius:20px;padding:1px 8px;font-size:0.7rem;font-weight:600;"></span></button>
+                </div>
+                <div id="viewTabOverview"></div>
+                <div id="viewTabPersonal" style="display:none;"></div>
+                <div id="viewTabQualifications" style="display:none;"></div>
+                <div id="viewTabBank" style="display:none;"></div>
+                <div id="viewTabJob" style="display:none;"></div>
+                <div id="viewTabRequests" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="deletePermanentModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:440px;">
+            <div class="modal-header">
+                <h2 style="color:var(--danger);"><i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>Permanent Delete</h2>
+                <button onclick="closeModal('deletePermanentModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="line-height:1.6;margin-bottom:12px;">This will <strong style="color:var(--danger);">permanently delete</strong> <strong id="delPermanentName"></strong> and <strong>ALL</strong> their data from the database (attendance, leave, payroll, documents, profile requests, etc.). This <strong>cannot be undone</strong>.</p>
+                <div class="form-group">
+                    <label for="delPermanentConfirm">Type <strong>DELETE</strong> to confirm</label>
+                    <input type="text" id="delPermanentConfirm" class="form-control" placeholder="DELETE">
+                </div>
+                <div class="modal-footer" style="padding:0;margin-top:16px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('deletePermanentModal')">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="delPermanentBtn" disabled onclick="confirmPermanentDelete()"><i class="fas fa-trash"></i> Delete Permanently</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="rejectModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:440px;">
+            <div class="modal-header">
+                <h2>Reject Update</h2>
+                <button onclick="closeModal('rejectModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label for="rejectRemarks">Remarks (optional)</label><textarea class="form-control" id="rejectRemarks" rows="3"></textarea></div>
+                <div class="modal-footer" style="padding:0;margin-top:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('rejectModal')">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmReject()">Reject Request</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script>
+        if (!requireAdmin()) throw new Error('Not authenticated');
+        let allEmployees = [];
+        let departmentsCache = [];
+        let pendingCounts = {};
+        let currentViewEmployee = null;
+        let currentViewRequests = [];
+        let allEmployeesForRM = [];
+        let designationsCache = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const me = getCurrentUser();
+            if (me && me.role !== 'admin') {
+                document.querySelectorAll('#addRole option[value="admin"], #editRole option[value="admin"]').forEach(o => o.remove());
+            }
+            loadEmployees();
+            loadDepartments();
+            loadDesignations();
+            loadReportingManagers();
+            loadPendingCounts().then(() => {
+                renderEmployees(allEmployees);
+                const params = new URLSearchParams(window.location.search);
+                const empId = params.get('emp');
+                const tab = params.get('tab') || 'overview';
+                if (empId) {
+                    const validTabs = ['overview', 'personal', 'qualifications', 'bank', 'job', 'requests'];
+                    viewEmployee(Number(empId)).then(() => {
+                        showViewTab(validTabs.includes(tab) ? tab : 'overview');
+                    });
+                }
+            });
+        });
+
+        async function loadEmployees() {
+            const data = await apiCall('/employees?limit=1000');
+            if (data && data.success) {
+                allEmployees = data.employees;
+                updateStats(data.employees);
+                renderEmployees(data.employees);
+            } else {
+                showEmptyState(document.getElementById('employeesTable'), 'fa-exclamation-triangle', 'Error', 'Failed to load employees');
+            }
+        }
+
+        function updateStats(employees) {
+            document.getElementById('totalCount').textContent = employees.length;
+            document.getElementById('activeCount').textContent = employees.filter(e => e.status === 'active').length;
+            document.getElementById('inactiveCount').textContent = employees.filter(e => e.status !== 'active').length;
+            const now = new Date();
+            const thisMonth = employees.filter(e => {
+                if (!e.joining_date) return false;
+                const d = new Date(e.joining_date);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).length;
+            document.getElementById('newMonthCount').textContent = thisMonth;
+        }
+
+        const EMPLOYEE_FIELDS = [
+            ['personal_email', 'Personal Email'], ['date_of_birth', 'Date of Birth'], ['gender', 'Gender'],
+            ['blood_group', 'Blood Group'], ['marital_status', 'Marital Status'], ['languages_spoken', 'Languages Spoken'],
+            ['address', 'Current Address'], ['permanent_address', 'Permanent Address'],
+            ['emergency_contact_name', 'Emergency Contact Name'], ['emergency_contact', 'Emergency Contact'],
+            ['qualification', 'Qualification'], ['specialization', 'Specialization'],
+            ['pan_number', 'PAN Number'], ['aadhaar_number', 'Aadhaar Number'], ['passport_number', 'Passport Number'],
+            ['bank_name', 'Bank Name'], ['bank_branch', 'Bank Branch'], ['bank_account', 'Bank Account'], ['bank_ifsc', 'IFSC Code']
+        ];
+
+        function getIncompleteFields(emp) {
+            if (!emp) return [];
+            return EMPLOYEE_FIELDS.filter(([f]) => emp[f] == null || String(emp[f]).trim() === '');
+        }
+
+        function getIncompleteCount(emp) { return getIncompleteFields(emp).length; }
+
+        function renderEmployees(employees) {
+            const tbody = document.getElementById('employeesTable');
+            if (employees.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-users"></i><h3>No Employees Found</h3><p>Try adjusting your filters or add a new employee.</p></div></td></tr>';
+                return;
+            }
+            const sorted = [...employees].sort((a, b) => {
+                const order = { active: 0, inactive: 1, paused: 1, terminated: 2 };
+                return (order[a.status] || 1) - (order[b.status] || 1);
+            });
+            tbody.innerHTML = sorted.map(emp => {
+                const isActive = emp.status === 'active';
+                const isTerminated = emp.status === 'terminated';
+                const isPaused = emp.status === 'paused';
+                const incFields = getIncompleteFields(emp);
+                const incCount = incFields.length;
+                const incLabel = incCount > 0 ? (incCount + ' from employee') : 'Complete';
+                const incTitle = incCount > 0 ? 'Pending from employee: ' + incFields.map(f => f[1]).join(', ') : 'All personal details provided';
+                return `
+                <tr${!isActive ? ' style="opacity:0.6;"' : ''}>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:600;flex-shrink:0;">${escapeHtml(getInitials(emp.first_name, emp.last_name))}</div>
+                            <div>
+                                <div style="font-weight:500;">${escapeHtml(emp.first_name)} ${escapeHtml(emp.last_name)}</div>
+                                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                                    ${pendingCounts[emp.id] ? `<span class="badge badge-warning" style="font-size:0.6rem;margin-top:2px;" title="Pending update requests">${pendingCounts[emp.id]} pending</span>` : ''}
+                                    <span class="badge ${incCount > 0 ? 'badge-secondary' : 'badge-success'}" style="font-size:0.6rem;margin-top:2px;" title="${escapeHtml(incTitle)}">${incLabel}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><strong>${escapeHtml(emp.employee_id)}</strong></td>
+                    <td>${escapeHtml(emp.email)}</td>
+                    <td>${escapeHtml(emp.phone || '-')}</td>
+                    <td>${escapeHtml(emp.department_name || '-')}</td>
+                    <td>${escapeHtml(emp.designation_name || '-')}${emp.designation_level ? '<br><span class="badge badge-secondary" style="font-size:0.62rem;">Level ' + escapeHtml(String(emp.designation_level)) + '</span>' : ''}</td>
+                    <td>${emp.reporting_manager_name ? '<span style="font-size:0.85rem;">' + escapeHtml(emp.reporting_manager_name) + '</span><br><span class="badge badge-secondary" style="font-size:0.62rem;">' + escapeHtml(emp.reporting_manager_employee_id || '') + '</span>' : '<span class="badge badge-secondary" style="font-size:0.7rem;">Not Assigned</span>'}</td>
+                    <td><span class="badge badge-${emp.role==='admin'?'danger':emp.role==='hr'?'warning':emp.role==='manager'?'info':emp.role==='team_lead'?'primary':'secondary'}">${escapeHtml(emp.role)}</span></td>
+                    <td><span class="badge badge-${getStatusBadge(emp.status)}">${escapeHtml(emp.status)}</span></td>
+                    <td>
+                        <div style="display:flex;gap:4px;">
+                            <button class="btn btn-sm btn-info" onclick="viewEmployee(${emp.id})" title="View"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-secondary" onclick="editEmployee(${emp.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                            ${!isTerminated ? (isActive
+                                ? `<button class="btn btn-sm btn-warning" onclick="toggleEmployeeStatus(${emp.id}, 'inactive')" title="Deactivate"><i class="fas fa-pause-circle"></i></button>
+                                   <button class="btn btn-sm btn-info" onclick="pauseEmployee(${emp.id})" title="Pause"><i class="fas fa-pause"></i></button>
+                                   <button class="btn btn-sm btn-danger" onclick="deleteEmployee(${emp.id})" title="Terminate"><i class="fas fa-trash"></i></button>`
+                                : isPaused
+                                    ? `<button class="btn btn-sm btn-success" onclick="resumeEmployee(${emp.id})" title="Resume"><i class="fas fa-play"></i></button>
+                                       <button class="btn btn-sm btn-danger" onclick="deleteEmployee(${emp.id})" title="Terminate"><i class="fas fa-trash"></i></button>`
+                                    : `<button class="btn btn-sm btn-success" onclick="toggleEmployeeStatus(${emp.id}, 'active')" title="Activate"><i class="fas fa-play-circle"></i></button>`
+                            ) : ''}
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function downloadEmployeesExcel() {
+            if (!allEmployees || allEmployees.length === 0) { showToast('No employee data to export', 'warning'); return; }
+            const rows = [['Employee ID', 'First Name', 'Last Name', 'Official Email', 'Personal Email', 'Phone', 'Department', 'Designation', 'Role', 'Status', 'Joining Date', 'Salary', 'Gender', 'Date of Birth', 'Blood Group', 'Marital Status', 'Languages Spoken', 'Current Address', 'Permanent Address', 'Emergency Contact Name', 'Emergency Contact', 'Qualification', 'Specialization', 'PAN Number', 'Aadhaar Number', 'Passport Number', 'Bank Name', 'Bank Branch', 'Account Number', 'IFSC Code']];
+            allEmployees.forEach(e => {
+                rows.push([
+                    e.employee_id || '', e.first_name || '', e.last_name || '', e.email || '', e.personal_email || '',
+                    e.phone || '', e.department_name || '', e.designation_name || '', e.role || '', e.status || '',
+                    e.joining_date || '', e.salary != null ? e.salary : '', e.gender || '', e.date_of_birth || '',
+                    e.blood_group || '', e.marital_status || '', e.languages_spoken || '', e.address || '',
+                    e.permanent_address || '', e.emergency_contact_name || '', e.emergency_contact || '',
+                    e.qualification || '', e.specialization || '', e.pan_number || '', e.aadhaar_number || '',
+                    e.passport_number || '', e.bank_name || '', e.bank_branch || '', e.bank_account || '', e.bank_ifsc || ''
+                ]);
+            });
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [
+                { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 22 },
+                { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 10 }, { wch: 10 },
+                { wch: 14 }, { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 12 },
+                { wch: 14 }, { wch: 20 }, { wch: 22 }, { wch: 22 }, { wch: 20 },
+                { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 16 },
+                { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, 'Employees');
+            XLSX.writeFile(wb, 'Employees_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            showToast('Excel downloaded!', 'success');
+        }
+
+        function filterEmployees() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const dept = document.getElementById('filterDept').value;
+            const status = document.getElementById('filterStatus').value;
+            let filtered = allEmployees;
+            if (search) {
+                filtered = filtered.filter(e =>
+                    (e.first_name || '').toLowerCase().includes(search) ||
+                    (e.last_name || '').toLowerCase().includes(search) ||
+                    (e.email || '').toLowerCase().includes(search) ||
+                    (e.employee_id || '').toLowerCase().includes(search)
+                );
+            }
+            if (dept) filtered = filtered.filter(e => String(e.department_id) === dept);
+            if (status) filtered = filtered.filter(e => e.status === status);
+            renderEmployees(filtered);
+        }
+
+        async function loadDepartments() {
+            const data = await apiCall('/departments');
+            if (data && data.success) {
+                departmentsCache = data.departments;
+                const html = '<option value="">All Departments</option>' + data.departments.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('');
+                document.getElementById('filterDept').innerHTML = html;
+                document.getElementById('departmentSelect').innerHTML = '<option value="">Select Department</option>' + data.departments.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('');
+                document.getElementById('editDepartment').innerHTML = '<option value="">Select Department</option>' + data.departments.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('');
+            }
+        }
+
+        async function loadDesignations() {
+            const data = await apiCall('/designations');
+            if (data && data.success) {
+                designationsCache = data.designations;
+                const html = '<option value="">Select Designation</option>' + data.designations.map(d => `<option value="${d.id}">${escapeHtml(d.name)}${d.level ? ' (Level ' + escapeHtml(String(d.level)) + ')' : ''}</option>`).join('');
+                document.getElementById('designationSelect').innerHTML = html;
+                document.getElementById('editDesignation').innerHTML = html;
+            }
+        }
+
+        const RM_ROLE_MAP = {
+            employee: ['team_lead'],
+            team_lead: ['manager'],
+            manager: ['admin'],
+            hr: ['manager'],
+            admin: []
+        };
+
+        const ROLE_LABEL = { employee: 'Employee', team_lead: 'Team Lead', manager: 'Manager', hr: 'HR', admin: 'Admin' };
+        function rmCandidatesFor(role) {
+            const wanted = RM_ROLE_MAP[role] || [];
+            return allEmployeesForRM.filter(e => wanted.includes(e.role) && e.status === 'active');
+        }
+
+        function renderRMOptions(role, selectEl, currentId) {
+            const candidates = rmCandidatesFor(role);
+            const opt = (e, labelOverride) => `<option value="${e.id}">${escapeHtml(labelOverride || (e.first_name + ' ' + e.last_name) + ' (' + (e.employee_id || '') + ')')}</option>`;
+            let html = '<option value="">' + (role === 'admin' ? 'Admin is top of chain' : 'Select Reporting Person') + '</option>';
+            if (currentId && !candidates.some(c => String(c.id) === String(currentId))) {
+                const cur = allEmployeesForRM.find(e => String(e.id) === String(currentId));
+                if (cur) html += opt(cur, cur.first_name + ' ' + cur.last_name + ' (' + (cur.employee_id || '') + ') - current');
+            }
+            html += candidates.map(e => opt(e)).join('');
+            selectEl.innerHTML = html;
+            if (currentId) selectEl.value = currentId;
+        }
+
+        function onRoleChange(selectEl, rmEl, currentId) {
+            renderRMOptions(selectEl.value, rmEl, currentId);
+        }
+
+        function onDesignationChange(selectEl, rmEl, roleEl) {
+            const des = designationsCache.find(d => String(d.id) === String(selectEl.value));
+            if (des && des.team_lead_id && roleEl.value === 'employee') {
+                const tlInList = allEmployeesForRM.some(e => String(e.id) === String(des.team_lead_id) && e.role === 'team_lead' && e.status === 'active');
+                if (tlInList) rmEl.value = String(des.team_lead_id);
+            }
+        }
+
+        async function loadReportingManagers() {
+            const data = await apiCall('/employees?limit=1000');
+            if (data && data.success) {
+                allEmployeesForRM = data.employees || [];
+                const addRole = document.getElementById('addRole');
+                const editRole = document.getElementById('editRole');
+                renderRMOptions(addRole.value, document.getElementById('reportingManagerSelect'));
+                renderRMOptions(editRole.value, document.getElementById('editReportingManager'));
+            }
+        }
+
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'addRole') {
+                onRoleChange(e.target, document.getElementById('reportingManagerSelect'));
+            } else if (e.target && e.target.id === 'editRole') {
+                onRoleChange(e.target, document.getElementById('editReportingManager'), document.getElementById('editReportingManager').dataset.currentRm || '');
+            } else if (e.target && e.target.id === 'designationSelect') {
+                onDesignationChange(e.target, document.getElementById('reportingManagerSelect'), document.getElementById('addRole'));
+            } else if (e.target && e.target.id === 'editDesignation') {
+                onDesignationChange(e.target, document.getElementById('editReportingManager'), document.getElementById('editRole'));
+            }
+        });
+
+        function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        async function addEmployee(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            const result = await apiCall('/employees', 'POST', data);
+            if (result && result.success) {
+                showToast('Employee added! Temp password: ' + (result.temp_password || 'welcome123'), 'success');
+                closeModal('addEmployeeModal');
+                form.reset();
+                renderRMOptions(document.getElementById('addRole').value, document.getElementById('reportingManagerSelect'));
+                loadEmployees();
+            } else {
+                showToast(result?.detail || result?.message || 'Failed to add employee', 'error');
+            }
+        }
+
+        async function editEmployee(id) {
+            const data = await apiCall(`/employees/${id}`);
+            if (data && data.success) {
+                const emp = data.employee;
+                document.getElementById('editId').value = emp.id;
+                document.getElementById('editEmpId').value = emp.employee_id;
+                document.getElementById('editEmail').value = emp.email || '';
+                document.getElementById('editFirstName').value = emp.first_name || '';
+                document.getElementById('editLastName').value = emp.last_name || '';
+                document.getElementById('editPhone').value = emp.phone || '';
+                document.getElementById('editJoiningDate').value = emp.joining_date ? emp.joining_date.split('T')[0] : '';
+                document.getElementById('editDepartment').value = emp.department_id || '';
+                document.getElementById('editDesignation').value = emp.designation_id || '';
+                document.getElementById('editRole').value = emp.role || 'employee';
+                renderRMOptions(emp.role || 'employee', document.getElementById('editReportingManager'), emp.reporting_manager_id || '');
+                document.getElementById('editReportingManager').dataset.currentRm = emp.reporting_manager_id || '';
+                document.getElementById('editSalary').value = emp.salary || '';
+                document.getElementById('editUAN').value = emp.uan_number || '';
+                document.getElementById('editStatus').value = emp.status || 'active';
+                document.getElementById('editGender').value = emp.gender || '';
+                document.getElementById('editBloodGroup').value = emp.blood_group || '';
+                document.getElementById('editDOB').value = emp.date_of_birth ? emp.date_of_birth.split('T')[0] : '';
+                document.getElementById('editAddress').value = emp.address || '';
+                document.getElementById('editPermanentAddress').value = emp.permanent_address || '';
+                document.getElementById('editEmergencyName').value = emp.emergency_contact_name || '';
+                document.getElementById('editEmergencyContact').value = emp.emergency_contact || '';
+                document.getElementById('editMaritalStatus').value = emp.marital_status || '';
+                document.getElementById('editLanguages').value = emp.languages_spoken || '';
+                document.getElementById('editPersonalEmail').value = emp.personal_email || '';
+                document.getElementById('editQualification').value = emp.qualification || '';
+                document.getElementById('editSpecialization').value = emp.specialization || '';
+                document.getElementById('editPAN').value = emp.pan_number || '';
+                document.getElementById('editAadhaar').value = emp.aadhaar_number || '';
+                document.getElementById('editPassport').value = emp.passport_number || '';
+                document.getElementById('editBankName').value = emp.bank_name || '';
+                document.getElementById('editBankBranch').value = emp.bank_branch || '';
+                document.getElementById('editBankAccount').value = emp.bank_account || '';
+                document.getElementById('editBankIFSC').value = emp.bank_ifsc || '';
+                const setNum = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val === null || val === undefined) ? '' : val; };
+                setNum('editBasicSalary', emp.basic_salary); setNum('editHRA', emp.hra);
+                setNum('editConveyance', emp.conveyance);
+                setNum('editSpecialAllowance', emp.special_allowance); setNum('editOtherAllowance', emp.other_allowance);
+                setNum('editEmployeePF', emp.pf); setNum('editEmployeeESI', emp.esi);
+                setNum('editProfessionalTax', emp.professional_tax); setNum('editIncomeTax', emp.income_tax);
+                setNum('editOtherDeduction', emp.other_deduction);
+                setNum('editEmployerPF', emp.employer_pf); setNum('editEmployerESI', emp.employer_esi);
+                setNum('editEmployerContribution', emp.employer_contribution);
+                document.getElementById('editEmployeeModal').classList.add('active');
+            }
+        }
+
+        async function updateEmployee(event) {
+            event.preventDefault();
+            const id = document.getElementById('editId').value;
+            const data = {
+                email: document.getElementById('editEmail').value,
+                first_name: document.getElementById('editFirstName').value,
+                last_name: document.getElementById('editLastName').value,
+                phone: document.getElementById('editPhone').value,
+                joining_date: document.getElementById('editJoiningDate').value || undefined,
+                department_id: document.getElementById('editDepartment').value || undefined,
+                designation_id: document.getElementById('editDesignation').value || undefined,
+                reporting_manager_id: document.getElementById('editReportingManager').value || '',
+                salary: document.getElementById('editSalary').value || undefined,
+                uan_number: document.getElementById('editUAN').value || undefined,
+                role: document.getElementById('editRole').value,
+                status: document.getElementById('editStatus').value,
+                gender: document.getElementById('editGender').value || undefined,
+                blood_group: document.getElementById('editBloodGroup').value || undefined,
+                date_of_birth: document.getElementById('editDOB').value || undefined,
+                address: document.getElementById('editAddress').value || undefined,
+                permanent_address: document.getElementById('editPermanentAddress').value || undefined,
+                emergency_contact_name: document.getElementById('editEmergencyName').value || undefined,
+                emergency_contact: document.getElementById('editEmergencyContact').value || undefined,
+                marital_status: document.getElementById('editMaritalStatus').value || undefined,
+                languages_spoken: document.getElementById('editLanguages').value || undefined,
+                personal_email: document.getElementById('editPersonalEmail').value || undefined,
+                qualification: document.getElementById('editQualification').value || undefined,
+                specialization: document.getElementById('editSpecialization').value || undefined,
+                pan_number: document.getElementById('editPAN').value || undefined,
+                aadhaar_number: document.getElementById('editAadhaar').value || undefined,
+                passport_number: document.getElementById('editPassport').value || undefined,
+                bank_name: document.getElementById('editBankName').value || undefined,
+                bank_branch: document.getElementById('editBankBranch').value || undefined,
+                bank_account: document.getElementById('editBankAccount').value || undefined,
+                bank_ifsc: document.getElementById('editBankIFSC').value || undefined,
+                basic_salary: document.getElementById('editBasicSalary').value || undefined,
+                hra: document.getElementById('editHRA').value || undefined,
+                conveyance: document.getElementById('editConveyance').value || undefined,
+                special_allowance: document.getElementById('editSpecialAllowance').value || undefined,
+                other_allowance: document.getElementById('editOtherAllowance').value || undefined,
+                pf: document.getElementById('editEmployeePF').value || undefined,
+                esi: document.getElementById('editEmployeeESI').value || undefined,
+                professional_tax: document.getElementById('editProfessionalTax').value || undefined,
+                income_tax: document.getElementById('editIncomeTax').value || undefined,
+                other_deduction: document.getElementById('editOtherDeduction').value || undefined,
+                employer_pf: document.getElementById('editEmployerPF').value || undefined,
+                employer_esi: document.getElementById('editEmployerESI').value || undefined,
+                employer_contribution: document.getElementById('editEmployerContribution').value || undefined
+            };
+            const result = await apiCall(`/employees/${id}`, 'PUT', data);
+            if (result && result.success) {
+                showToast('Employee updated successfully!', 'success');
+                closeModal('editEmployeeModal');
+                loadEmployees();
+            } else {
+                showToast(result?.detail || result?.message || 'Failed to update employee', 'error');
+            }
+        }
+
+        function toggleEmployeeStatus(id, newStatus) {
+            const action = newStatus === 'active' ? 'Activate' : 'Deactivate';
+            showConfirmDialog(action + ' Employee', 'Are you sure you want to ' + action.toLowerCase() + ' this employee?', action, newStatus === 'active' ? 'btn-success' : 'btn-warning', function() {
+                apiCall(`/employees/${id}`, 'PUT', { status: newStatus }).then(result => {
+                    if (result && result.success) {
+                        showToast('Employee ' + action.toLowerCase() + 'd successfully!', 'success');
+                        loadEmployees();
+                    } else {
+                        showToast(result?.message || 'Failed to update status', 'error');
+                    }
+                });
+            });
+        }
+
+        async function deleteEmployee(id) {
+            showConfirmDialog('Terminate Employee', 'Are you sure you want to terminate this employee? This action can be reversed by setting status to active.', 'Terminate', 'btn-danger', async () => {
+                const result = await apiCall(`/employees/${id}`, 'DELETE');
+                if (result && result.success) {
+                    showToast('Employee terminated successfully', 'success');
+                    await Promise.all([loadEmployees(), loadPendingCounts()]);
+                    if (currentViewEmployee && String(currentViewEmployee.id) === String(id)) viewEmployee(id);
+                }
+            });
+        }
+
+        async function pauseEmployee(id) {
+            showConfirmDialog('Pause Employee', 'Pause this employee? They will not be able to log in or check in, but all their data will be kept.', 'Pause', 'btn-warning', async () => {
+                const result = await apiCall(`/employees/${id}/pause`, 'POST');
+                if (result && result.success) {
+                    showToast('Employee paused successfully', 'success');
+                    await Promise.all([loadEmployees(), loadPendingCounts()]);
+                    if (currentViewEmployee && String(currentViewEmployee.id) === String(id)) viewEmployee(id);
+                } else {
+                    showToast(result?.message || 'Failed to pause employee', 'error');
+                }
+            });
+        }
+
+        async function resumeEmployee(id) {
+            const result = await apiCall(`/employees/${id}/resume`, 'POST');
+            if (result && result.success) {
+                showToast('Employee resumed successfully', 'success');
+                await Promise.all([loadEmployees(), loadPendingCounts()]);
+                if (currentViewEmployee && String(currentViewEmployee.id) === String(id)) viewEmployee(id);
+            } else {
+                showToast(result?.message || 'Failed to resume employee', 'error');
+            }
+        }
+
+        let permanentDeleteTargetId = null;
+        function openPermanentDeleteModal(id) {
+            permanentDeleteTargetId = id;
+            const emp = (allEmployees || []).find(e => String(e.id) === String(id)) || currentViewEmployee || {};
+            document.getElementById('delPermanentName').textContent = (emp.first_name || '') + ' ' + (emp.last_name || '') + ' (' + (emp.employee_id || '') + ')';
+            document.getElementById('delPermanentConfirm').value = '';
+            document.getElementById('delPermanentBtn').disabled = true;
+            document.getElementById('deletePermanentModal').classList.add('active');
+            document.getElementById('delPermanentConfirm').focus();
+        }
+
+        async function confirmPermanentDelete() {
+            if (!permanentDeleteTargetId) return;
+            const result = await apiCall('/employees/' + permanentDeleteTargetId + '/permanent', 'DELETE');
+            if (result && result.success) {
+                showToast(result.message || 'Employee permanently deleted', 'success');
+                closeModal('deletePermanentModal');
+                closeModal('viewEmployeeModal');
+                permanentDeleteTargetId = null;
+                await Promise.all([loadEmployees(), loadPendingCounts()]);
+            } else {
+                showToast(result?.message || 'Failed to permanently delete employee', 'error');
+            }
+        }
+
+        document.addEventListener('input', function(e) {
+            if (e.target && e.target.id === 'delPermanentConfirm') {
+                document.getElementById('delPermanentBtn').disabled = (e.target.value.trim() !== 'DELETE');
+            }
+        });
+
+        async function loadPendingCounts() {
+            const data = await apiCall('/profile-updates?status=pending');
+            if (data && data.success) {
+                pendingCounts = {};
+                (data.requests || []).forEach(r => {
+                    pendingCounts[r.employee_id] = (pendingCounts[r.employee_id] || 0) + 1;
+                });
+            }
+        }
+
+        function maskId(value, keepChars) {
+            if (!value) return '-';
+            const v = String(value);
+            const k = keepChars || 4;
+            if (v.length <= k) return '••••';
+            return '••••' + v.slice(-k);
+        }
+
+        function cap(text) { return text ? text.charAt(0).toUpperCase() + text.slice(1) : null; }
+
+        function vRow(label, value) {
+            return '<div class="detail-row"><span class="detail-label">' + escapeHtml(label) + '</span><span class="detail-value">' + (value != null && String(value) !== '' ? escapeHtml(String(value)) : '<span style="color:var(--text-tertiary);">-</span>') + '</span></div>';
+        }
+
+        function vSection(title, icon, rowsHtml) {
+            return '<div class="detail-card"><h4><i class="fas ' + icon + '" style="color:var(--primary);"></i>' + escapeHtml(title) + '</h4><div class="detail-grid">' + rowsHtml + '</div></div>';
+        }
+
+        async function viewEmployee(id) {
+            const [empRes, reqRes] = await Promise.all([
+                apiCall(`/employees/${id}`),
+                apiCall(`/profile-updates?employee_id=${id}`)
+            ]);
+            if (!empRes || !empRes.success) { showToast('Failed to load employee', 'error'); return; }
+            const emp = empRes.employee;
+            currentViewEmployee = emp;
+            currentViewRequests = (reqRes && reqRes.success) ? reqRes.requests : [];
+
+            const initials = getInitials(emp.first_name, emp.last_name);
+            let avatarInner = emp.profile_photo
+                ? '<img src="' + escapeHtml(emp.profile_photo) + '" alt="Profile" onerror="this.remove();">'
+                : '';
+            let header = '<div class="view-hero">';
+            header += '<div class="avatar">' + avatarInner + escapeHtml(initials) + '</div>';
+            header += '<div class="hero-info">';
+            header += '<h3 style="font-weight:700;font-size:1.2rem;margin-bottom:6px;">' + escapeHtml(emp.first_name) + ' ' + escapeHtml(emp.last_name) +
+                ' <span class="badge badge-' + (emp.role==='admin'?'danger':emp.role==='hr'?'warning':emp.role==='manager'?'info':emp.role==='team_lead'?'primary':'secondary') + '">' + escapeHtml(emp.role || 'employee') + '</span>' +
+                ' <span class="badge badge-' + getStatusBadge(emp.status) + '">' + escapeHtml(emp.status || 'active') + '</span></h3>';
+            header += '<p style="color:var(--text-secondary);font-size:0.9rem;">' + escapeHtml(emp.employee_id || '') + ' &middot; ' + escapeHtml(emp.department_name || '-') + (emp.designation_name ? ' &middot; ' + escapeHtml(emp.designation_name) + (emp.designation_level ? ' (Level ' + escapeHtml(String(emp.designation_level)) + ')' : '') : '') + '</p>';
+            header += '<p style="color:var(--text-secondary);font-size:0.85rem;margin-top:4px;"><i class="fas fa-envelope" style="margin-right:6px;"></i>' + escapeHtml(emp.email || '-') + (emp.phone ? '<span style="margin-left:14px;"><i class="fas fa-phone" style="margin-right:6px;"></i>' + escapeHtml(emp.phone) + '</span>' : '') + '</p>';
+            header += '</div>';
+            const pend = currentViewRequests.filter(r => r.status === 'pending').length;
+            header += '<div class="hero-actions">';
+            if (pend > 0) header += '<span class="badge badge-warning"><i class="fas fa-hourglass-half"></i> ' + pend + ' pending update(s)</span>';
+            header += '<button class="btn btn-sm btn-secondary" onclick="resetEmployeePassword(' + emp.id + ')"><i class="fas fa-key"></i> Reset Password</button>';
+            if (emp.status === 'active') {
+                header += '<button class="btn btn-sm btn-warning" onclick="pauseEmployee(' + emp.id + ')"><i class="fas fa-pause"></i> Pause</button>';
+                header += '<button class="btn btn-sm btn-danger" onclick="deleteEmployee(' + emp.id + ')"><i class="fas fa-trash"></i> Delete</button>';
+            } else if (emp.status === 'paused') {
+                header += '<button class="btn btn-sm btn-success" onclick="resumeEmployee(' + emp.id + ')"><i class="fas fa-play"></i> Resume</button>';
+                header += '<button class="btn btn-sm btn-danger" onclick="deleteEmployee(' + emp.id + ')"><i class="fas fa-trash"></i> Delete</button>';
+            }
+            header += '<button class="btn btn-sm btn-danger" onclick="openPermanentDeleteModal(' + emp.id + ')"><i class="fas fa-trash"></i> Delete Permanently</button>';
+            header += '</div>';
+            header += '</div>';
+            document.getElementById('viewEmpHeader').innerHTML = header;
+            document.getElementById('viewEmpTitle').textContent = 'Employee Details - ' + emp.first_name + ' ' + (emp.last_name || '');
+
+            renderViewTabs();
+            document.getElementById('viewEmployeeModal').classList.add('active');
+            showViewTab('overview');
+        }
+
+        function resetEmployeePassword(id) {
+            const emp = currentViewEmployee;
+            showConfirmDialog('Reset Password', 'Generate a temporary password for <strong>' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '</strong>? They will be required to change it on next login.', 'Reset Password', 'btn-warning', async function() {
+                const data = await apiCall('/employees/' + id + '/reset-password', 'POST', {});
+                if (data && data.success) {
+                    showTempPasswordModal(data.temp_password);
+                    await Promise.all([loadEmployees(), loadPendingCounts()]);
+                } else {
+                    showToast(data?.message || 'Failed to reset password', 'error');
+                }
+            });
+        }
+
+        function showTempPasswordModal(tempPassword) {
+            const existing = document.getElementById('tempPasswordOverlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'tempPasswordOverlay';
+            overlay.className = 'modal active';
+            overlay.onclick = function(e) { if (e.target === this) { this.remove(); } };
+
+            const content = document.createElement('div');
+            content.className = 'modal-content';
+            content.style.maxWidth = '420px';
+            content.onclick = function(e) { e.stopPropagation(); };
+
+            const header = document.createElement('div');
+            header.className = 'modal-header';
+            header.innerHTML = '<h2><i class="fas fa-key" style="color:var(--warning);margin-right:8px;"></i>Temporary Password</h2><button class="modal-close" onclick="this.closest(\'.modal\').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>';
+
+            const body = document.createElement('div');
+            body.className = 'modal-body';
+            body.innerHTML = '<p style="line-height:1.6;">Share this temporary password with the employee. They must change it on next login.</p>' +
+                '<div style="margin:16px 0;padding:14px;background:var(--border-light);border-radius:var(--radius);text-align:center;font-family:monospace;font-size:1.1rem;font-weight:700;word-break:break-all;">' + escapeHtml(tempPassword) + '</div>';
+
+            const footer = document.createElement('div');
+            footer.className = 'modal-footer';
+            footer.innerHTML = '<button class="btn btn-secondary" onclick="this.closest(\'.modal\').remove()">Close</button>';
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'btn btn-primary';
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            copyBtn.onclick = function() {
+                navigator.clipboard.writeText(tempPassword).then(() => showToast('Password copied', 'success'));
+            };
+            footer.appendChild(copyBtn);
+
+            content.appendChild(header);
+            content.appendChild(body);
+            content.appendChild(footer);
+            overlay.appendChild(content);
+            document.body.appendChild(overlay);
+        }
+
+        function renderViewTabs() {
+            const emp = currentViewEmployee;
+            if (!emp) return;
+
+            const incFields = getIncompleteFields(emp);
+            let overviewHtml = '';
+            if (incFields.length > 0) {
+                overviewHtml += '<div style="padding:10px 12px;border-radius:var(--radius);background:#FEF3C7;border:1px solid #F59E0B;color:#92400E;font-size:0.82rem;margin-bottom:12px;line-height:1.6;"><i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i><strong>' + incFields.length + ' field(s) pending from employee:</strong> ' + incFields.map(f => '<strong>' + escapeHtml(f[1]) + '</strong>').join(', ') + '</div>';
+            } else {
+                overviewHtml += '<p style="font-size:0.82rem;color:var(--success);margin-bottom:12px;"><i class="fas fa-check-circle"></i> All personal details provided by the employee.</p>';
+            }
+            document.getElementById('viewTabOverview').innerHTML = overviewHtml +
+                vSection('Contact Information', 'fa-address-book', 
+                    vRow('Official Email', emp.email) +
+                    vRow('Personal Email', emp.personal_email) +
+                    vRow('Phone', emp.phone)) +
+                vSection('Personal Information', 'fa-user',
+                    vRow('Date of Birth', emp.date_of_birth ? formatDate(emp.date_of_birth) : null) +
+                    vRow('Gender', cap(emp.gender)) +
+                    vRow('Blood Group', emp.blood_group) +
+                    vRow('Marital Status', cap(emp.marital_status)) +
+                    vRow('Languages Spoken', emp.languages_spoken)) +
+                vSection('Employment', 'fa-briefcase',
+                    vRow('Joining Date', emp.joining_date ? formatDate(emp.joining_date) : null) +
+                    vRow('Department', emp.department_name) +
+                    vRow('Designation', emp.designation_name ? emp.designation_name + (emp.designation_level ? ' (Level ' + emp.designation_level + ')' : '') : null) +
+                    vRow('Reporting To', emp.reporting_manager_name ? emp.reporting_manager_name + (emp.reporting_manager_employee_id ? ' (' + emp.reporting_manager_employee_id + ')' : '') : null));
+
+            document.getElementById('viewTabPersonal').innerHTML =
+                vSection('Addresses', 'fa-home',
+                    vRow('Current Address', emp.address) +
+                    vRow('Permanent Address', emp.permanent_address)) +
+                vSection('Contact', 'fa-phone',
+                    vRow('Personal Email', emp.personal_email) +
+                    vRow('Official Email', emp.email) +
+                    vRow('Mobile', emp.phone) +
+                    vRow('Emergency Contact', emp.emergency_contact_name ? emp.emergency_contact_name + ' (' + emp.emergency_contact + ')' : null)) +
+                vSection('Personal Details', 'fa-user',
+                    vRow('Date of Birth', emp.date_of_birth ? formatDate(emp.date_of_birth) : null) +
+                    vRow('Gender', cap(emp.gender)) +
+                    vRow('Blood Group', emp.blood_group) +
+                    vRow('Marital Status', cap(emp.marital_status)) +
+                    vRow('Languages Spoken', emp.languages_spoken));
+
+            document.getElementById('viewTabQualifications').innerHTML =
+                vSection('Education', 'fa-graduation-cap',
+                    vRow('Qualification', emp.qualification) +
+                    vRow('Specialization', emp.specialization)) +
+                vSection('Government IDs', 'fa-id-card',
+                    vRow('PAN Number', emp.pan_number) +
+                    vRow('UAN Number', emp.uan_number) +
+                    vRow('Aadhaar Number', emp.aadhaar_number) +
+                    vRow('Passport Number', emp.passport_number));
+
+            document.getElementById('viewTabBank').innerHTML =
+                vSection('Bank Details', 'fa-university',
+                    vRow('Bank Name', emp.bank_name) +
+                    vRow('Branch', emp.bank_branch) +
+                    vRow('Account Number', emp.bank_account) +
+                    vRow('IFSC Code', emp.bank_ifsc));
+
+            document.getElementById('viewTabJob').innerHTML =
+                vSection('Job Information', 'fa-briefcase',
+                    vRow('Employee ID', emp.employee_id) +
+                    vRow('Department', emp.department_name) +
+                    vRow('Designation', emp.designation_name ? emp.designation_name + (emp.designation_level ? ' (Level ' + emp.designation_level + ')' : '') : null) +
+                    vRow('Role', emp.role) +
+                    vRow('Joining Date', emp.joining_date ? formatDate(emp.joining_date) : null) +
+                    vRow('Status', emp.status)) +
+                vSection('Total Compensation', 'fa-indian-rupee-sign',
+                    vRow('Total Compensation', emp.salary ? formatCurrency(emp.salary) : null) +
+                    vRow('UAN Number', emp.uan_number)) +
+                vSection('Salary Structure', 'fa-calculator',
+                    vRow('Basic Salary', formatCurrency(emp.basic_salary)) +
+                    vRow('HRA', formatCurrency(emp.hra)) +
+                    vRow('Conveyance', formatCurrency(emp.conveyance)) +
+                    vRow('Medical Allowance', formatCurrency(emp.other_allowance)) +
+                    vRow('Special Allowance', formatCurrency(emp.special_allowance)) +
+                    vRow('Employee PF', formatCurrency(emp.pf)) +
+                    vRow('Employee ESI', formatCurrency(emp.esi)) +
+                    vRow('Professional Tax', formatCurrency(emp.professional_tax)) +
+                    vRow('Income Tax', formatCurrency(emp.income_tax)) +
+                    vRow('Other Deduction', formatCurrency(emp.other_deduction)) +
+                     vRow('Employer PF', formatCurrency(emp.employer_pf)) +
+                    vRow('Employer ESI', formatCurrency(emp.employer_esi)) +
+                    vRow('Employer Contribution', formatCurrency(emp.employer_contribution))) +
+                vSection('System Info', 'fa-clock',
+                    vRow('Created', emp.created_at ? formatDate(emp.created_at) : null) +
+                    vRow('Last Updated', emp.updated_at ? formatDate(emp.updated_at) : null));
+
+            renderRequestsTab();
+        }
+
+        function renderRequestsTab() {
+            const container = document.getElementById('viewTabRequests');
+            const badge = document.getElementById('viewTabRequestsBadge');
+            const pendCount = (currentViewRequests || []).filter(r => r.status === 'pending').length;
+            if (badge) {
+                badge.style.display = pendCount > 0 ? 'inline-block' : 'none';
+                badge.textContent = pendCount;
+            }
+            if (!currentViewRequests || currentViewRequests.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.9rem;">No update requests from this employee.</p>';
+                return;
+            }            const labels = {
+                address: 'Current Address', permanent_address: 'Permanent Address', languages_spoken: 'Languages Spoken',
+                marital_status: 'Marital Status', personal_email: 'Personal Email', emergency_contact: 'Emergency Contact Number',
+                emergency_contact_name: 'Emergency Contact Name', blood_group: 'Blood Group', qualification: 'Qualification',
+                specialization: 'Specialization', pan_number: 'PAN Number', aadhaar_number: 'Aadhaar Number',
+                passport_number: 'Passport Number', bank_name: 'Bank Name', bank_branch: 'Bank Branch',
+                bank_account: 'Bank Account No', bank_ifsc: 'IFSC Code'
+            };
+            const badgeMap = { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'secondary' };
+            const order = ['pending', 'approved', 'rejected', 'cancelled'];
+            const groupTitles = { pending: 'Pending (awaiting approval)', approved: 'Approved', rejected: 'Rejected', cancelled: 'Cancelled' };
+            let html = '';
+            order.forEach(status => {
+                const group = currentViewRequests.filter(r => r.status === status);
+                if (group.length === 0) return;
+                html += '<div class="req-section-title">' + escapeHtml(groupTitles[status]) + ' (' + group.length + ')</div>';
+                html += '<div class="table-container"><table><thead><tr><th>Field</th><th>Old Value</th><th>New Value</th><th>Submitted</th><th>Reviewed By</th><th>Remarks</th><th>Action</th></tr></thead><tbody>';
+                group.forEach(r => {
+                    html += '<tr>';
+                    html += '<td><strong>' + escapeHtml(labels[r.field] || r.field) + '</strong></td>';
+                    html += '<td>' + escapeHtml(r.old_value || '-') + '</td>';
+                    html += '<td><strong>' + escapeHtml(r.new_value || '-') + '</strong></td>';
+                    html += '<td style="font-size:0.8rem;">' + formatDate(r.created_at) + '</td>';
+                    html += '<td style="font-size:0.8rem;">' + escapeHtml(r.reviewer_name || '-') + '</td>';
+                    html += '<td style="font-size:0.8rem;">' + escapeHtml(r.review_remarks || '-') + '</td>';
+                    html += '<td>';
+                    if (r.status === 'pending') {
+                        html += '<div style="display:flex;gap:4px;">';
+                        html += '<button class="btn btn-sm btn-success" onclick="approveRequest(' + r.id + ')"><i class="fas fa-check"></i> Approve</button>';
+                        html += '<button class="btn btn-sm btn-danger" onclick="openRejectModal(' + r.id + ')"><i class="fas fa-times"></i> Reject</button>';
+                        html += '</div>';
+                    } else {
+                        html += '<span class="badge badge-' + (badgeMap[r.status] || 'secondary') + '">' + escapeHtml(r.status) + '</span>';
+                    }
+                    html += '</td>';
+                    html += '</tr>';
+                });
+                html += '</tbody></table></div>';
+            });
+            container.innerHTML = html;
+        }
+
+        let currentViewTab = 'overview';
+        function showViewTab(tab) {
+            currentViewTab = tab;
+            const tabs = ['overview', 'personal', 'qualifications', 'bank', 'job', 'requests'];
+            tabs.forEach(t => {
+                const el = document.getElementById('viewTab' + t.charAt(0).toUpperCase() + t.slice(1));
+                if (el) el.style.display = t === tab ? 'block' : 'none';
+                const btn = document.querySelector('[data-tab="' + t + '"]');
+                if (btn) btn.className = 'btn btn-sm ' + (t === tab ? 'btn-primary' : 'btn-secondary');
+            });
+        }
+
+        async function approveRequest(id) {
+            const result = await apiCall('/profile-updates/' + id + '/approve', 'POST');
+            if (result && result.success) {
+                showToast(result.message || 'Request approved', 'success');
+                const restoreTab = currentViewTab === 'requests' ? 'requests' : 'overview';
+                await Promise.all([viewEmployee(currentViewEmployee.id), loadPendingCounts(), loadEmployees()]);
+                renderEmployees(allEmployees);
+                showViewTab(restoreTab);
+                loadNotifBadge();
+            } else {
+                showToast(result?.message || 'Failed to approve', 'error');
+            }
+        }
+
+        let rejectTargetId = null;
+        function openRejectModal(id) {
+            rejectTargetId = id;
+            document.getElementById('rejectRemarks').value = '';
+            document.getElementById('rejectModal').classList.add('active');
+        }
+
+        async function confirmReject() {
+            const remarks = document.getElementById('rejectRemarks').value;
+            const result = await apiCall('/profile-updates/' + rejectTargetId + '/reject', 'POST', { remarks });
+            if (result && result.success) {
+                showToast('Request rejected', 'success');
+                closeModal('rejectModal');
+                const restoreTab = currentViewTab === 'requests' ? 'requests' : 'overview';
+                await Promise.all([viewEmployee(currentViewEmployee.id), loadPendingCounts(), loadEmployees()]);
+                renderEmployees(allEmployees);
+                showViewTab(restoreTab);
+                loadNotifBadge();
+            } else {
+                showToast(result?.message || 'Failed to reject', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "project": "Gensar HRMS",
+  "repo": "https://github.com/ramakrishna49/Gensar_HRMS",
+  "live": "https://gensarhrms.in",
+  "branch": "master (single branch only)",
+  "lastCommit": "49c18d8",
+  "savedDate": "2026-08-04",
+  "sessionSummary": {
+    "objective": "Admin app mobile UI cleanup, login page polish, repo cleanup to single master branch",
+    "workDone": [
+      "Admin mobile UI (phone PWA, ADMIN pages only): tables -> stacked label:value cards, bottom-sheet modals, icon-only header buttons, sidebar drawer backdrop, toast bottom-center, notification panel bottom sheet, safe-area padding, stat grid 2-col on phones. Desktop (>=800px) and employee pages untouched.",
+      "Implementation: body.admin-app class on 14 admin pages, .page-body containers, dashboard.js table label-stamper (MutationObserver, gated .admin-app), ADMIN MOBILE UI CSS block in main.css.",
+      "Login pages (login.html + admin-login.html): label/placeholder changed to 'Employee ID' only (email text removed).",
+      "Login: removed 'Gensar HRMS' h1 heading under logo; enlarged 'Employee Portal' / 'Administrator Portal' subtitle (1.4rem, 1.2rem on phones, bold, primary color).",
+      "Login: reduced logo-to-text gap from 14px to 6px.",
+      "Deleted developing branch locally and pruned stale origin/developing; repo now has only master. All work committed to master and pushed each time.",
+      "Verified with headless Edge + CDP at 375px and 800px: card transform, icon-only buttons, toast/panel repositioning apply on mobile, all revert on desktop, no horizontal overflow."
+    ],
+    "currentState": "Login pages clean (no email text, no Gensar HRMS heading, bigger portal subtitle, tight logo gap). Admin app mobile UI polished. Desktop unchanged. Single master branch in sync with GitHub and Vercel prod.",
+    "commitsThisSession": [
+      "4a90ae4 Add PWA support: manifest, service worker, offline app shell, and web push notifications",
+      "665127f Fix text encoding, shorten sidebar labels, real-time notification polling, robust notification click, login page tweaks",
+      "d765715 Admin UI refresh (REVERTED by 1170094)",
+      "cdf922e Login: bigger logo, form shifted up, install button only on login pages (KEPT)",
+      "1170094 Revert Admin UI refresh",
+      "df772dc Admin panel normalize sizes (REVERTED by 6cd0211)",
+      "5df2cbc Admin login -> dashboard + polish (REVERTED by 4d31309)",
+      "4d31309 Revert 5df2cbc",
+      "6cd0211 Revert df772dc",
+      "158b923 Admin login always redirects to dashboard (login fix kept, UI reverted)",
+      "1b336e5 Admin mobile UI: tables to cards, bottom-sheet modals, icon-only header buttons, sidebar backdrop",
+      "68c8659 Login: label/placeholder to Employee ID only (remove email text)",
+      "ad98667 Login: remove Gensar HRMS heading, enlarge portal subtitle",
+      "49c18d8 Login: reduce gap between logo and portal subtitle"
+    ],
+    "keyDecisions": [
+      "Admin UI redesign attempts (d765715, df772dc, 5df2cbc) were REVERTED at user request; user kept login-page changes (cdf922e) and the admin-login-redirects-to-dashboard fix (158b923).",
+      "User confirmed: website/desktop is fine; problem is mobile app UI only.",
+      "User confirmed: tables -> CARD LAYOUT (not horizontal scroll); scope = admin pages only.",
+      "User removed email text from login pages; server-side (auth.js) still accepts employee_id OR email (only UI text changed).",
+      "Repo now uses only master branch; developing branch deleted."
+    ],
+    "importantNotes": [
+      "Git identity not configured in repo: commit with -c user.name='Ramakrishna' -c user.email='gangineniramakrishna49gmail.com'",
+      "Deploy: run 'vercel --prod --yes' from repo dir; prod aliased to https://gensarhrms.in",
+      "ENCODING WARNING: never edit HTML/JS via PowerShell Get-Content/Set-Content (corrupts UTF-8, adds BOM). Use Edit tool or .NET File.ReadAllText/WriteAllText with explicit UTF-8 no-BOM.",
+      "Local dev server: node server/index.js on :3000 (http://localhost:3000, root serves /pages/login.html).",
+      "PWA: manifest display standalone, orientation portrait-primary; mobile app always portrait.",
+      "Admin mobile CSS is scoped under body.admin-app so employee pages are untouched.",
+      "Attendance matrix table (class .matrix-table) is intentionally NOT card-ified."
+    ]
+  }
+}

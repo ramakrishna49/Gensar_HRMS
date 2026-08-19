@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Attendance - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/employee/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">My Info</div>
+            <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
+            <a href="/pages/employee/attendance.html" class="nav-item active"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/pages/employee/payslips.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/employee/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
+            <div class="nav-section-title">Resources</div>
+            <a href="/pages/employee/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/employee/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">My Attendance</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/employee/profile.html" class="profile-menu-item"><i class="fas fa-user"></i> My Profile</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div style="padding:30px;">
+            <div class="grid grid-3 mb-3">
+                <div class="stat-card slide-up stagger-1">
+                    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info"><h3 id="presentDays">0</h3><p>Present Days</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-2">
+                    <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
+                    <div class="stat-info"><h3 id="absentDays">0</h3><p>Absent Days</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-3">
+                    <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info"><h3 id="totalOvertime">0</h3><p>Total Overtime (hrs)</p></div>
+                </div>
+            </div>
+
+            <div class="card slide-up stagger-2">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+                    <h3 style="font-weight:600;"><i class="fas fa-history" style="color:var(--info);margin-right:8px;"></i>Attendance History</h3>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <div style="display:flex;gap:4px;background:var(--bg-light);border-radius:var(--radius);padding:3px;">
+                            <button class="btn btn-sm btn-primary" id="viewToggleList" onclick="setView('list')"><i class="fas fa-list"></i> List</button>
+                            <button class="btn btn-sm btn-secondary" id="viewToggleMonth" onclick="setView('month')"><i class="fas fa-calendar-alt"></i> Monthly</button>
+                        </div>
+                        <select id="filterMonth" class="form-control" style="width:auto;" onchange="loadData()"></select>
+                        <input type="number" id="filterYear" class="form-control" style="width:100px;" onchange="loadData()">
+                    </div>
+                </div>
+                <div id="summaryBar" style="margin-bottom:16px;font-size:0.9rem;color:var(--text-secondary);"></div>
+                <div id="tableContainer" style="display:block;">
+                    <div style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></div>
+                </div>
+                <div id="monthlyContainer" style="display:none;"></div>
+            </div>
+        </div>
+    </main>
+
+    <style>
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .cal-weekday { text-align: center; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); padding: 6px 0; }
+        .cal-cell { border: 1px solid var(--border-light); border-radius: var(--radius); min-height: 74px; padding: 6px; position: relative; display: flex; flex-direction: column; }
+        .cal-cell .cal-day { font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
+        .cal-cell .cal-tag { font-size: 0.62rem; font-weight: 600; border-radius: 4px; padding: 1px 5px; align-self: flex-start; }
+        .cal-cell .cal-in { font-size: 0.62rem; color: var(--text-secondary); margin-top: 2px; }
+        .cal-cell.today { outline: 2px solid var(--primary); outline-offset: -1px; }
+        .cal-cell.weekoff { background: var(--bg-light); }
+        .cal-cell.future { background: transparent; color: var(--text-tertiary); }
+        .cal-cell.cal-present { background: #D1FAE5; color: #065F46; }
+        .cal-cell.cal-late { background: #FEF3C7; color: #92400E; }
+        .cal-cell.cal-half-day { background: #FED7AA; color: #9A3412; }
+        .cal-cell.cal-absent { background: #FEE2E2; color: #991B1B; }
+        .cal-cell.cal-holiday { background: #E0E7FF; color: #3730A3; }
+        .dark-mode .cal-cell.cal-present { background: #064E3B; color: #34D399; }
+        .dark-mode .cal-cell.cal-late { background: #78350F; color: #FBBF24; }
+        .dark-mode .cal-cell.cal-half-day { background: #7C2D12; color: #FDBA74; }
+        .dark-mode .cal-cell.cal-absent { background: #7F1D1D; color: #F87171; }
+        .dark-mode .cal-cell.cal-holiday { background: #312E81; color: #A5B4FC; }
+        .legend-dot.cal-present { background: #D1FAE5; }
+        .legend-dot.cal-late { background: #FEF3C7; }
+        .legend-dot.cal-half-day { background: #FED7AA; }
+        .legend-dot.cal-absent { background: #FEE2E2; }
+        .legend-dot.cal-holiday { background: #E0E7FF; }
+        .legend-dot.cal-weekoff { background: var(--bg-light); border: 1px solid var(--border); }
+        .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; font-size: 0.78rem; }
+        .cal-legend .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+        @media (max-width: 768px) {
+            .cal-cell { min-height: 54px; padding: 4px; }
+            .cal-cell .cal-tag { font-size: 0.55rem; }
+        }
+        @media (max-width: 480px) {
+            .calendar-grid { gap: 4px; }
+            .cal-cell { min-height: 46px; padding: 3px; }
+            .cal-cell .cal-day { font-size: 0.7rem; }
+            .cal-cell .cal-in { font-size: 0.55rem; }
+        }
+    </style>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/tickets.js"></script>
+    <script>
+        const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const shortDayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const fullMonthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+        let currentView = 'list';
+        let lastRecords = [];
+        let lastHolidays = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) throw new Error('Not authenticated');
+            const select = document.getElementById('filterMonth');
+            for (let i = 0; i < 12; i++) {
+                const opt = document.createElement('option');
+                opt.value = i + 1;
+                opt.textContent = monthNames[i];
+                select.appendChild(opt);
+            }
+            const now = new Date();
+            select.value = now.getMonth() + 1;
+            document.getElementById('filterYear').value = now.getFullYear();
+            loadData();
+        });
+
+        function setView(view) {
+            currentView = view;
+            const listBtn = document.getElementById('viewToggleList');
+            const monthBtn = document.getElementById('viewToggleMonth');
+            listBtn.className = 'btn btn-sm ' + (view === 'list' ? 'btn-primary' : 'btn-secondary');
+            monthBtn.className = 'btn btn-sm ' + (view === 'month' ? 'btn-primary' : 'btn-secondary');
+            document.getElementById('tableContainer').style.display = view === 'list' ? 'block' : 'none';
+            document.getElementById('monthlyContainer').style.display = view === 'month' ? 'block' : 'none';
+            if (view === 'month') renderMonthlyView();
+        }
+
+        async function loadData() {
+            const month = document.getElementById('filterMonth').value;
+            const year = document.getElementById('filterYear').value;
+            const [attRes, holRes] = await Promise.all([
+                apiCall(`/attendance/my?month=${month}&year=${year}`),
+                apiCall('/holidays?year=' + year)
+            ]);
+            const container = document.getElementById('tableContainer');
+            const summaryEl = document.getElementById('summaryBar');
+
+            const records = (attRes && attRes.success) ? (attRes.attendance || []) : [];
+            lastRecords = records;
+            lastHolidays = (holRes && holRes.success) ? (holRes.holidays || []) : [];
+
+            const present = records.filter(a => a.status === 'present').length;
+            const absent = records.filter(a => a.status === 'absent').length;
+            const late = records.filter(a => a.status === 'late').length;
+            const halfDay = records.filter(a => a.status === 'half-day').length;
+            const overtime = records.reduce((s, a) => s + parseFloat(a.overtime_hours || 0), 0);
+
+            document.getElementById('presentDays').textContent = present + late + halfDay;
+            document.getElementById('absentDays').textContent = absent;
+            document.getElementById('totalOvertime').textContent = overtime.toFixed(1);
+
+            const totalDaysInMonth = new Date(year, month, 0).getDate();
+            summaryEl.innerHTML = '<span style="font-weight:500;">Present Days (incl. late logins &amp; half days): <strong>' + (present + late + halfDay) + '</strong> / ' + totalDaysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
+
+            if (records.length === 0) {
+                showEmptyState(container, 'fa-clock', 'No Records', 'No attendance records for this period');
+                document.getElementById('monthlyContainer').innerHTML = '';
+                return;
+            }
+
+            const todayStr = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+                    let html = '<div class="table-container"><table><thead><tr><th>Date</th><th>Day</th><th>Check In</th><th>Check Out</th><th>Location</th><th>Hours Worked</th><th>Status</th><th>Overtime</th></tr></thead><tbody>';
+                    records.forEach(a => {
+                        const d = new Date(a.date);
+                        const adate = a.date ? a.date.split('T')[0] : '';
+                        const isToday = adate === todayStr;
+                        const isLate = a.status === 'late';
+                        let rowStyle = '';
+                        if (isToday) rowStyle = 'background:var(--primary-50);';
+                        else if (isLate) rowStyle = 'background:rgba(239,68,68,0.04);';
+
+                        let hoursWorked = '-';
+                        if (a.check_in && a.check_out) {
+                            const ci = a.check_in.split(':').map(Number);
+                            const co = a.check_out.split(':').map(Number);
+                            let diffMin = (co[0]*60+co[1]) - (ci[0]*60+ci[1]);
+                            const breakLog = (() => { try { return JSON.parse(a.break_log || '[]'); } catch { return []; } })();
+                            breakLog.forEach(b => {
+                                if (b.start && b.end) {
+                                    const bs = b.start.split(':').map(Number);
+                                    const be = b.end.split(':').map(Number);
+                                    diffMin -= ((be[0]*60+be[1]) - (bs[0]*60+bs[1]));
+                                }
+                            });
+                            if (diffMin < 0) diffMin = 0;
+                            if (diffMin > 0) hoursWorked = (diffMin/60).toFixed(1) + 'h';
+                        }
+
+                        let locHtml = '-';
+                        const loc = a.check_in_location || '';
+                        if (loc && loc.includes(',')) {
+                            const [lat, lon] = loc.split(',');
+                            locHtml = '<a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(loc) + '"><i class="fas fa-map-marker-alt"></i></a>';
+                        } else if (loc) {
+                            locHtml = '<span style="font-size:0.75rem;">' + escapeHtml(loc) + '</span>';
+                        }
+
+                        html += '<tr style="' + rowStyle + '">';
+                        html += '<td>' + formatDate(a.date) + (isToday ? ' <span class="badge badge-primary" style="font-size:0.6rem;">Today</span>' : '') + '</td>';
+                        html += '<td>' + dayNames[d.getDay()] + '</td>';
+                        html += '<td>' + escapeHtml(a.check_in || '-') + '</td>';
+                        html += '<td>' + escapeHtml(a.check_out || '-') + '</td>';
+                        html += '<td style="text-align:center;">' + locHtml + '</td>';
+                        html += '<td>' + hoursWorked + '</td>';
+                        html += '<td><span class="badge badge-' + getStatusBadge(a.status) + '">' + escapeHtml(getStatusText(a.status)) + '</span></td>';
+                        html += '<td>' + formatHours(a.overtime_hours) + '</td>';
+                        html += '</tr>';
+                    });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            renderMonthlyView();
+        }
+
+        function renderMonthlyView() {
+            const container = document.getElementById('monthlyContainer');
+            const month = parseInt(document.getElementById('filterMonth').value);
+            const year = parseInt(document.getElementById('filterYear').value);
+            const records = lastRecords || [];
+            const holidays = lastHolidays || [];
+
+            const byDate = {};
+            records.forEach(a => { byDate[(a.date || '').split('T')[0]] = a; });
+            const holidayDates = {};
+            holidays.forEach(h => { const d = (h.date || '').split('T')[0]; if (d) holidayDates[d] = h.name; });
+
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0).getDate();
+            const lead = firstDay.getDay();
+            const todayStr = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+            const padStart = new Date(year, month - 1, -(lead) + 1);
+
+            let html = '<div class="cal-legend">' +
+                '<span class="legend-item"><span class="legend-dot cal-present"></span> Present</span>' +
+                '<span class="legend-item"><span class="legend-dot cal-late"></span> Late Login</span>' +
+                '<span class="legend-item"><span class="legend-dot cal-half-day"></span> Half Day</span>' +
+                '<span class="legend-item"><span class="legend-dot cal-absent"></span> Absent</span>' +
+                '<span class="legend-item"><span class="legend-dot cal-weekoff"></span> Week Off</span>' +
+                '<span class="legend-item"><span class="legend-dot cal-holiday"></span> Holiday</span>' +
+                '</div>';
+
+            html += '<div class="calendar-grid">';
+            shortDayNames.forEach(s => { html += '<div class="cal-weekday">' + s + '</div>'; });
+
+            for (let i = 0; i < lead; i++) {
+                const pad = new Date(padStart);
+                pad.setDate(pad.getDate() + i);
+                html += '<div class="cal-cell weekoff" style="min-height:0;border-style:dashed;opacity:0.4;"><div class="cal-day">' + pad.getDate() + '</div></div>';
+            }
+
+            const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0 };
+            for (let d = 1; d <= lastDay; d++) {
+                const date = new Date(year, month - 1, d);
+                const dayOfWeek = date.getDay();
+                const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                const rec = byDate[dateStr];
+                const isToday = dateStr === todayStr;
+                const isFuture = date > new Date();
+
+                let cls = '', tag = '', tagColor = '', checkIn = '', extra = '';
+                if (rec) {
+                    const status = rec.status;
+                    if (status === 'present') { cls = 'cal-present'; tag = 'Present'; counts.present++; }
+                    else if (status === 'late') { cls = 'cal-late'; tag = 'Late'; counts.late++; }
+                    else if (status === 'half-day') { cls = 'cal-half-day'; tag = 'Half Day'; counts['half-day']++; }
+                    else if (status === 'absent') { cls = 'cal-absent'; tag = 'Absent'; counts.absent++; }
+                    else { cls = 'cal-weekoff'; tag = status; counts.weekoff++; }
+                    if (rec.check_in) checkIn = 'In ' + rec.check_in;
+                } else if (isFuture) {
+                    cls = 'future';
+                } else if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++;
+                } else if (holidayDates[dateStr]) {
+                    cls = 'cal-holiday'; tag = holidayDates[dateStr]; counts.holiday++;
+                } else {
+                    cls = 'cal-absent'; tag = 'Absent'; counts.absent++;
+                }
+
+                html += '<div class="cal-cell ' + cls + (isToday ? ' today' : '') + '" title="' + (rec && rec.check_in ? 'Check In: ' + rec.check_in + (rec.check_out ? ' | Check Out: ' + rec.check_out : '') : (holidayDates[dateStr] || '')) + '">';
+                html += '<div class="cal-day">' + d + (isToday ? ' <span style="font-size:0.55rem;font-weight:700;color:var(--primary);">TODAY</span>' : '') + '</div>';
+                if (tag) html += '<div class="cal-tag">' + escapeHtml(tag) + '</div>';
+                if (checkIn) html += '<div class="cal-in">' + escapeHtml(checkIn) + '</div>';
+                html += '</div>';
+            }
+            html += '</div>';
+
+            const presentTotal = counts.present + counts.late + counts['half-day'];
+            html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;">';
+            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + presentTotal + '</h3><p>Present Days</p></div></div>';
+            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.late + '</h3><p>Late Logins</p></div></div>';
+            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts['half-day'] + '</h3><p>Half Days</p></div></div>';
+            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.absent + '</h3><p>Absent Days</p></div></div>';
+            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.weekoff + '</h3><p>Week Offs</p></div></div>';
+            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.holiday + '</h3><p>Holidays</p></div></div>';
+            html += '</div>';
+
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
