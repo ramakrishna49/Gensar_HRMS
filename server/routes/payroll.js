@@ -487,6 +487,7 @@ async function renderPayslipPdf(p, company) {
                 doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attValueH, 11.5), { width: attColW, align: 'center' });
             });
             doc.strokeColor(BORDER).lineWidth(0.5 * S).moveTo(attX, ay + attValueH).lineTo(attX + attW, ay + attValueH).stroke();
+            doc.strokeColor(BORDER).lineWidth(0.5 * S).rect(attX, attBarY, attW, attBarH + attHeadH + attValueH).stroke();
             ay += attValueH;
 
             const bonusRows = [
