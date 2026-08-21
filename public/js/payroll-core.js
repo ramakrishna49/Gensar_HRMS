@@ -256,7 +256,7 @@ function buildPayslipHTML(p) {
             '</div>' +
         '</div>' +
         '<!-- EMPLOYEE DETAILS -->' +
-        '<div class="pp-sec">EMPLOYEE DETAILS</div>' +
+        '<div class="pp-sec" style="margin-bottom:0;">EMPLOYEE DETAILS</div>' +
         '<table class="pp-emp">' +
             ppEmpRow('Employee ID', ppEsc(p.emp_id || '-'), 'Pay Period', ppEsc(period)) +
             ppEmpRow('Employee Name', ppEsc(empName), 'Working Days', ppNum(p.working_days)) +

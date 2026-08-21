@@ -443,7 +443,10 @@ async function renderPayslipPdf(p, company) {
             y += 2 * S + 16 * S;
 
             // ---- Employee details (4 equal columns) ----
-            y = sectionBar('EMPLOYEE DETAILS', ML, y, CW) + 8 * S;
+            // Zero vertical gap: the table starts immediately below the bar.
+            // The bar's bottom border and the table's top border coincide into
+            // one single 1px line (border-collapse behaviour) - no spacing.
+            y = sectionBar('EMPLOYEE DETAILS', ML, y, CW);
             const colW = CW / 4;
             const empCells = [
                 ['Employee ID', p.emp_id || '-'],
@@ -597,9 +600,12 @@ async function renderPayslipPdf(p, company) {
                 doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attValueH, 11.5), { width: attColW, align: 'center', lineBreak: false });
             });
             ay += attValueH;
-            // Grid: internal verticals span header+value; separator between the
-            // two rows; outer left/right/bottom (bar supplies its own top/sides).
+            // Grid: every edge explicit - outer TOP (table's own top border,
+            // since the bar above is noBottom), internal verticals spanning
+            // header+value rows, separator between the two rows, outer
+            // left/right/bottom. All drawn AFTER the fills at 1px BORDER.
             doc.strokeColor(BORDER).lineWidth(1 * S);
+            doc.moveTo(attX, attBarY + SEC_H).lineTo(attX + attW, attBarY + SEC_H).stroke();
             for (let c = 1; c < 4; c++) {
                 doc.moveTo(attX + c * attColW, attBarY + SEC_H).lineTo(attX + c * attColW, ay).stroke();
             }
