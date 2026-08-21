@@ -10,14 +10,22 @@ function getPool() {
         throw new Error('DATABASE_URL is not set. Configure it in .env (local) or Vercel environment variables.');
     }
 
+    // Use Supabase pooler for serverless (port 6543) or direct connection
     const isRemote = !/localhost|127\.0\.0\.1|sslmode=disable/.test(connectionString);
-    pool = new Pool({
+    const isVercel = !!process.env.VERCEL;
+    
+    // For serverless, use a smaller pool with shorter timeouts
+    const poolConfig = {
         connectionString,
         ssl: isRemote ? { rejectUnauthorized: false } : undefined,
-        max: parseInt(process.env.PGPOOL_MAX || '5', 10),
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000
-    });
+        max: isVercel ? 1 : parseInt(process.env.PGPOOL_MAX || '5', 10),
+        idleTimeoutMillis: isVercel ? 5000 : 30000,
+        connectionTimeoutMillis: 10000,
+        // Allow exit even if pool has idle connections
+        allowExitOnIdle: true
+    };
+
+    pool = new Pool(poolConfig);
 
     pool.on('error', (err) => {
         console.error('Unexpected pg pool error:', err.message);
@@ -38,9 +46,15 @@ async function query(sql, params = []) {
     };
 }
 
+// For serverless: get a fresh client per request (avoids pool issues)
+async function getClient() {
+    const p = getPool();
+    return p.connect();
+}
+
 const poolLike = {
     query: (sql, params) => query(sql, params),
     end: () => getPool().end()
 };
 
-module.exports = { query, pool: poolLike, getPool };
+module.exports = { query, pool: poolLike, getPool, getClient };
