@@ -208,7 +208,7 @@ function buildPayslipHTML(p) {
     // Company block from DB data with Gensar defaults as fallback, so settings
     // edits reflect on payslips without code changes.
     const coName = company.name || 'GENSAR IT SOLUTIONS PVT. LTD.';
-    const coAddress = String(company.address || 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad, 500072, Telangana, India');
+    const coAddress = String(company.address || 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,\nHyderabad, 500072, Telangana, India');
     const addressHtml = ppEsc(coAddress).replace(/\r?\n/g, '<br>');
     // Contact lines must ALWAYS be visible on the payslip. If the company
     // settings have not loaded (or fields are empty), fall back to the Gensar

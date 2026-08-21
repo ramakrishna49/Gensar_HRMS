@@ -387,7 +387,7 @@ async function renderPayslipPdf(p, company) {
             // the Gensar defaults only as a fallback, so settings edits reflect
             // on payslips without code changes.
             const coName = (company && company.name) || 'GENSAR IT SOLUTIONS PVT. LTD.';
-            const coAddress = String((company && company.address) || 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad, 500072, Telangana, India');
+            const coAddress = String((company && company.address) || 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,\nHyderabad, 500072, Telangana, India');
             const addressSegs = coAddress.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
             const contactLines = [];
             // Contact lines are mandatory on the payslip - same Gensar
