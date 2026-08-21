@@ -8,9 +8,12 @@ const PORT = process.env.PORT || 3000;
 const { query } = require('./config/database');
 
 // Middleware
+// 15MB JSON limit: payroll generate/generate-bulk payloads carry base64 PDFs
+// (default 100KB limit rejected them with 413). Vercel caps at ~4.5MB anyway,
+// and the bulk flow chunks requests client-side to stay under that.
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));

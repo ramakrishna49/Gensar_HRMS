@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const https = require('https');
 const http = require('http');
 const PDFDocument = require('pdfkit');
@@ -26,11 +27,6 @@ try {
 
 const FONT_REG = fontsReady ? 'Roboto' : 'Helvetica';
 const FONT_BOLD = fontsReady ? 'Roboto-Bold' : 'Helvetica-Bold';
-
-function formatINR(amount) {
-    const n = Number(amount || 0);
-    return (fontsReady ? '₹' : 'Rs. ') + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 function formatDateOnly(value) {
     if (!value) return '';
@@ -122,14 +118,17 @@ function computeTotals(v) {
 }
 
 // Download a remote image (HTTP/HTTPS) to a temp file path, returns the local path or null.
-function downloadLogoToTemp(url) {
+// Uses os.tmpdir() (writable on Vercel/serverless, unlike the package dir) and a
+// unique file name so concurrent renders never overwrite each other's logo.
+function downloadLogoToTemp(url, depth = 0) {
     return new Promise((resolve) => {
         try {
+            if (depth > 3) { resolve(null); return; }
             const client = url.startsWith('https') ? https : http;
-            const tmpPath = path.join(__dirname, '..', 'assets', 'fonts', '_logo_tmp.png');
+            const tmpPath = path.join(os.tmpdir(), `_payslip_logo_${Date.now()}_${Math.random().toString(36).slice(2)}.png`);
             client.get(url, { timeout: 5000 }, (res) => {
                 if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    return downloadLogoToTemp(res.headers.location).then(resolve);
+                    return downloadLogoToTemp(res.headers.location, depth + 1).then(resolve);
                 }
                 if (res.statusCode !== 200) { resolve(null); return; }
                 const file = fs.createWriteStream(tmpPath);
@@ -145,33 +144,39 @@ async function getProfileSalaryValues(employeeId, values) {
     const result = await query(
         `SELECT salary, basic_salary, hra, conveyance, special_allowance, other_allowance,
                 pf, esi, professional_tax, income_tax, other_deduction,
-                employer_pf, employer_esi, employer_contribution
+                employer_pf, employer_esi, employer_contribution, personal_email
          FROM employees WHERE id = $1`,
         [employeeId]
     );
     if (result.rows.length === 0) return null;
     const profile = result.rows[0];
-    return {
-        ...values,
-        basic_salary: num(profile.basic_salary) || num(profile.salary),
-        hra: num(profile.hra),
-        conveyance: num(profile.conveyance),
+    // WYSIWYG: values explicitly sent in the request always win so the saved
+    // payslip matches the preview the admin saw. The employee profile is only
+    // used as a fallback for fields the request did not include (e.g. bulk
+    // rows built from profiles). An explicit 0 is respected as a real zero.
+    const provided = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+    const pick = (v, p) => (provided(v) ? num(v) : num(p));
+    const merged = {
+        basic_salary: pick(values.basic_salary, profile.basic_salary) || num(profile.salary),
+        hra: pick(values.hra, profile.hra),
+        conveyance: pick(values.conveyance, profile.conveyance),
         medical: 0,
-        special_allowance: num(profile.special_allowance),
-        other_allowance: num(profile.other_allowance),
-        pf: num(profile.pf),
-        esi: num(profile.esi),
-        professional_tax: num(profile.professional_tax),
-        income_tax: num(profile.income_tax),
+        special_allowance: pick(values.special_allowance, profile.special_allowance),
+        other_allowance: pick(values.other_allowance, profile.other_allowance),
+        pf: pick(values.pf, profile.pf),
+        esi: pick(values.esi, profile.esi),
+        professional_tax: pick(values.professional_tax, profile.professional_tax),
+        income_tax: pick(values.income_tax, profile.income_tax),
         loan_deduction: 0,
         advance_salary: 0,
-        other_deduction: num(profile.other_deduction),
-        employer_pf: num(profile.employer_pf),
-        employer_esi: num(profile.employer_esi),
-        employer_contribution: num(profile.employer_contribution),
-        monthly_gross: num(profile.basic_salary) + num(profile.hra) + num(profile.conveyance)
-            + num(profile.special_allowance) + num(profile.other_allowance)
+        other_deduction: pick(values.other_deduction, profile.other_deduction),
+        employer_pf: pick(values.employer_pf, profile.employer_pf),
+        employer_esi: pick(values.employer_esi, profile.employer_esi),
+        employer_contribution: pick(values.employer_contribution, profile.employer_contribution)
     };
+    merged.monthly_gross = merged.basic_salary + merged.hra + merged.conveyance
+        + merged.special_allowance + merged.other_allowance;
+    return { ...values, ...merged, personal_email: profile.personal_email || null };
 }
 
 // Company branding + contact block used on the payslip.
@@ -227,10 +232,17 @@ async function renderPayslipPdf(p, company) {
         if (/^https?:\/\//i.test(logo)) {
             resolvedLogoPath = await downloadLogoToTemp(logo);
         } else {
-            // logo is always a web-relative path (e.g. /assets/images/gensar_logo.png),
-            // not a filesystem path. Always resolve against the public/ directory.
-            const lp = path.join(__dirname, '../../public', logo.replace(/^\/+/, ''));
-            if (fs.existsSync(lp)) resolvedLogoPath = lp;
+            // logo is always a web-relative path (e.g. /assets/images/gensar_logo.png).
+            // Try every plausible static root: package-relative (works when the
+            // function is traced with its assets) and process.cwd()/public
+            // (works on Vercel where the repo root is the working directory).
+            const rel = logo.replace(/^\/+/, '');
+            const candidates = [
+                path.join(__dirname, '../../public', rel),
+                path.join(process.cwd(), 'public', rel),
+                path.join(__dirname, '../public', rel)
+            ];
+            resolvedLogoPath = candidates.find(p => fs.existsSync(p)) || null;
         }
     } catch (e) { /* logo is optional */ }
 
@@ -242,16 +254,22 @@ async function renderPayslipPdf(p, company) {
             doc.on('end', () => resolve(Buffer.concat(chunks)));
             doc.on('error', reject);
 
-            // Reference template is 794px wide (A4 @96dpi). Scale every metric by S = A4_width / 794
-            // so the PDF output matches the reference HTML layout proportionally.
+            // ---- Layout constants derived 1:1 from the preview CSS ----
+            // Preview sheet: 794px wide, border-box, 1px purple border,
+            // padding 22px top / 28px sides → content box x=29 y=23 w=736.
             const PW = doc.page.width;
             const S = PW / 794;
             const ML = 29 * S;
             const CW = 736 * S;
-            const PAD_TOP = 22 * S;
-            const ROW = 24.14 * S;
-            const BAR_H = 26 * S;
+            const PAD_TOP = 23 * S;
+            // Tables: font-size 11.5px, line-height normal (~1.15), cell
+            // padding 5.5px 10px, collapsed 1px borders
+            // → one row = 11.5*1.15 + 11 + 1 ≈ 25.22px (same for every table).
+            const ROW = 25.22 * S;
+            // Section bar (.pp-sec): 11.5 bold + 6px vert padding + 2 borders.
+            const SEC_H = 27.23 * S;
             const F = (px) => px * S;
+            const LH = 1.172; // PDFKit TTF normal line-height factor (Roboto)
             const plainINR = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             if (fontsReady) {
@@ -261,7 +279,11 @@ async function renderPayslipPdf(p, company) {
 
             const PURPLE = '#7c6ca8';
             const DARK = '#38286b';
-            const BORDER = '#d5cee6';
+            // ONE border system for the whole sheet: every table edge, internal
+            // separator, card outline and the words bar share this exact color
+            // and 1px weight. Visual hierarchy comes from the row backgrounds
+            // (#e5e0f5 header / #efeafb totals), never from thicker lines.
+            const BORDER = '#d8cfe8';
             const BAR = '#e5e0f5';
             const CARD = '#fbfbfd';
             const TOTAL = '#efeafb';
@@ -271,98 +293,151 @@ async function renderPayslipPdf(p, company) {
             const FL = FONT_REG;
             const FB = FONT_BOLD;
 
-            const centerY = (y, h, fontPx) => y + (h - F(fontPx)) / 2;
+            // Vertical centering of one text line inside an h-tall row.
+            const centerY = (y, h, fontPx) => y + (h - F(fontPx) * LH) / 2;
 
-            const sectionBar = (title, x, y, w) => {
-                const h = BAR_H;
+            // Section bar (.pp-sec): 4px purple accent + #e5e0f5 bar + 1px grid.
+            // Text starts after accent(4) + padding-left(10) = 14px.
+            const sectionBar = (title, x, y, w, opts) => {
+                const h = SEC_H;
+                const o = opts || {};
                 doc.rect(x, y, 4 * S, h).fill(PURPLE);
                 doc.rect(x + 4 * S, y, w - 4 * S, h).fill(BAR);
-                doc.strokeColor(BORDER).lineWidth(1 * S).rect(x, y, w, h).stroke();
-                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(title, x + 10 * S, centerY(y, h, 11.5));
+                doc.strokeColor(BORDER).lineWidth(1 * S);
+                if (o.noBottom) {
+                    // attendance variant: border-bottom:none
+                    doc.moveTo(x, y + h).lineTo(x, y).lineTo(x + w, y).lineTo(x + w, y + h).stroke();
+                } else {
+                    doc.rect(x, y, w, h).stroke();
+                }
+                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(title, x + 14 * S, centerY(y, h, 11.5));
                 return y + h;
             };
 
-            // Financial table (header row, data rows, total row) matching the reference.
+            // Financial table mirroring .pp-fin CSS exactly: header row on
+            // #e5e0f5 (bold dark), data rows (regular), total row on #efeafb
+            // (bold dark); single thin 1px #d5cee6 grid on every edge.
             const finTable = (x, title, rows, totalLabel, total, baseY, tableW) => {
-                const w = tableW || (CW - 12 * S) / 2;
+                const w = tableW || (CW - 12 * S) / 2; // flex gap 12px between pair
                 const AMT_W = 95 * S;
                 const vcol = x + w - AMT_W;
-                let ty = baseY;
                 const bw = 1 * S;
-                const headerText = (txt, x0, w0, right) => {
-                    doc.fill(DARK).font(FB).fontSize(F(11.5));
-                    doc.text(txt, x0 + 10 * S, centerY(ty, ROW, 11.5), { width: w0 - 20 * S, align: right ? 'right' : 'left' });
+                let ty = baseY;
+                const cellText = (txt, x0, w0, bold, color, align) => {
+                    doc.fill(color).font(bold ? FB : FL).fontSize(F(11.5));
+                    doc.text(txt, x0, centerY(ty, ROW, 11.5), { width: w0, align: align || 'left', lineBreak: false });
                 };
+                // Header row
                 doc.rect(x, ty, w, ROW).fill(BAR);
-                headerText(title, x, vcol - x, false);
-                headerText('AMOUNT (\u20B9)', vcol, AMT_W, true);
-                doc.strokeColor(BORDER).lineWidth(bw);
-                doc.moveTo(x, ty + ROW).lineTo(x + w, ty + ROW).stroke();
-                doc.moveTo(vcol, ty).lineTo(vcol, ty + ROW).stroke();
+                cellText(title, x + 10 * S, vcol - x - 20 * S, true, DARK);
+                cellText('AMOUNT (\u20B9)', vcol + 10 * S, AMT_W - 20 * S, true, DARK, 'right');
                 ty += ROW;
+                // Data rows (amounts regular weight, like the preview td)
                 rows.forEach(([k, v]) => {
-                    doc.fill(BODY).font(FL).fontSize(F(11.5)).text(k, x + 10 * S, centerY(ty, ROW, 11.5), { width: vcol - x - 20 * S });
-                    doc.font(FB).text(plainINR(v), vcol + 10 * S, centerY(ty, ROW, 11.5), { width: AMT_W - 20 * S, align: 'right' });
-                    doc.strokeColor(BORDER).lineWidth(bw);
-                    doc.moveTo(x, ty + ROW).lineTo(x + w, ty + ROW).stroke();
-                    doc.moveTo(vcol, ty).lineTo(vcol, ty + ROW).stroke();
+                    cellText(k, x + 10 * S, vcol - x - 20 * S, false, BODY);
+                    cellText(plainINR(v), vcol + 10 * S, AMT_W - 20 * S, false, BODY, 'right');
                     ty += ROW;
                 });
+                // Total row
                 doc.rect(x, ty, w, ROW).fill(TOTAL);
-                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(totalLabel, x + 10 * S, centerY(ty, ROW, 11.5), { width: vcol - x - 20 * S });
-                doc.text(plainINR(total), vcol + 10 * S, centerY(ty, ROW, 11.5), { width: AMT_W - 20 * S, align: 'right' });
-                doc.strokeColor(BORDER).lineWidth(bw).rect(x, ty, w, ROW).stroke();
+                cellText(totalLabel, x + 10 * S, vcol - x - 20 * S, true, DARK);
+                cellText(plainINR(total), vcol + 10 * S, AMT_W - 20 * S, true, DARK, 'right');
                 ty += ROW;
-                // Outer border: top + left + right only (bottom is the total row's own rect)
+                // Grid: outer border + every internal separator + amount divider
                 doc.strokeColor(BORDER).lineWidth(bw);
-                doc.moveTo(x, baseY).lineTo(x + w, baseY).stroke();
-                doc.moveTo(x, baseY).lineTo(x, ty).stroke();
-                doc.moveTo(x + w, baseY).lineTo(x + w, ty).stroke();
+                doc.rect(x, baseY, w, ty - baseY).stroke();
+                for (let i = 1; i < rows.length + 2; i++) {
+                    doc.moveTo(x, baseY + i * ROW).lineTo(x + w, baseY + i * ROW).stroke();
+                }
+                doc.moveTo(vcol, baseY).lineTo(vcol, ty).stroke();
                 return ty;
             };
 
-            // ---- Container border ----
-            doc.strokeColor(PURPLE).lineWidth(1 * S).rect(0, 0, PW, doc.page.height).stroke();
+            // ---- Container border (1px purple, inset so the stroke stays
+            //      fully inside the page like the CSS border-box) ----
+            doc.strokeColor(PURPLE).lineWidth(1 * S)
+                .rect(0.5 * S, 0.5 * S, PW - 1 * S, doc.page.height - 1 * S).stroke();
 
             let y = PAD_TOP;
 
             // ---- Header: logo | divider | company info + PAYSLIP badge ----
+            // Flex row: logo(175) --gap15--> divider(margin 0 5px, 1px wide,
+            // 95px tall) --gap15--> text column; badge 150px on the right.
             const badgeW = 150 * S;
             const badgeX = ML + CW - badgeW;
             const logoW = 175 * S;
+            const GROUP_H = 95 * S; // divider height drives the group height
+
+            // Logo vertically centered in the group (align-items:center), with
+            // its real aspect ratio preserved.
             if (resolvedLogoPath) {
-                try { doc.image(resolvedLogoPath, ML, y, { width: logoW }); } catch (e) { /* logo is optional */ }
+                try {
+                    const img = doc.openImage(resolvedLogoPath);
+                    const lh = Math.min(GROUP_H, logoW * img.height / img.width);
+                    doc.image(img, ML, y + (GROUP_H - lh) / 2, { width: logoW, height: lh });
+                } catch (e) { /* logo is optional */ }
             }
 
-            const divX = ML + logoW + 15 * S;
-            doc.rect(divX, y, 1, 95 * S).fill(PURPLE);
+            const divX = ML + logoW + 15 * S + 5 * S; // gap 15 + margin-left 5
+            doc.rect(divX, y, 1 * S, GROUP_H).fill(PURPLE);
 
-            const infoX = divX + 5 * S + 1 * S + 15 * S;
-            const infoW = badgeX - infoX - 10 * S;
-            doc.fill('#111111').font(FB).fontSize(F(19)).text('GENSAR IT SOLUTIONS PVT. LTD.', infoX, y, { width: infoW });
-            let iy = y + F(19) * 1.25 + 5 * S;
+            const infoX = divX + 1 * S + 5 * S + 15 * S; // line + margin-right 5 + gap 15
+            const infoW = badgeX - infoX;
+            // Company block comes from the DB (companies/company_settings) with
+            // the Gensar defaults only as a fallback, so settings edits reflect
+            // on payslips without code changes.
+            const coName = (company && company.name) || 'GENSAR IT SOLUTIONS PVT. LTD.';
+            const coAddress = String((company && company.address) || 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad, 500072, Telangana, India');
+            const addressSegs = coAddress.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+            const contactLines = [];
+            if (company && company.email) contactLines.push('E-Mail: ' + company.email);
+            if (company && company.phone) contactLines.push('Ph No: ' + company.phone);
+
+            // Estimate the text-column height first so the whole column can be
+            // vertically centered in the 95px group (flex align-items:center).
+            const smallLH = F(10.5) * 1.2;   // address/email/phone divs: line-height:1.2
+            const nameH = F(19) * LH;
+            let estLines = 0;
+            addressSegs.forEach(seg => {
+                estLines += Math.max(1, Math.ceil(doc.widthOfString(seg) / (infoW - 2 * S)));
+            });
+            const textColH = nameH + 5 * S + estLines * smallLH + 3 * S
+                + contactLines.length * (smallLH + 3 * S);
+            const colTop = y + (GROUP_H - Math.min(textColH, GROUP_H)) / 2;
+
+            doc.fill('#111111').font(FB).fontSize(F(19));
+            doc.text(coName.toUpperCase(), infoX, colTop, { width: infoW, lineBreak: false, letterSpacing: 0.2 * S });
+            let iy = colTop + nameH + 5 * S;
             doc.font(FL).fontSize(F(10.5)).fill('#222222');
-            ['Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,',
-                'Hyderabad, 500072, Telangana, India',
-                'E-Mail: hr@gensarit.com',
-                'Ph No: +91 9121912138'].forEach(l => {
+            addressSegs.forEach(seg => {
+                doc.text(seg, infoX, iy, { width: infoW });
+                iy = doc.y + 3 * S;
+            });
+            contactLines.forEach(l => {
                 doc.text(l, infoX, iy, { width: infoW });
-                iy += F(10.5) * 1.25 + 3 * S;
+                iy += smallLH + 3 * S;
             });
 
-            const bH = 66 * S;
-            const bhH = bH / 2;
-            doc.strokeColor(BORDER).lineWidth(1 * S);
-            doc.roundedRect(badgeX, y, badgeW, bH, 6 * S).stroke();
-            doc.rect(badgeX, y, badgeW, bhH).fill(PURPLE);
-            doc.fill('#FFFFFF').font(FB).fontSize(F(15)).text('PAYSLIP', badgeX, centerY(y, bhH, 15), { width: badgeW, align: 'center', letterSpacing: 1 * S });
-            doc.fill('#111111').font(FB).fontSize(F(13.5)).text(`${PP_MONTHS[p.month] || ''} ${p.year}`, badgeX, centerY(y + bhH, bhH, 13.5), { width: badgeW, align: 'center' });
+            // PAYSLIP badge: 150px, radius 6, 1px PURPLE border, overflow hidden
+            // → top half purple with rounded TOP corners, bottom half white.
+            const bPad1 = 7 * S, bPad2 = 8 * S;
+            const bh1 = F(15) * LH + bPad1 * 2;   // PAYSLIP row
+            const bh2 = F(13.5) * LH + bPad2 * 2; // period row
+            const bH = bh1 + bh2 + 2 * S;         // + top/bottom borders
+            const r6 = 6 * S;
+            doc.save();
+            doc.roundedRect(badgeX, y, badgeW, bH, r6).clip();
+            doc.rect(badgeX, y, badgeW, bh1 + 1 * S).fill(PURPLE);
+            doc.rect(badgeX, y + bh1 + 1 * S, badgeW, bh2).fill('#FFFFFF');
+            doc.restore();
+            doc.strokeColor(PURPLE).lineWidth(1 * S).roundedRect(badgeX, y, badgeW, bH, r6).stroke();
+            doc.fill('#FFFFFF').font(FB).fontSize(F(15)).text('PAYSLIP', badgeX, centerY(y, bh1, 15), { width: badgeW, align: 'center', letterSpacing: 1 * S, lineBreak: false });
+            doc.fill('#111111').font(FB).fontSize(F(13.5)).text(`${PP_MONTHS[p.month] || ''} ${p.year}`, badgeX, centerY(y + bh1 + 1 * S, bh2, 13.5), { width: badgeW, align: 'center', lineBreak: false });
 
-            const divH = Math.max(iy - y, 95 * S);
-            doc.rect(divX, y, 1, divH).fill(PURPLE);
-
-            y += divH + 16 * S;
-            doc.strokeColor(PURPLE).lineWidth(2 * S).moveTo(ML, y).lineTo(ML + CW, y).stroke();
+            // Header bottom: padding-bottom 16 + 2px purple border, margin 16.
+            const hdrContentH = Math.max(GROUP_H, Math.min(textColH, GROUP_H), bH);
+            y += hdrContentH + 16 * S;
+            doc.strokeColor(PURPLE).lineWidth(2 * S).moveTo(ML, y + 1 * S).lineTo(ML + CW, y + 1 * S).stroke();
             y += 2 * S + 16 * S;
 
             // ---- Employee details (4 equal columns) ----
@@ -394,8 +469,9 @@ async function renderPayslipPdf(p, company) {
                 for (let c = 0; c < 4; c++) {
                     const pair = empCells[r * 2 + Math.floor(c / 2)];
                     const isVal = c % 2 === 1;
-                    doc.fill(isVal ? BODY : '#333333').font(isVal ? FB : FL).fontSize(F(11.5));
-                    doc.text(String(pair[isVal ? 1 : 0]), ecol(c) + 10 * S, centerY(y, ROW, 11.5), { width: colW - 20 * S });
+                    // label cells: #333 regular · value cells: #111 semibold
+                    doc.fill(isVal ? '#111111' : '#333333').font(isVal ? FB : FL).fontSize(F(11.5));
+                    doc.text(String(pair[isVal ? 1 : 0]), ecol(c) + 10 * S, centerY(y, ROW, 11.5), { width: colW - 20 * S, lineBreak: false });
                     if (c < 3) {
                         doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ecol(c + 1), y).lineTo(ecol(c + 1), y + ROW).stroke();
                     }
@@ -439,67 +515,80 @@ async function renderPayslipPdf(p, company) {
                 const ch = 65 * S;
                 doc.roundedRect(cx, y, cardW, ch, 5 * S).fill(CARD);
                 doc.strokeColor(BORDER).lineWidth(1 * S).roundedRect(cx, y, cardW, ch, 5 * S).stroke();
-                const cPad = 8 * S;
-                const labelFontSize = 13.5;
-                const valueFontSize = 19;
-                const labelMargin = 5;
-                const textBlockH = F(labelFontSize) + F(labelMargin) + F(valueFontSize);
-                const textOffset = (ch - cPad * 2 - textBlockH) / 2;
-                const labelY = y + cPad + textOffset;
-                doc.fill('#444444').font(FB).fontSize(F(labelFontSize)).text(card.label, cx + 5 * S, labelY, { width: cardW - 10 * S, align: 'center', lineBreak: false });
-                doc.fill(card.color).font(FB).fontSize(F(valueFontSize)).text('\u20B9 ' + plainINR(card.value), cx + 5 * S, labelY + F(labelFontSize) + F(labelMargin), { width: cardW - 10 * S, align: 'center' });
+                // CSS: padding 8px 5px + flex-column justify-content:center
+                const cPadV = 8 * S;
+                const labelH = F(13.5) * LH;
+                const valueH = F(19) * LH;
+                const blockH = labelH + 5 * S + valueH;
+                const labelY = y + cPadV + ((ch - 2 * cPadV) - blockH) / 2;
+                doc.fill('#444444').font(FB).fontSize(F(13.5)).text(card.label, cx + 5 * S, labelY, { width: cardW - 10 * S, align: 'center', lineBreak: false });
+                doc.fill(card.color).font(FB).fontSize(F(19)).text('\u20B9 ' + plainINR(card.value), cx + 5 * S, labelY + labelH + 5 * S, { width: cardW - 10 * S, align: 'center', lineBreak: false });
                 cx += cardW + 10 * S;
             });
             y += 65 * S + 6 * S;
 
             // ---- Net salary in words ----
-            const wH = 28 * S;
+            // CSS: padding 7px 12px + 11.5px line + 1px borders ≈ 29.22px tall.
+            const wH = F(11.5) * 1.15 + 14 * S + 2 * S;
             doc.rect(ML, y, CW, wH).fill(CARD);
             doc.strokeColor(BORDER).lineWidth(1 * S).rect(ML, y, CW, wH).stroke();
             const wordsLabel = 'NET SALARY IN WORDS:';
-            doc.fill(DARK).font(FB).fontSize(F(11.5)).text(wordsLabel + '  ', ML + 12 * S, centerY(y, wH, 11.5), { continued: true, width: CW - 24 * S });
-            doc.fill(BODY).font('Helvetica-Oblique').fontSize(F(11.5)).text(amountToWords(totals.net));
+            doc.fill(DARK).font(FB).fontSize(F(11.5));
+            doc.text(wordsLabel, ML + 12 * S, centerY(y, wH, 11.5), { lineBreak: false });
+            const labelW = doc.widthOfString(wordsLabel);
+            // Italic words: Roboto with a 12° oblique skew → same font metrics
+            // as the label so both sit on one identical baseline. The skew is
+            // applied around the text origin (translate first, then transform).
+            const itX = ML + 12 * S + labelW + 12 * S; // flex gap 12px
+            const itY = centerY(y, wH, 11.5);
+            doc.save();
+            doc.translate(itX, itY);
+            doc.transform(1, 0, Math.tan(-12 * Math.PI / 180), 1, 0, 0);
+            doc.fill(BODY).font(FL).fontSize(F(11.5)).text(amountToWords(totals.net), 0, 0, { lineBreak: false });
+            doc.restore();
             y += wH + 12 * S;
 
             // ---- Attendance summary (4-col) + Bonus (C) side by side ----
             const attX = ML;
-            const attW = 0.46 * CW;
+            // Mirrors preview: attendance column is a fixed 340px (4 integer
+            // 85px columns), bonus takes the remaining 376px, gap 20px.
+            const attW = 340 * S;
             const rowGap = 20 * S;
             const bnsX = ML + attW + rowGap;
             const bnsW = CW - attW - rowGap;
+            // CSS fixes these heights: .pp-sec bar, th height 30px,
+            // .pp-att-values td height 28px (normal table model).
             const attBarY = y;
-            const attBarH = BAR_H - 2 * S; // reference bar has no bottom border here
-            const attValueH = 26 * S;
-            const attHeadH = 4 * ROW - attBarH - attValueH;
-            doc.rect(attX, attBarY, 4 * S, attBarH).fill(PURPLE);
-            doc.rect(attX + 4 * S, attBarY, attW - 4 * S, attBarH).fill(BAR);
-            doc.fill(DARK).font(FB).fontSize(F(11.5)).text('ATTENDANCE SUMMARY', attX + 10 * S, centerY(attBarY, attBarH, 11.5));
+            const attHeadH = 30 * S;
+            const attValueH = 28 * S;
+            sectionBar('ATTENDANCE SUMMARY', attX, attBarY, attW, { noBottom: true });
 
             const attColW = attW / 4;
             const attHeads = ['Working Days', 'Present Days', 'Leave Days', 'LOP Days'];
             const attVals = [p.working_days || 0, p.present_days || 0, p.leave_days || 0, p.lop_days || 0];
-            let ay = attBarY + attBarH;
-            doc.fill(BAR);
-            for (let c = 0; c < 4; c++) {
-                doc.rect(attX + c * attColW, ay, attColW, attHeadH).fill();
-                doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attHeadH).stroke();
-            }
-            doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(attX, ay + attHeadH).lineTo(attX + attW, ay + attHeadH).stroke();
+            let ay = attBarY + SEC_H;
+            // Header row (30px, #e5e0f5, bold dark, centered)
+            doc.rect(attX, ay, attW, attHeadH).fill(BAR);
             attHeads.forEach((h, c) => {
-                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, attHeadH, 11.5), { width: attColW, align: 'center' });
+                doc.fill(DARK).font(FB).fontSize(F(11.5)).text(h, attX + c * attColW, centerY(ay, attHeadH, 11.5), { width: attColW, align: 'center', lineBreak: false });
             });
             ay += attHeadH;
+            // Value row (28px, white, bold, centered)
             doc.fill('#FFFFFF').rect(attX, ay, attW, attValueH).fill();
             attVals.forEach((v, c) => {
-                doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(attX + c * attColW, ay).lineTo(attX + c * attColW, ay + attValueH).stroke();
-                doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attValueH, 11.5), { width: attColW, align: 'center' });
+                doc.fill(BODY).font(FB).fontSize(F(11.5)).text(String(v), attX + c * attColW, centerY(ay, attValueH, 11.5), { width: attColW, align: 'center', lineBreak: false });
             });
-            doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(attX, ay + attValueH).lineTo(attX + attW, ay + attValueH).stroke();
-            doc.strokeColor(BORDER).lineWidth(1 * S);
-            doc.moveTo(attX, attBarY).lineTo(attX + attW, attBarY).stroke();
-            doc.moveTo(attX, attBarY).lineTo(attX, ay + attValueH).stroke();
-            doc.moveTo(attX + attW, attBarY).lineTo(attX + attW, ay + attValueH).stroke();
             ay += attValueH;
+            // Grid: internal verticals span header+value; separator between the
+            // two rows; outer left/right/bottom (bar supplies its own top/sides).
+            doc.strokeColor(BORDER).lineWidth(1 * S);
+            for (let c = 1; c < 4; c++) {
+                doc.moveTo(attX + c * attColW, attBarY + SEC_H).lineTo(attX + c * attColW, ay).stroke();
+            }
+            doc.moveTo(attX, attBarY + SEC_H + attHeadH).lineTo(attX + attW, attBarY + SEC_H + attHeadH).stroke();
+            doc.moveTo(attX, ay).lineTo(attX + attW, ay).stroke();
+            doc.moveTo(attX, attBarY + SEC_H).lineTo(attX, ay).stroke();
+            doc.moveTo(attX + attW, attBarY + SEC_H).lineTo(attX + attW, ay).stroke();
 
             const bonusRows = [
                 ['Incentive', num(p.incentive)],
@@ -507,7 +596,8 @@ async function renderPayslipPdf(p, company) {
                 ['Extra Work', num(p.extra_work)]
             ];
             const by = finTable(bnsX, 'BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, attBarY, bnsW);
-            y = Math.max(ay, by) + 2 * S;
+            // Preview band has margin-bottom:12px before EMPLOYER CONTRIBUTIONS.
+            y = Math.max(ay, by) + 12 * S;
 
             // ---- Employer Contributions (single column, full width finTable) ----
             const empTotal = totals.employerTotal;
@@ -519,30 +609,40 @@ async function renderPayslipPdf(p, company) {
             y = finTable(ML, 'EMPLOYER CONTRIBUTIONS', eRows, 'TOTAL EMPLOYER CONTRIBUTION (D)', empTotal, y, CW) + 2 * S;
 
             // ---- Footer: notes + signature ----
-            y += 8 * S;
-            doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ML, y).lineTo(ML + CW, y).stroke();
-            const fTop = y + 6 * S;
+            // The footer is anchored to the BOTTOM of the page (mirroring the
+            // sheet's 22px padding) so the notes and the signature block sit in
+            // a fixed, balanced position instead of floating mid-page with a
+            // large blank area underneath. It never rises above the content.
+            const pageBottom = doc.page.height - PAD_TOP;
             const fLineH = F(10.5) * 1.4;
+            const leftBlockH = fLineH * 4;                 // Note: + 3 bullets
+            const sepY = Math.max(y + 8 * S, pageBottom - 6 * S - leftBlockH);
+            doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ML, sepY).lineTo(ML + CW, sepY).stroke();
+            const fTop = sepY + 6 * S;
 
-            // Left: Note + bullet list
+            // Left: Note + bullet list (ul padding-left 15px, disc markers)
             doc.fill('#555555').font(FB).fontSize(F(10.5)).text('Note:', ML, fTop);
             let bY = fTop + fLineH;
             doc.font(FL);
             ['This is a computer generated payslip.',
                 'No signature is required.',
                 'Please contact HR for any discrepancies.'].forEach(t => {
-                doc.text('\u2022 ' + t, ML + 15 * S, bY);
+                doc.fill('#555555').text('\u2022', ML + 15 * S, bY, { lineBreak: false });
+                doc.text(t, ML + 27 * S, bY, { lineBreak: false });
                 bY += fLineH;
             });
 
-            // Right: company authorization (bottom-aligned with left block)
+            // Right: company authorization, bottom-aligned with the left block.
+            // Measure the disclaimer so a wrap to 2 lines keeps alignment.
             const sigW = CW * 0.48;
             const sigX = ML + CW - sigW;
-            const leftBlockH = fLineH * 4;
-            const rightBlockH = fLineH * 2 + 8 * S;
+            doc.font(FL).fontSize(F(10.5));
+            const disclaimer = 'This is a system generated document and does not require signature.';
+            const disLines = Math.max(1, Math.ceil(doc.widthOfString(disclaimer) / sigW));
+            const rightBlockH = F(10.5) * LH + 8 * S + disLines * F(10.5) * LH;
             const rightY = fTop + leftBlockH - rightBlockH;
-            doc.fill(DARK).font(FB).fontSize(F(10.5)).text('For GENSAR IT SOLUTIONS PVT. LTD.', sigX, rightY, { width: sigW, align: 'right' });
-            doc.fill('#555555').font(FL).fontSize(F(10.5)).text('This is a system generated document and does not require signature.', sigX, rightY + fLineH + 8 * S, { width: sigW, align: 'right' });
+            doc.fill(DARK).font(FB).fontSize(F(10.5)).text('For ' + coName.toUpperCase(), sigX, rightY, { width: sigW, align: 'right', lineBreak: false });
+            doc.fill('#555555').font(FL).text(disclaimer, sigX, rightY + F(10.5) * LH + 8 * S, { width: sigW, align: 'right' });
 
             doc.end();
         } catch (err) {
@@ -557,6 +657,25 @@ function pdfFromBase64(pdfBase64) {
     if (!pdfBase64) return null;
     const cleaned = String(pdfBase64).replace(/^data:application\/pdf;base64,/, '');
     return Buffer.from(cleaned, 'base64');
+}
+
+// Simple in-memory rate limiter for the CPU-heavy PDF render endpoints
+// (30 renders/minute per user). Prevents a single session from hogging the
+// serverless function with concurrent renders.
+const pdfRateBuckets = new Map();
+function pdfRateLimit(req, res, next) {
+    const key = (req.user && req.user.id) || req.ip || 'anon';
+    const now = Date.now();
+    let bucket = pdfRateBuckets.get(key);
+    if (!bucket || now - bucket.start > 60000) {
+        bucket = { start: now, count: 0 };
+        pdfRateBuckets.set(key, bucket);
+    }
+    bucket.count++;
+    if (bucket.count > 30) {
+        return res.status(429).json({ success: false, message: 'Too many PDF requests. Please wait a moment and try again.' });
+    }
+    next();
 }
 
 // @route   GET /api/payroll/my
@@ -626,7 +745,7 @@ router.get('/all', verifyToken, isAdmin, async (req, res) => {
 // @route   POST /api/payroll/render-pdf
 // @desc    Render a PDF from payslip payload data (for unsaved / live preview downloads)
 // @access  Private
-router.post('/render-pdf', verifyToken, async (req, res) => {
+router.post('/render-pdf', verifyToken, pdfRateLimit, async (req, res) => {
     try {
         const p = req.body;
         if (!p) return res.status(400).json({ success: false, message: 'No payslip data' });
@@ -660,7 +779,7 @@ router.get('/:id', verifyToken, async (req, res) => {
 // @route   GET /api/payroll/:id/pdf
 // @desc    Server-rendered PDF download (fallback / backward compatible)
 // @access  Private (owner or admin)
-router.get('/:id/pdf', verifyToken, async (req, res) => {
+router.get('/:id/pdf', verifyToken, pdfRateLimit, async (req, res) => {
     try {
         const isPrivileged = req.user.role === 'admin';
         const row = await fetchPayslipWithProfile(req.params.id, req.user.id, isPrivileged);
@@ -745,13 +864,10 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
         const payslip = result.rows[0];
 
         // Auto-email the employee using their personal email ONLY (never the official/work email).
+        // personal_email already comes back from getProfileSalaryValues (no extra query).
         let email_sent = null;
-        const empResult = await query(
-            'SELECT personal_email FROM employees WHERE id = $1',
-            [employee_id]
-        );
-        if (empResult.rows.length > 0 && empResult.rows[0].personal_email) {
-            const empEmail = empResult.rows[0].personal_email;
+        const empEmail = payrollValues.personal_email;
+        if (empEmail) {
             let pdfBuffer = pdfFromBase64(v.pdfBase64);
             if (!pdfBuffer) {
                 const row = await fetchPayslipWithProfile(payslip.id, req.user.id, true);
@@ -850,12 +966,9 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                 created++;
 
                 // Email each employee using their personal email ONLY (never the official/work email).
+                // personal_email already comes back from getProfileSalaryValues (no extra query).
                 let email_sent = false;
-                const empResult = await query(
-                    'SELECT personal_email FROM employees WHERE id = $1',
-                    [employee_id]
-                );
-                if (empResult.rows.length > 0 && empResult.rows[0].personal_email) {
+                if (payrollValues.personal_email) {
                     let pdfBuffer = pdfFromBase64(v.pdfBase64);
                     if (!pdfBuffer) {
                         const row = await fetchPayslipWithProfile(result.rows[0].id, req.user.id, true);
@@ -863,7 +976,7 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                     }
                     if (pdfBuffer) {
                         const filename = `payslip_${employee_id}_${month}_${year}.pdf`;
-                        const sent = await sendPayslipEmail(empResult.rows[0].personal_email, filename, pdfBuffer);
+                        const sent = await sendPayslipEmail(payrollValues.personal_email, filename, pdfBuffer);
                         if (sent.success) { emailed++; email_sent = true; }
                     }
                 }

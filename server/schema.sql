@@ -487,4 +487,9 @@ ALTER TABLE payroll ADD COLUMN IF NOT EXISTS employer_contribution DECIMAL(10,2)
 ALTER TABLE payroll ADD COLUMN IF NOT EXISTS gross_salary DECIMAL(10,2) DEFAULT 0;
 ALTER TABLE payroll ADD COLUMN IF NOT EXISTS total_deductions DECIMAL(10,2) DEFAULT 0;
 
+-- Payroll: guarantee the (employee_id, month, year) uniqueness that the
+-- generate/generate-bulk upserts rely on with ON CONFLICT. Databases created
+-- before the UNIQUE table constraint existed get it via this idempotent index.
+CREATE UNIQUE INDEX IF NOT EXISTS payroll_employee_month_year_uidx ON payroll (employee_id, month, year);
+
 CREATE INDEX IF NOT EXISTS idx_payroll_status ON payroll(status);

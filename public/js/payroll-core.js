@@ -10,9 +10,14 @@ function ppNum(v) { return Number(v) || 0; }
 
 function ppEsc(str) {
     if (str === null || str === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(str);
-    return div.innerHTML;
+    // Escape &, <, > and quotes so values are safe in both text nodes and
+    // attribute positions (src="...", style="...").
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function ppFormatINR(amount) {
@@ -187,8 +192,11 @@ function buildPayslipHTML(p) {
         ['Attendance Incentive', ppNumFmt(p.bonus)],
         ['Extra Work', ppNumFmt(p.extra_work)]
     ];
-    const finTable = (title, rows, totalLabel, totalValue, extraStyle) =>
-        '<table class="pp-fin"' + (extraStyle ? ' style="' + extraStyle + '"' : '') + '>' +
+    const finTable = (title, rows, totalLabel, totalValue) =>
+        '<table class="pp-fin">' +
+            // Fixed layout + explicit col widths keep the AMOUNT divider at an
+            // exact integer position at every zoom level.
+            '<colgroup><col /><col style="width:95px;" /></colgroup>' +
             '<thead><tr><th>' + title + '</th><th class="text-right">AMOUNT (\u20B9)</th></tr></thead>' +
             '<tbody>' +
                 rows.map((r) => '<tr><td>' + r[0] + '</td><td class="text-right">' + r[1] + '</td></tr>').join('') +
@@ -197,28 +205,33 @@ function buildPayslipHTML(p) {
     const logoHtml = (company.logo || '/assets/images/gensar_logo.png')
         ? '<img src="' + ppEsc(company.logo || '/assets/images/gensar_logo.png') + '" alt="Gensar Logo" style="width:175px;height:auto;object-fit:contain;flex-shrink:0;" onerror="this.style.display=\'none\';">'
         : '<i class="fas fa-building" style="font-size:26px;color:#7c6ca8;"></i>';
-    return '<div class="pp-sheet ppslip" style="width:100%;max-width:794px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
+    // Company block from DB data with Gensar defaults as fallback, so settings
+    // edits reflect on payslips without code changes.
+    const coName = company.name || 'GENSAR IT SOLUTIONS PVT. LTD.';
+    const coAddress = String(company.address || 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad, 500072, Telangana, India');
+    const addressHtml = ppEsc(coAddress).replace(/\r?\n/g, '<br>');
+    const contactBits = [];
+    if (company.email) contactBits.push('E-Mail: ' + ppEsc(company.email));
+    if (company.phone) contactBits.push('Ph No: ' + ppEsc(company.phone));
+    return '<div class="pp-sheet ppslip" style="width:794px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
         '.ppslip{line-height:normal;}' +
         '.ppslip *{box-sizing:border-box;}' +
-        '.ppslip table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:12px;}' +
-        '.ppslip th,.ppslip td{border:1px solid #d5cee6;padding:5.5px 10px;text-align:left;font-size:11.5px;text-transform:none;letter-spacing:normal;white-space:normal;}' +
+        '.ppslip table{width:100%;table-layout:fixed;border-collapse:collapse;border-spacing:0;font-size:11.5px;margin-bottom:12px;}' +
+        '.ppslip th,.ppslip td{border:1px solid #d8cfe8;padding:5.5px 10px;text-align:left;font-size:11.5px;text-transform:none;letter-spacing:normal;white-space:normal;}' +
         '.ppslip th{font-weight:700;}' +
-        '.ppslip tbody tr:last-child td{border-bottom:1px solid #d5cee6;}' +
+        '.ppslip tbody tr:last-child td{border-bottom:1px solid #d8cfe8;}' +
         '.ppslip tbody tr:hover{background:transparent;}' +
         '.ppslip tr{transition:none;}' +
         '.ppslip .text-right{text-align:right;}' +
-        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;padding:6px 10px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px;border-top:1px solid #d5cee6;border-right:1px solid #d5cee6;border-bottom:1px solid #d5cee6;border-left:4px solid #7c6ca8;margin-bottom:8px;}' +
+        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;padding:6px 10px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px;border-top:1px solid #d8cfe8;border-right:1px solid #d8cfe8;border-bottom:1px solid #d8cfe8;border-left:4px solid #7c6ca8;margin-bottom:8px;}' +
         '.ppslip .pp-emp td{width:25%;}' +
         '.ppslip .pp-emp td:nth-child(odd){background:#fbf9fc;color:#333;}' +
         '.ppslip .pp-emp td:nth-child(even){color:#111;font-weight:600;}' +
-        '.ppslip .pp-fin th{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;border:1px solid #d5cee6;}' +
-        '.ppslip .pp-fin td{border:1px solid #d5cee6;}' +
+        '.ppslip .pp-fin th{background:#e5e0f5;color:#38286b;font-weight:700;font-size:11.5px;border:1px solid #d8cfe8;}' +
+        '.ppslip .pp-fin td{border:1px solid #d8cfe8;}' +
         '.ppslip .pp-att-values td{padding-top:2px;padding-bottom:2px;height:28px;}' +
-        '.ppslip .pp-attendance{display:flex;flex-direction:column;}' +
-        '.ppslip .pp-attendance thead{display:table;table-layout:fixed;width:100%;flex:0 0 30px;}' +
-        '.ppslip .pp-attendance thead th{line-height:1.0;}' +
-        '.ppslip .pp-attendance tbody{display:table;table-layout:fixed;width:100%;flex:0 0 28px;}' +
+        '.ppslip .pp-attendance th{height:30px;line-height:1.0;}' +
         '.ppslip .total-row td{background:#efeafb;font-weight:700;color:#38286b;}' +
         '</style>' +
         '<!-- HEADER -->' +
@@ -227,10 +240,11 @@ function buildPayslipHTML(p) {
                 '<div style="flex-shrink:0;">' + logoHtml + '</div>' +
                 '<div style="width:1px;height:95px;background:#7c6ca8;margin:0 5px;flex-shrink:0;align-self:center;"></div>' +
                 '<div style="display:flex;flex-direction:column;justify-content:center;">' +
-                    '<div style="font-size:19px;font-weight:900;color:#111;letter-spacing:0.2px;margin-bottom:5px;">GENSAR IT SOLUTIONS PVT. LTD.</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally,<br>Hyderabad, 500072, Telangana, India</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">E-Mail: hr@gensarit.com</div>' +
-                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">Ph No: +91 9121912138</div>' +
+                    '<div style="font-size:19px;font-weight:900;color:#111;letter-spacing:0.2px;margin-bottom:5px;">' + ppEsc(coName.toUpperCase()) + '</div>' +
+                    '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">' + addressHtml + '</div>' +
+                    contactBits.map(function (c) {
+                        return '<div style="display:flex;align-items:center;font-size:10.5px;color:#222;line-height:1.2;margin-bottom:3px;">' + c + '</div>';
+                    }).join('') +
                 '</div>' +
             '</div>' +
             '<div style="width:150px;border:1px solid #7c6ca8;border-radius:6px;overflow:hidden;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
@@ -251,31 +265,32 @@ function buildPayslipHTML(p) {
         '</table>' +
         '<!-- EARNINGS / DEDUCTIONS -->' +
         '<div style="display:flex;gap:12px;margin-bottom:6px;">' +
-            '<div style="flex:1;min-width:0;">' + finTable('EARNINGS', earnings, 'TOTAL EARNINGS (A)', totals.gross) + '</div>' +
-            '<div style="flex:1;min-width:0;">' + finTable('DEDUCTIONS', deductions, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions) + '</div>' +
+            '<div style="width:362px;">' + finTable('EARNINGS', earnings, 'TOTAL EARNINGS (A)', totals.gross) + '</div>' +
+            '<div style="width:362px;">' + finTable('DEDUCTIONS', deductions, 'TOTAL DEDUCTIONS (B)', totals.totalDeductions) + '</div>' +
         '</div>' +
         '<!-- SUMMARY CARDS -->' +
         '<div style="display:flex;justify-content:center;gap:10px;margin-bottom:6px;">' +
-            '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="width:239px;height:65px;background:#fbfbfd;border:1px solid #d8cfe8;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">GROSS SALARY (A)</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#38286b;">\u20B9 ' + ppNumFmt(totals.gross) + '</div></div>' +
-            '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="width:238px;height:65px;background:#fbfbfd;border:1px solid #d8cfe8;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">TOTAL DEDUCTIONS</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#d97706;">\u20B9 ' + ppNumFmt(totals.totalDeductionsWithEmployer) + '</div></div>' +
-            '<div style="flex:1;min-width:0;height:65px;background:#fbfbfd;border:1px solid #d5cee6;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
+            '<div style="width:239px;height:65px;background:#fbfbfd;border:1px solid #d8cfe8;border-radius:5px;padding:8px 5px;text-align:center;display:flex;flex-direction:column;justify-content:center;">' +
                 '<div style="font-size:13.5px;font-weight:700;color:#444;margin-bottom:5px;white-space:nowrap;">NET SALARY PAYABLE</div>' +
                 '<div style="font-size:19px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +
-        '<div style="background:#fbfbfd;border:1px solid #d5cee6;padding:7px 12px;font-size:11.5px;margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
+        '<div style="background:#fbfbfd;border:1px solid #d8cfe8;padding:7px 12px;font-size:11.5px;margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
             '<span style="font-weight:700;color:#38286b;white-space:nowrap;">NET SALARY IN WORDS:</span>' +
             '<span style="font-style:italic;color:#222222;">' + ppEsc(ppAmountInWords(totals.net)) + '</span>' +
         '</div>' +
         '<!-- ATTENDANCE + BONUS -->' +
-        '<div style="display:flex;gap:20px;margin-bottom:2px;align-items:stretch;">' +
-            '<div style="flex:0 0 46%;min-width:0;overflow:hidden;display:flex;flex-direction:column;">' +
+        '<div style="display:flex;gap:20px;margin-bottom:12px;align-items:flex-start;">' +
+            '<div style="width:340px;">' +
                 '<div class="pp-sec" style="margin-bottom:0;border-bottom:none;">ATTENDANCE SUMMARY</div>' +
-                '<table class="pp-fin pp-attendance" style="border-top:none;flex:1;max-width:100%;">' +
+                '<table class="pp-fin pp-attendance">' +
+                    '<colgroup><col /><col /><col /><col /></colgroup>' +
                     '<thead><tr><th style="text-align:center;">Working Days</th><th style="text-align:center;">Present Days</th><th style="text-align:center;">Leave Days</th><th style="text-align:center;">LOP Days</th></tr></thead>' +
                     '<tbody><tr class="pp-att-values">' +
                         '<td style="text-align:center;font-weight:700;">' + ppNum(p.working_days) + '</td>' +
@@ -285,7 +300,7 @@ function buildPayslipHTML(p) {
                     '</tr></tbody>' +
                 '</table>' +
             '</div>' +
-            '<div style="flex:1;min-width:0;display:flex;flex-direction:column;">' + finTable('BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus, 'flex:1;max-width:100%;') + '</div>' +
+            '<div style="width:376px;">' + finTable('BONUS (C)', bonusRows, 'TOTAL BONUS (C)', totals.bonus) + '</div>' +
         '</div>' +
         '<!-- EMPLOYER CONTRIBUTIONS -->' +
         '<div style="margin-bottom:2px;">' + finTable('EMPLOYER CONTRIBUTIONS', [
@@ -294,7 +309,7 @@ function buildPayslipHTML(p) {
             ['Employer Other Contribution', ppNumFmt(p.employer_contribution)]
         ], 'TOTAL EMPLOYER CONTRIBUTION (D)', totals.employerTotal) + '</div>' +
         '<!-- FOOTER -->' +
-        '<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;padding-bottom:0;border-top:1px solid #d5cee6;font-size:10.5px;align-items:flex-end;">' +
+        '<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;padding-bottom:0;border-top:1px solid #d8cfe8;font-size:10.5px;align-items:flex-end;">' +
             '<div>' +
                 '<strong>Note:</strong>' +
                 '<ul style="list-style-type:disc;padding-left:15px;color:#555;line-height:1.4;margin:0;">' +
@@ -304,7 +319,7 @@ function buildPayslipHTML(p) {
                 '</ul>' +
             '</div>' +
             '<div style="text-align:right;">' +
-                '<div style="font-weight:700;color:#38286b;margin-bottom:8px;">For GENSAR IT SOLUTIONS PVT. LTD.</div>' +
+                '<div style="font-weight:700;color:#38286b;margin-bottom:8px;">For ' + ppEsc(coName.toUpperCase()) + '</div>' +
                 '<div style="color:#555555;">This is a system generated document and does not require signature.</div>' +
             '</div>' +
         '</div>' +
@@ -352,10 +367,7 @@ async function downloadPayslip(p, filename) {
 
 // Open print window with only the payslip (proper A4 dimensions)
 function printPayslip(p) {
-    const w = window.open('', '_blank');
-    if (!w) { showToast('Popup blocked. Allow popups to print.', 'error'); return; }
-    w.document.write(
-        '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Payslip</title>' +
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Payslip</title>' +
         '<style>' +
         '@page{size:A4 portrait;margin:0;}' +
         'html,body{margin:0;padding:0;background:#FFFFFF;}' +
@@ -365,9 +377,16 @@ function printPayslip(p) {
         '</style></head><body>' +
         buildPayslipHTML(p) +
         '<script>window.onload=function(){window.focus();setTimeout(function(){window.print();},400);};<\/script>' +
-        '</body></html>'
-    );
-    w.document.close();
+        '</body></html>';
+    // Blob URL instead of document.write (deprecated + blocked in some contexts).
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    const w = window.open(url, '_blank');
+    if (!w) {
+        URL.revokeObjectURL(url);
+        showToast('Popup blocked. Allow popups to print.', 'error');
+        return;
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // Bulk ZIP download of payslip PDFs (server-side real text PDFs)

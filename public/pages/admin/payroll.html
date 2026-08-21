@@ -325,13 +325,10 @@
             }
             showToast('Fetching payslips (' + d.payroll.length + ')...', 'info');
             try {
-                const full = [];
-                for (const p of d.payroll) {
-                    const det = await apiCall('/payroll/' + p.id);
-                    if (det && det.success) full.push(det.payslip);
-                }
-                if (!full.length) { showToast('Could not load payslips', 'error'); return; }
-                await zipPayslips(full, 'payslips_' + month + '_' + year + '.zip');
+                // zipPayslips -> /payroll/:id/pdf renders server-side from the DB,
+                // so the list rows (which carry id/month/year/emp_id) are enough.
+                // No need to fetch every payslip detail individually.
+                await zipPayslips(d.payroll, 'payslips_' + month + '_' + year + '.zip');
                 showToast('ZIP downloaded', 'success');
             } catch (e) {
                 showToast('Failed to create ZIP', 'error');
