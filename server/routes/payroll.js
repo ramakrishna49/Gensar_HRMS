@@ -463,26 +463,42 @@ async function renderPayslipPdf(p, company) {
             ];
             const t0 = y;
             const ecol = (ci) => ML + ci * colW;
+            // Border fix: draw in three passes like finTable - backgrounds,
+            // then text, THEN the grid. Previously each row's borders were
+            // stroked before the NEXT row's background fill was painted, which
+            // covered the lower half of every internal line and made the
+            // cell borders look faint or missing.
+            // Pass 1: alternating column backgrounds.
             for (let r = 0; r < 7; r++) {
                 for (let c = 0; c < 4; c++) {
                     const colBg = c % 2 === 0 ? '#fbf9fc' : '#FFFFFF';
-                    doc.fill(colBg).rect(ecol(c), y, colW, ROW).fill();
+                    doc.fill(colBg).rect(ecol(c), t0 + r * ROW, colW, ROW).fill();
                 }
+            }
+            // Pass 2: cell text.
+            for (let r = 0; r < 7; r++) {
                 for (let c = 0; c < 4; c++) {
                     const pair = empCells[r * 2 + Math.floor(c / 2)];
                     const isVal = c % 2 === 1;
                     // label cells: #333 regular · value cells: #111 semibold
                     doc.fill(isVal ? '#111111' : '#333333').font(isVal ? FB : FL).fontSize(F(11.5));
-                    doc.text(String(pair[isVal ? 1 : 0]), ecol(c) + 10 * S, centerY(y, ROW, 11.5), { width: colW - 20 * S, lineBreak: false });
-                    if (c < 3) {
-                        doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ecol(c + 1), y).lineTo(ecol(c + 1), y + ROW).stroke();
-                    }
+                    doc.text(String(pair[isVal ? 1 : 0]), ecol(c) + 10 * S, centerY(t0 + r * ROW, ROW, 11.5), { width: colW - 20 * S, lineBreak: false });
                 }
-                doc.strokeColor(BORDER).lineWidth(1 * S).moveTo(ML, y + ROW).lineTo(ML + CW, y + ROW).stroke();
-                y += ROW;
             }
-            doc.strokeColor(BORDER).lineWidth(1 * S).rect(ML, t0, CW, 7 * ROW).stroke();
-            y += 12 * S;
+            // Pass 3: full grid on top of every fill - internal verticals span
+            // the whole table height once, internal horizontals between rows,
+            // and the outer rect closes all four edges. Every line is drawn
+            // exactly once at the shared BORDER color and 1px weight.
+            doc.strokeColor(BORDER).lineWidth(1 * S);
+            for (let c = 1; c < 4; c++) {
+                doc.moveTo(ecol(c), t0).lineTo(ecol(c), t0 + 7 * ROW);
+            }
+            for (let r = 1; r < 7; r++) {
+                doc.moveTo(ML, t0 + r * ROW).lineTo(ML + CW, t0 + r * ROW);
+            }
+            doc.stroke();
+            doc.rect(ML, t0, CW, 7 * ROW).stroke();
+            y = t0 + 7 * ROW + 12 * S;
 
             // ---- Earnings (A) / Deductions (B) tables ----
             const totals = computeTotals(p);
