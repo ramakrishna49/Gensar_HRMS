@@ -210,21 +210,24 @@ function buildPayslipHTML(p) {
     const coName = company.name || 'GENSAR IT SOLUTIONS PVT. LTD.';
     const coAddress = String(company.address || 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad, 500072, Telangana, India');
     const addressHtml = ppEsc(coAddress).replace(/\r?\n/g, '<br>');
+    // Contact lines must ALWAYS be visible on the payslip. If the company
+    // settings have not loaded (or fields are empty), fall back to the Gensar
+    // defaults - exactly like the server-side PDF renderer does.
     const contactBits = [];
-    if (company.email) contactBits.push('E-Mail: ' + ppEsc(company.email));
-    if (company.phone) contactBits.push('Ph No: ' + ppEsc(company.phone));
+    contactBits.push('E-Mail: ' + ppEsc(company.email || 'hr@gensarit.com'));
+    contactBits.push('Ph No: ' + ppEsc(company.phone || '+91 9121912138'));
     return '<div class="pp-sheet ppslip" style="width:794px;box-sizing:border-box;margin:0 auto;background:#ffffff;color:#222;font-family:Arial,Helvetica,sans-serif;border:1px solid #7c6ca8;padding:22px 28px;box-shadow:0 0 12px rgba(0,0,0,0.08);">' +
         '<style>' +
         '.ppslip{line-height:normal;}' +
         '.ppslip *{box-sizing:border-box;}' +
         '.ppslip table{width:100%;table-layout:fixed;border-collapse:collapse;border-spacing:0;font-size:11.5px;margin-bottom:12px;}' +
-        '.ppslip th,.ppslip td{border:1px solid #d8cfe8;padding:5.5px 10px;text-align:left;font-size:11.5px;text-transform:none;letter-spacing:normal;white-space:normal;}' +
+        '.ppslip th,.ppslip td{border:1px solid #d8cfe8;padding:5px 10px;line-height:14px;text-align:left;font-size:11.5px;text-transform:none;letter-spacing:normal;white-space:normal;}' +
         '.ppslip th{font-weight:700;}' +
         '.ppslip tbody tr:last-child td{border-bottom:1px solid #d8cfe8;}' +
         '.ppslip tbody tr:hover{background:transparent;}' +
         '.ppslip tr{transition:none;}' +
         '.ppslip .text-right{text-align:right;}' +
-        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;padding:6px 10px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px;border-top:1px solid #d8cfe8;border-right:1px solid #d8cfe8;border-bottom:1px solid #d8cfe8;border-left:4px solid #7c6ca8;margin-bottom:8px;}' +
+        '.ppslip .pp-sec{background:#e5e0f5;color:#38286b;padding:6px 10px;line-height:14px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px;border-top:1px solid #d8cfe8;border-right:1px solid #d8cfe8;border-bottom:1px solid #d8cfe8;border-left:4px solid #7c6ca8;margin-bottom:8px;}' +
         '.ppslip .pp-emp td{width:25%;}' +
         '.ppslip .pp-emp td:nth-child(odd){background:#fbf9fc;color:#333;}' +
         '.ppslip .pp-emp td:nth-child(even){color:#111;font-weight:600;}' +
@@ -281,7 +284,7 @@ function buildPayslipHTML(p) {
                 '<div style="font-size:19px;font-weight:700;color:#2e7d32;">\u20B9 ' + ppNumFmt(totals.net) + '</div></div>' +
         '</div>' +
         '<!-- Net Salary in Words -->' +
-        '<div style="background:#fbfbfd;border:1px solid #d8cfe8;padding:7px 12px;font-size:11.5px;margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
+        '<div style="background:#fbfbfd;border:1px solid #d8cfe8;padding:7px 12px;line-height:14px;font-size:11.5px;margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
             '<span style="font-weight:700;color:#38286b;white-space:nowrap;">NET SALARY IN WORDS:</span>' +
             '<span style="font-style:italic;color:#222222;">' + ppEsc(ppAmountInWords(totals.net)) + '</span>' +
         '</div>' +

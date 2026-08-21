@@ -262,12 +262,12 @@ async function renderPayslipPdf(p, company) {
             const ML = 29 * S;
             const CW = 736 * S;
             const PAD_TOP = 23 * S;
-            // Tables: font-size 11.5px, line-height normal (~1.15), cell
-            // padding 5.5px 10px, collapsed 1px borders
-            // → one row = 11.5*1.15 + 11 + 1 ≈ 25.22px (same for every table).
-            const ROW = 25.22 * S;
-            // Section bar (.pp-sec): 11.5 bold + 6px vert padding + 2 borders.
-            const SEC_H = 27.23 * S;
+            // Tables: font-size 11.5px, line-height 14px, cell
+            // padding 5px 10px, collapsed 1px borders
+            // → one row = 14 + 10 + 2 = 26px EXACT (same for every table).
+            const ROW = 26 * S;
+            // Section bar (.pp-sec): 14px line + 12px vert padding + 2 borders.
+            const SEC_H = 28 * S;
             const F = (px) => px * S;
             const LH = 1.172; // PDFKit TTF normal line-height factor (Roboto)
             const plainINR = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -390,8 +390,10 @@ async function renderPayslipPdf(p, company) {
             const coAddress = String((company && company.address) || 'Manjeera Trinity Corporate, 4th Floor, #402, KPHB, Kukatpally, Hyderabad, 500072, Telangana, India');
             const addressSegs = coAddress.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
             const contactLines = [];
-            if (company && company.email) contactLines.push('E-Mail: ' + company.email);
-            if (company && company.phone) contactLines.push('Ph No: ' + company.phone);
+            // Contact lines are mandatory on the payslip - same Gensar
+            // fallbacks as the browser preview (buildPayslipHTML).
+            contactLines.push('E-Mail: ' + ((company && company.email) || 'hr@gensarit.com'));
+            contactLines.push('Ph No: ' + ((company && company.phone) || '+91 9121912138'));
 
             // Estimate the text-column height first so the whole column can be
             // vertically centered in the 95px group (flex align-items:center).
@@ -528,8 +530,8 @@ async function renderPayslipPdf(p, company) {
             y += 65 * S + 6 * S;
 
             // ---- Net salary in words ----
-            // CSS: padding 7px 12px + 11.5px line + 1px borders ≈ 29.22px tall.
-            const wH = F(11.5) * 1.15 + 14 * S + 2 * S;
+            // CSS: padding 7px 12px + 14px line + 1px borders = 30px tall.
+            const wH = 14 * S + 14 * S + 2 * S;
             doc.rect(ML, y, CW, wH).fill(CARD);
             doc.strokeColor(BORDER).lineWidth(1 * S).rect(ML, y, CW, wH).stroke();
             const wordsLabel = 'NET SALARY IN WORDS:';
