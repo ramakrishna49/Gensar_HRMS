@@ -257,6 +257,9 @@ async function computeAttendanceSummary(employeeId, month, year) {
     // a full-month basis. Every day lands in exactly one calendar bucket:
     // holiday, week off, or working day.
     let totalDays = 0, weekOffs = 0, workingDays = 0, paidRaw = 0.0, leaveDays = 0;
+    // First N late logins per payslip period are excused; beyond that each
+    // late login costs half a day.
+    const LATE_LOGIN_GRACE = 3;
     const tally = { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0 };
 
     const cursor = new Date(effStart + 'T00:00:00Z');
@@ -286,7 +289,12 @@ async function computeAttendanceSummary(employeeId, month, year) {
 
         const st = statusByDate[ds];
         if (st === 'present') { paidRaw++; tally.present++; }
-        else if (st === 'late') { paidRaw++; tally.late++; }
+        else if (st === 'late') {
+            // Late-login policy: first 3 lates in the period are excused
+            // (full day); every late from the 4th onward counts as half day.
+            tally.late++;
+            paidRaw += tally.late <= LATE_LOGIN_GRACE ? 1 : 0.5;
+        }
         else if (st === 'half-day') { paidRaw += 0.5; tally.half_day++; }
         else if (leaveRes.rows.some(l => ds >= fmtD(l.start_date) && ds <= fmtD(l.end_date))) {
             // Approved leave day (with or without a back-filled row) is paid
@@ -370,6 +378,7 @@ async function computeAttendanceSummary(employeeId, month, year) {
         // Extra context for the admin UI derivation note.
         leave_taken: leaveDays,
         monthly_leave_quota: MONTHLY_LEAVE_QUOTA,
+        late_login_grace: LATE_LOGIN_GRACE,
         // Pending leaves are NOT protected - they currently count as LOP.
         pending_leave_days: (() => {
             let n = 0;

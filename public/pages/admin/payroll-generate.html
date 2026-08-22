@@ -376,6 +376,10 @@
                             if ((s.pending_leave_days || 0) > 0) {
                                 extra += ' | NOTE: ' + s.pending_leave_days + ' PENDING leave day' + (s.pending_leave_days > 1 ? 's' : '') + ' not protected - approve them first!';
                             }
+                            if (s.breakdown && s.breakdown.late > (s.late_login_grace != null ? s.late_login_grace : 3)) {
+                                const g = s.late_login_grace != null ? s.late_login_grace : 3;
+                                extra += ' | Late logins ' + s.breakdown.late + ': first ' + g + ' excused, ' + (s.breakdown.late - g) + ' counted as half day';
+                            }
                             dv.style.display = 'block';
                             dv.textContent = parts.join(' + ') + ' = ' + s.working_days + ' total days | Present ' + s.present_days + ' (incl. check-ins, WFH, week offs & holidays)' + extra + ' | LOP ' + s.lop_days + ' days will be deducted (period ' + s.period_start + ' to ' + s.period_end + ')';
                         }
