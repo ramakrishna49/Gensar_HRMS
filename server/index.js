@@ -4,6 +4,10 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
+// Behind Vercel's proxy, req.ip would otherwise always be 127.0.0.1.
+// Trusting the proxy makes Express read the real client IP from
+// x-forwarded-for so audit logs record where logins actually came from.
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 const { query } = require('./config/database');
 
