@@ -8,6 +8,7 @@ const http = require('http');
 const PDFDocument = require('pdfkit');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { istDateString } = require('../utils/date');
 const { sendPayslipEmail } = require('../services/email');
 const { logAudit } = require('../utils/audit');
 
@@ -181,9 +182,10 @@ async function getProfileSalaryValues(employeeId, values) {
 }
 
 // Auto-calculate payroll attendance numbers straight from the attendance,
-// leave and holiday tables so admins no longer hand-count days.
-// Working days = non-weekend days (Sat+Sun off) minus declared holidays,
-// starting from the joining date for mid-month joiners.
+// leave, WFH and holiday tables so admins no longer hand-count days.
+// Per-day ledger: every working day resolves to exactly one bucket -
+// paid (incl. approved WFH), approved leave, or LOP - so the
+// working = present + leave + LOP identity always holds.
 async function computeAttendanceSummary(employeeId, month, year) {
     const empRes = await query('SELECT joining_date FROM employees WHERE id = $1', [employeeId]);
     if (empRes.rows.length === 0) return null;
@@ -192,42 +194,71 @@ async function computeAttendanceSummary(employeeId, month, year) {
     const start = `${year}-${pad(month)}-01`;
     const lastDay = new Date(year, month, 0).getDate();
     const end = `${year}-${pad(month)}-${pad(lastDay)}`;
+    const todayStr = istDateString();
 
+    // Mid-month joiners only earn working days from their joining date.
     let effStart = start;
     const join = empRes.rows[0].joining_date ? String(empRes.rows[0].joining_date).substring(0, 10) : null;
     if (join && join > start && join <= end) effStart = join;
 
-    const [attRes, leaveRes, holRes] = await Promise.all([
-        query(`SELECT status, COUNT(*)::int AS c FROM attendance
-               WHERE employee_id = $1 AND date >= $2 AND date <= $3 GROUP BY status`,
-              [employeeId, effStart, end]),
-        query(`SELECT COALESCE(SUM((LEAST(la.end_date::date, $3::date) - GREATEST(la.start_date::date, $2::date)) + 1), 0)::int AS leave_days
-               FROM leave_applications la
-               WHERE la.employee_id = $1 AND la.status = 'approved'
-                 AND la.end_date >= $2 AND la.start_date <= $3`,
-              [employeeId, effStart, end]),
-        query(`SELECT date FROM holidays WHERE is_active = 1 AND date >= $1 AND date <= $2`, [effStart, end])
+    // Never count days that have not happened yet - a mid-month preview must
+    // not turn upcoming days into phantom LOP. Fully-future periods: zeros.
+    if (effStart > todayStr) {
+        return {
+            working_days: 0, present_days: 0, leave_days: 0, lop_days: 0,
+            breakdown: { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0, holiday: 0 },
+            period_start: effStart, period_end: end, future_period: true
+        };
+    }
+    let effEnd = end;
+    if (effEnd > todayStr) effEnd = todayStr;
+
+    const [attRes, leaveRes, wfhRes, holRes] = await Promise.all([
+        query(`SELECT date, status FROM attendance
+               WHERE employee_id = $1 AND date >= $2 AND date <= $3`, [employeeId, effStart, effEnd]),
+        query(`SELECT start_date, end_date FROM leave_applications
+               WHERE employee_id = $1 AND status = 'approved'
+                 AND end_date >= $2 AND start_date <= $3`, [employeeId, effStart, effEnd]),
+        query(`SELECT start_date, end_date FROM wfh_requests
+               WHERE employee_id = $1 AND status = 'approved'
+                 AND end_date >= $2 AND start_date <= $3`, [employeeId, effStart, effEnd]),
+        query(`SELECT date FROM holidays WHERE is_active = 1 AND date >= $1 AND date <= $2`, [effStart, effEnd])
     ]);
 
-    const counts = {};
-    attRes.rows.forEach(r => { counts[r.status] = parseInt(r.c) || 0; });
-    const holidaySet = new Set(holRes.rows.map(r => formatDateOnly(r.date)));
+    const fmtD = (v) => formatDateOnly(v);
+    const statusByDate = {};
+    attRes.rows.forEach(r => { statusByDate[fmtD(r.date)] = r.status; });
+    const holidaySet = new Set(holRes.rows.map(r => fmtD(r.date)));
 
-    let workingDays = 0;
+    let workingDays = 0, paidRaw = 0.0, leaveDays = 0;
+    const tally = { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0 };
+
     const cursor = new Date(effStart + 'T00:00:00Z');
-    const endDate = new Date(end + 'T00:00:00Z');
+    const endDate = new Date(effEnd + 'T00:00:00Z');
     while (cursor <= endDate) {
+        const ds = cursor.toISOString().substring(0, 10);
         const dow = cursor.getUTCDay();
-        if (dow !== 0 && dow !== 6 && !holidaySet.has(cursor.toISOString().substring(0, 10))) workingDays++;
         cursor.setUTCDate(cursor.getUTCDate() + 1);
+        if (dow === 0 || dow === 6 || holidaySet.has(ds)) continue;
+
+        workingDays++;
+        const st = statusByDate[ds];
+        if (st === 'present') { paidRaw++; tally.present++; }
+        else if (st === 'late') { paidRaw++; tally.late++; }
+        else if (st === 'half-day') { paidRaw += 0.5; tally.half_day++; }
+        else if (leaveRes.rows.some(l => ds >= fmtD(l.start_date) && ds <= fmtD(l.end_date))) {
+            // Approved leave day (with or without a back-filled row) is paid leave.
+            leaveDays++;
+            if (st === 'absent') tally.absent++;
+        }
+        else if (wfhRes.rows.some(w => ds >= fmtD(w.start_date) && ds <= fmtD(w.end_date))) {
+            // Approved WFH with no check-in record is still a paid day.
+            paidRaw++; tally.wfh++;
+        }
+        else tally.absent++;
     }
 
-    // Half-days count as half presence. Values are kept in whole days so the
-    // stored rows stay integers and working = present + leave + LOP holds
-    // exactly (computeTotals validates this identity).
-    const presentExact = (counts.present || 0) + (counts.late || 0) + 0.5 * (counts['half-day'] || 0);
-    const leaveDays = parseInt(leaveRes.rows[0].leave_days) || 0;
-    const presentDays = Math.min(workingDays, Math.round(presentExact));
+    const presentDays = Math.min(workingDays, Math.round(paidRaw));
     const lopDays = Math.max(0, workingDays - presentDays - leaveDays);
 
     return {
@@ -236,15 +267,15 @@ async function computeAttendanceSummary(employeeId, month, year) {
         leave_days: leaveDays,
         lop_days: lopDays,
         breakdown: {
-            present: counts.present || 0,
-            late: counts.late || 0,
-            half_day: counts['half-day'] || 0,
-            absent: counts.absent || 0,
-            weekoff: counts.weekoff || 0,
-            holiday: counts.holiday || 0
+            present: tally.present,
+            late: tally.late,
+            half_day: tally.half_day,
+            absent: tally.absent,
+            wfh: tally.wfh,
+            holiday: holidaySet.size
         },
         period_start: effStart,
-        period_end: end
+        period_end: effEnd
     };
 }
 
