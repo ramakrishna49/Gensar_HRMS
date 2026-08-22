@@ -28,6 +28,51 @@
             .reg-fields { flex-direction: column; }
             .reg-fields .form-group { flex: 1 1 auto; min-width: 0; width: 100%; }
         }
+
+        /* Custom calendar / clock pickers - identical on laptop & PWA */
+        .picker-wrap { position: relative; }
+        .picker-trigger {
+            display: flex; align-items: center; gap: 8px;
+            width: 100%; text-align: left; cursor: pointer;
+            color: var(--text-secondary);
+        }
+        .picker-trigger.has-value { color: var(--text-primary); font-weight: 500; }
+        .picker-trigger .fa-calendar-day { color: var(--primary); }
+        .picker-trigger .fa-clock.in-ic { color: var(--success); }
+        .picker-trigger .fa-clock.out-ic { color: var(--danger); }
+        .picker-trigger .label-txt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .picker-trigger .chev { margin-left: auto; opacity: 0.5; font-size: 0.72rem; }
+        .picker-popup {
+            display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
+            background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e5e7eb);
+            border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+            padding: 12px; width: min(300px, calc(100vw - 48px));
+        }
+        .picker-popup.open { display: block; }
+        .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .cal-title { font-weight: 700; font-size: 0.88rem; color: var(--text-primary); }
+        .cal-nav {
+            border: none; background: transparent; cursor: pointer;
+            width: 30px; height: 30px; border-radius: 8px; color: var(--text-primary);
+        }
+        .cal-nav:hover:not(:disabled) { background: var(--bg-light, #f3f4f6); }
+        .cal-nav:disabled { opacity: 0.3; cursor: default; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+        .cal-dow { font-size: 0.62rem; color: var(--text-secondary); font-weight: 700; padding: 4px 0; }
+        .cal-day {
+            border: none; background: transparent; padding: 0; height: 33px;
+            border-radius: 8px; font-size: 0.78rem; cursor: pointer; color: var(--text-primary);
+        }
+        .cal-day:hover:not(:disabled) { background: var(--bg-light, #f3f4f6); }
+        .cal-day.sel { background: var(--primary); color: #fff; font-weight: 700; }
+        .cal-day:disabled { opacity: 0.25; cursor: default; }
+        .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 230px; overflow-y: auto; }
+        .time-chip {
+            border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 8px;
+            padding: 6px 2px; font-size: 0.7rem; cursor: pointer; color: var(--text-primary); white-space: nowrap;
+        }
+        .time-chip:hover { border-color: var(--primary); color: var(--primary); }
+        .time-chip.sel { background: var(--primary); color: #fff; border-color: var(--primary); }
     </style>
 </head>
 <body class="employee-app">
@@ -87,21 +132,40 @@
                     <div class="reg-fields">
                         <div class="form-group" style="margin-bottom:0;">
                             <label><i class="fas fa-calendar-day" style="color:var(--primary);margin-right:6px;"></i>Date *</label>
-                            <select id="regDate" class="form-control" required>
-                                <option value="">Select date...</option>
-                            </select>
+                            <div class="picker-wrap">
+                                <button type="button" class="form-control picker-trigger" onclick="openPicker('date')">
+                                    <i class="fas fa-calendar-day"></i><span class="label-txt" id="regDateLabel">Select date...</span><i class="fas fa-chevron-down chev"></i>
+                                </button>
+                                <input type="hidden" id="regDate">
+                                <div class="picker-popup" id="datePopup">
+                                    <div class="cal-head">
+                                        <button type="button" class="cal-nav" onclick="calNav(-1)"><i class="fas fa-chevron-left"></i></button>
+                                        <span class="cal-title" id="calTitle"></span>
+                                        <button type="button" class="cal-nav" id="calNextBtn" onclick="calNav(1)"><i class="fas fa-chevron-right"></i></button>
+                                    </div>
+                                    <div class="cal-grid" id="calGrid"></div>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
                             <label><i class="fas fa-clock" style="color:var(--success);margin-right:6px;"></i>Check-in Time</label>
-                            <select id="regIn" class="form-control">
-                                <option value="">Select time...</option>
-                            </select>
+                            <div class="picker-wrap">
+                                <button type="button" class="form-control picker-trigger" onclick="openPicker('in')">
+                                    <i class="fas fa-clock in-ic"></i><span class="label-txt" id="regInLabel">Select time...</span><i class="fas fa-chevron-down chev"></i>
+                                </button>
+                                <input type="hidden" id="regIn">
+                                <div class="picker-popup" id="inPopup"><div class="time-grid" id="inGrid"></div></div>
+                            </div>
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
                             <label><i class="fas fa-clock" style="color:var(--danger);margin-right:6px;"></i>Check-out Time</label>
-                            <select id="regOut" class="form-control">
-                                <option value="">Select time...</option>
-                            </select>
+                            <div class="picker-wrap">
+                                <button type="button" class="form-control picker-trigger" onclick="openPicker('out')">
+                                    <i class="fas fa-clock out-ic"></i><span class="label-txt" id="regOutLabel">Select time...</span><i class="fas fa-chevron-down chev"></i>
+                                </button>
+                                <input type="hidden" id="regOut">
+                                <div class="picker-popup" id="outPopup"><div class="time-grid" id="outGrid"></div></div>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group" style="margin-top:12px;">
@@ -128,34 +192,97 @@
         if (!checkAuth()) throw new Error('Not authenticated');
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Select dropdowns look identical on every device (laptop & PWA).
+            // Custom calendar + clock pickers: same look on laptop & PWA.
             const MONTHS_S = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const dateSel = document.getElementById('regDate');
-            for (let i = 1; i <= 60; i++) {
-                const d = new Date(Date.now() - i * 86400000);
-                // IST calendar date key the backend expects.
-                const ist = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-                const y = ist.getFullYear();
-                const m = String(ist.getMonth() + 1).padStart(2, '0');
-                const dd = String(ist.getDate()).padStart(2, '0');
-                dateSel.innerHTML += `<option value="${y}-${m}-${dd}">${dd} ${MONTHS_S[ist.getMonth()]} ${y}</option>`;
+            window.MONTHS_S = MONTHS_S;
+            loadMyRequests();
+        });
+
+        // ---- Custom pickers ----
+        let calY = null, calM = null;
+        function istNow() { return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); }
+        function openPicker(kind) {
+            closePickers();
+            if (kind === 'date') {
+                if (!calY) { const n = istNow(); calY = n.getFullYear(); calM = n.getMonth(); renderCal(); }
+                document.getElementById('datePopup').classList.add('open');
+            } else {
+                const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
+                const grid = document.getElementById(kind === 'in' ? 'inGrid' : 'outGrid');
+                if (!grid.dataset.built) { buildTimes(grid, kind); grid.dataset.built = '1'; }
+                pop.classList.add('open');
             }
-            const fmtTime = (h, mm) => {
+        }
+        function closePickers() {
+            document.querySelectorAll('.picker-popup.open').forEach(p => p.classList.remove('open'));
+        }
+        document.addEventListener('click', e => { if (!e.target.closest('.picker-wrap')) closePickers(); });
+
+        function renderCal() {
+            const grid = document.getElementById('calGrid');
+            const now = istNow();
+            const selVal = document.getElementById('regDate').value;
+            document.getElementById('calTitle').textContent = window.MONTHS_S[calM] + ' ' + calY;
+            // Next-month nav is blocked once we are viewing the current month.
+            document.getElementById('calNextBtn').disabled =
+                (calY === now.getFullYear() && calM === now.getMonth());
+            const firstDow = new Date(calY, calM, 1).getDay();
+            const daysInMonth = new Date(calY, calM + 1, 0).getDate();
+            let html = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+            for (let i = 0; i < firstDow; i++) html += '<div></div>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const key = `${calY}-${String(calM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const future = new Date(calY, calM, d) > new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                html += `<button type="button" class="cal-day${selVal === key ? ' sel' : ''}" data-key="${key}" ${future || !selAllowed(key) ? 'disabled' : ''} onclick="pickDate('${key}',${d})">${d}</button>`;
+            }
+            grid.innerHTML = html;
+        }
+        // Only the past ~60 days can be regularized.
+        function selAllowed(key) {
+            const ms = new Date(key + 'T00:00:00').getTime();
+            const min = Date.now() - 60 * 86400000;
+            return ms >= new Date(min).setHours(0, 0, 0, 0);
+        }
+        function calNav(dir) {
+            calM += dir;
+            if (calM < 0) { calM = 11; calY--; }
+            if (calM > 11) { calM = 0; calY++; }
+            renderCal();
+        }
+        function pickDate(key, day) {
+            document.getElementById('regDate').value = key;
+            const mon = parseInt(key.split('-')[1], 10) - 1;
+            document.getElementById('regDateLabel').textContent =
+                `${day} ${window.MONTHS_S[mon]} ${key.split('-')[0]}`;
+            document.querySelector('#datePopup').closest('.picker-wrap').querySelector('.picker-trigger').classList.add('has-value');
+            closePickers();
+        }
+
+        function buildTimes(grid, kind) {
+            const fmt = (h, mm) => {
                 const ampm = h < 12 ? 'AM' : 'PM';
                 const hh = h % 12 === 0 ? 12 : h % 12;
                 return `${hh}:${String(mm).padStart(2, '0')} ${ampm}`;
             };
-            ['regIn', 'regOut'].forEach(id => {
-                const sel = document.getElementById(id);
-                for (let h = 0; h < 24; h++) {
-                    [0, 30].forEach(mm => {
-                        const v = String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
-                        sel.innerHTML += `<option value="${v}">${fmtTime(h, mm)}</option>`;
-                    });
-                }
-            });
-            loadMyRequests();
-        });
+            let html = '';
+            for (let h = 0; h < 24; h++) {
+                [0, 30].forEach(mm => {
+                    const v = String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+                    html += `<button type="button" class="time-chip" data-v="${v}" onclick="pickTime('${kind}','${v}')">${fmt(h, mm)}</button>`;
+                });
+            }
+            grid.innerHTML = html;
+        }
+        function pickTime(kind, v) {
+            const id = kind === 'in' ? 'regIn' : 'regOut';
+            const labelId = kind === 'in' ? 'regInLabel' : 'regOutLabel';
+            const popId = kind === 'in' ? 'inPopup' : 'outPopup';
+            document.getElementById(id).value = v;
+            document.getElementById(labelId).textContent = v;
+            document.querySelectorAll(`#${popId} .time-chip`).forEach(c => c.classList.toggle('sel', c.dataset.v === v));
+            document.getElementById(popId).closest('.picker-wrap').querySelector('.picker-trigger').classList.add('has-value');
+            closePickers();
+        }
 
         async function submitRequest(event) {
             event.preventDefault();
