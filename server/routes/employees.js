@@ -123,8 +123,18 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
 // @desc    Staff directory. Admins see the whole company; everyone else sees
 //          only their own team - a manager/team_lead sees their direct reports,
 //          and a regular employee sees their teammates plus their reporting
-//          manager (the TL). Work contact fields only.
+//          manager (the TL). The caller's own card is always hidden and the
+//          contact shown is the personal email/phone, never work details.
 // @access  Private (any authenticated employee)
+const DIRECTORY_COLUMNS = `SELECT e.id, e.employee_id, e.first_name, e.last_name,
+        e.personal_email, e.phone,
+        d.name AS department_name, g.name AS designation_name,
+        rm.first_name || ' ' || rm.last_name AS reporting_manager
+FROM employees e
+LEFT JOIN departments d ON d.id = e.department_id
+LEFT JOIN designations g ON g.id = e.designation_id
+LEFT JOIN employees rm ON rm.id = e.reporting_manager_id`;
+
 router.get('/directory', verifyToken, async (req, res) => {
     try {
         const meRes = await query(
@@ -141,64 +151,42 @@ router.get('/directory', verifyToken, async (req, res) => {
             scope = 'team';
         } else if (me.role === 'admin') {
             const result = await query(
-                `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
-                        d.name AS department_name, g.name AS designation_name,
-                        rm.first_name || ' ' || rm.last_name AS reporting_manager
-                FROM employees e
-                LEFT JOIN departments d ON d.id = e.department_id
-                LEFT JOIN designations g ON g.id = e.designation_id
-                LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
-                WHERE e.status = 'active'
-                ORDER BY e.first_name, e.last_name`
+                `${DIRECTORY_COLUMNS}
+                WHERE e.status = 'active' AND e.id <> $1
+                ORDER BY e.first_name, e.last_name`,
+                [req.user.id]
             );
             rows = result.rows;
             scope = 'company';
         } else if (me.role === 'manager' || me.role === 'team_lead') {
-            // Direct reports + the lead themselves.
+            // Direct reports (own card hidden).
             const result = await query(
-                `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
-                        d.name AS department_name, g.name AS designation_name,
-                        rm.first_name || ' ' || rm.last_name AS reporting_manager
-                FROM employees e
-                LEFT JOIN departments d ON d.id = e.department_id
-                LEFT JOIN designations g ON g.id = e.designation_id
-                LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
-                WHERE e.status = 'active' AND (e.reporting_manager_id = $1 OR e.id = $1)
+                `${DIRECTORY_COLUMNS}
+                WHERE e.status = 'active' AND e.reporting_manager_id = $1 AND e.id <> $1
                 ORDER BY e.first_name, e.last_name`,
                 [req.user.id]
             );
             rows = result.rows;
             scope = 'team';
         } else {
-            // Team member: show teammates (same manager) + the manager + self.
+            // Team member: show teammates (same manager) + the manager, self hidden.
             // Without a reporting manager fall back to the company view.
             const anchorId = me.reporting_manager_id || null;
             if (!anchorId) {
                 const result = await query(
-                    `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
-                            d.name AS department_name, g.name AS designation_name,
-                            rm.first_name || ' ' || rm.last_name AS reporting_manager
-                    FROM employees e
-                    LEFT JOIN departments d ON d.id = e.department_id
-                    LEFT JOIN designations g ON g.id = e.designation_id
-                    LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
-                    WHERE e.status = 'active'
-                    ORDER BY e.first_name, e.last_name`
+                    `${DIRECTORY_COLUMNS}
+                    WHERE e.status = 'active' AND e.id <> $1
+                    ORDER BY e.first_name, e.last_name`,
+                    [req.user.id]
                 );
                 rows = result.rows;
                 scope = 'company';
             } else {
                 const result = await query(
-                    `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
-                            d.name AS department_name, g.name AS designation_name,
-                            rm.first_name || ' ' || rm.last_name AS reporting_manager
-                    FROM employees e
-                    LEFT JOIN departments d ON d.id = e.department_id
-                    LEFT JOIN designations g ON g.id = e.designation_id
-                    LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
-                    WHERE e.status = 'active' AND (e.reporting_manager_id = $1 OR e.id = $1)
+                    `${DIRECTORY_COLUMNS}
+                    WHERE e.status = 'active' AND (e.reporting_manager_id = $1 OR e.id = $1) AND e.id <> $2
                     ORDER BY e.first_name, e.last_name`,
-                    [anchorId]
+                    [anchorId, req.user.id]
                 );
                 rows = result.rows;
                 scope = 'team';

@@ -142,7 +142,8 @@
                 list = list.filter(e =>
                     ((e.first_name || '') + ' ' + (e.last_name || '')).toLowerCase().includes(q) ||
                     (e.employee_id || '').toLowerCase().includes(q) ||
-                    (e.email || '').toLowerCase().includes(q) ||
+                    (e.personal_email || '').toLowerCase().includes(q) ||
+                    (e.phone || '').toLowerCase().includes(q) ||
                     (e.department_name || '').toLowerCase().includes(q) ||
                     (e.designation_name || '').toLowerCase().includes(q)
                 );
@@ -157,8 +158,8 @@
 
             grid.innerHTML = list.map(e => {
                 const initials = getInitials(e.first_name, e.last_name);
-                const emailLink = e.email
-                    ? '<a href="mailto:' + encodeURIComponent(e.email) + '" style="color:inherit;text-decoration:none;">' + escapeHtml(e.email) + '</a>'
+                const emailLink = e.personal_email
+                    ? '<a href="mailto:' + encodeURIComponent(e.personal_email) + '" style="color:inherit;text-decoration:none;">' + escapeHtml(e.personal_email) + '</a>'
                     : '—';
                 const phoneLink = e.phone
                     ? '<a href="tel:' + escapeHtml(String(e.phone).replace(/[^0-9+]/g, '')) + '" style="color:inherit;text-decoration:none;">' + escapeHtml(e.phone) + '</a>'

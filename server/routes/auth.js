@@ -72,7 +72,7 @@ router.post('/forgot-password', forgotLimiter, async (req, res) => {
         }
 
         const result = await query(
-            `SELECT id, email FROM employees
+            `SELECT id, email, personal_email FROM employees
             WHERE (LOWER(employee_id) = LOWER($1) OR LOWER(email) = LOWER($1)) AND status = $2
             LIMIT 1`,
             [identifier, 'active']
@@ -84,6 +84,11 @@ router.post('/forgot-password', forgotLimiter, async (req, res) => {
         }
 
         const user = result.rows[0];
+        // Deliver the code to the personal address when available - work
+        // inboxes may be inaccessible while the employee is locked out.
+        // The code itself stays keyed to the unique office email so the
+        // reset-password lookup keeps working unchanged.
+        const deliveryEmail = user.personal_email || user.email;
 
         // Only one live code per account - older ones become unusable.
         await query(
@@ -98,7 +103,7 @@ router.post('/forgot-password', forgotLimiter, async (req, res) => {
             [user.email, hashOtp(otp), expiresAt]
         );
 
-        await sendOTPEmail(user.email, otp);
+        await sendOTPEmail(deliveryEmail, otp);
 
         // Deliberately vague - do not reveal whether the account exists or
         // whether email delivery succeeded.
