@@ -238,8 +238,6 @@
             if (kind === 'date') {
                 if (!calY) { const n = istNow(); calY = n.getFullYear(); calM = n.getMonth(); renderCal(); }
                 document.getElementById('datePopup').classList.add('open');
-            } else {
-                openClock(kind);
             }
         }
         function closePickers() {
