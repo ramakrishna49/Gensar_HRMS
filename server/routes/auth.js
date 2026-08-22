@@ -115,6 +115,53 @@ router.post('/forgot-password', forgotLimiter, async (req, res) => {
     }
 });
 
+// @route   POST /api/auth/verify-reset-otp
+// @desc    Check a reset code is valid WITHOUT consuming it - used by the
+//          UI to verify the code before revealing the new-password fields.
+// @access  Public (rate limited)
+router.post('/verify-reset-otp', otpResetLimiter, async (req, res) => {
+    try {
+        const identifier = String((req.body && req.body.employee_id) || '').trim();
+        const otp = String((req.body && req.body.otp) || '').trim();
+        if (!identifier || !otp) {
+            return res.status(400).json({ success: false, message: 'Identifier and code are required' });
+        }
+
+        const result = await query(
+            `SELECT id, email FROM employees
+            WHERE (LOWER(employee_id) = LOWER($1) OR LOWER(email) = LOWER($1)
+                OR LOWER(personal_email) = LOWER($1)) AND status = $2
+            LIMIT 1`,
+            [identifier, 'active']
+        );
+        if (result.rows.length === 0) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+        }
+        const user = result.rows[0];
+
+        const otpRows = await query(
+            `SELECT id, otp AS otp_hash FROM password_reset_otps
+            WHERE email = $1 AND is_used = 0 AND expires_at > NOW()
+            ORDER BY id DESC LIMIT 1`,
+            [user.email]
+        );
+
+        const storedHash = otpRows.rows.length > 0 ? otpRows.rows[0].otp_hash : null;
+        const providedHash = hashOtp(otp);
+        let match = storedHash !== null && storedHash.length === providedHash.length;
+        if (match) {
+            match = crypto.timingSafeEqual(Buffer.from(storedHash), Buffer.from(providedHash));
+        }
+        if (!match) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+        }
+        res.json({ success: true, message: 'Code verified! Now set your new password.' });
+    } catch (error) {
+        console.error('Verify reset OTP error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // @route   POST /api/auth/reset-password
 // @desc    Verify OTP and set a new password (revokes all existing sessions)
 // @access  Public (rate limited)
