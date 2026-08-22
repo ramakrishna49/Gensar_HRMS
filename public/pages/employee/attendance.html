@@ -107,6 +107,7 @@
             .cal-times { gap: 5px; }
             .cal-times .cf { display: none; }
             .cal-times .cs { display: inline; }
+            .cal-times .to { display: none; } /* phone cells: In time is enough */
         }
         .cal-cell.today { outline: 2px solid var(--primary); outline-offset: -1px; }
         .cal-cell.weekoff { background: var(--bg-light); }
@@ -376,11 +377,11 @@
                 html += '<div class="cal-day">' + d + (isToday ? ' <span style="font-size:0.55rem;font-weight:700;color:var(--primary);">TODAY</span>' : '') + '</div>';
                 if (tag) html += '<div class="cal-tag">' + escapeHtml(tag) + '</div>';
                 if (checkIn || checkOut) {
-                    const tspan = (full, short, t) =>
-                        '<span style="white-space:nowrap;"><b class="cf">' + full + '</b><b class="cs">' + short + '</b> ' + escapeHtml(t) + '</span>';
+                    const tspan = (cls, full, short, t) =>
+                        '<span class="' + cls + '" style="white-space:nowrap;"><b class="cf">' + full + '</b><b class="cs">' + short + '</b> ' + escapeHtml(t) + '</span>';
                     html += '<div class="cal-times">';
-                    if (checkIn) html += tspan('Check In', 'In', checkIn);
-                    if (checkOut) html += tspan('Check Out', 'Out', checkOut);
+                    if (checkIn) html += tspan('ti', 'Check In', 'In', checkIn);
+                    if (checkOut) html += tspan('to', 'Check Out', 'Out', checkOut);
                     html += '</div>';
                 }
                 html += '</div>';
