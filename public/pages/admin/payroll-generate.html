@@ -367,8 +367,14 @@
                             const parts = [workDays + ' work days'];
                             if (s.week_offs) parts.push(s.week_offs + ' week off' + (s.week_offs !== 1 ? 's' : ''));
                             if (s.holidays) parts.push(s.holidays + ' holiday' + (s.holidays !== 1 ? 's' : ''));
+                            let extra = '';
+                            if ((s.leave_taken || 0) > 0) {
+                                const q = s.monthly_leave_quota != null ? s.monthly_leave_quota : 1;
+                                const covered = Math.min(s.leave_taken, q);
+                                extra = ' | Leaves taken ' + s.leave_taken + ': ' + covered + ' paid (monthly quota) + ' + (s.leave_taken - covered) + ' LOP';
+                            }
                             dv.style.display = 'block';
-                            dv.textContent = parts.join(' + ') + ' = ' + s.working_days + ' total days | Present ' + s.present_days + ' includes check-ins, WFH, week offs & holidays (period ' + s.period_start + ' to ' + s.period_end + ')';
+                            dv.textContent = parts.join(' + ') + ' = ' + s.working_days + ' total days | Present ' + s.present_days + ' (incl. check-ins, WFH, week offs & holidays)' + extra + ' | LOP ' + s.lop_days + ' days will be deducted (period ' + s.period_start + ' to ' + s.period_end + ')';
                         }
                     }
                     updateSummary();

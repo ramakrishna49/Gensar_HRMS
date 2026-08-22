@@ -332,18 +332,31 @@ async function computeAttendanceSummary(employeeId, month, year) {
     // late logins & half days), approved WFH, plus week offs and holidays
     // up to the employee's last active day.
     const presentDays = Math.min(totalDays, Math.round(paidRaw) + creditedWOs + creditedHols);
-    const lopDays = tally.absent;
+
+    // ---- Leave quota vs LOP ----
+    // Every employee earns ONE paid leave per month. Approved leaves up to
+    // that quota stay "Leave Days" (no salary impact); anything beyond it,
+    // plus every genuine absence, becomes LOP and alone drives the salary
+    // cut. Identity: Total - Present = Leave(quota) + LOP.
+    const MONTHLY_LEAVE_QUOTA = 1;
+    const quotaCovered = Math.min(leaveDays, MONTHLY_LEAVE_QUOTA);
+    const excessLeave = leaveDays - quotaCovered;
+    const lopDays = tally.absent + excessLeave;
 
     return {
         // "Working days" now carries the FULL calendar month (Total Days) -
         // per-day salary divides by every day of the month, not just work days.
         working_days: totalDays,
         present_days: presentDays,
-        leave_days: leaveDays,
+        // Payslip "Leave Days" shows only the quota-protected portion.
+        leave_days: quotaCovered,
         lop_days: lopDays,
         total_days: totalDays,
         week_offs: weekOffs,
         holidays: holidaySet.size,
+        // Extra context for the admin UI derivation note.
+        leave_taken: leaveDays,
+        monthly_leave_quota: MONTHLY_LEAVE_QUOTA,
         breakdown: {
             present: tally.present,
             late: tally.late,
