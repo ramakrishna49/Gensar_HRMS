@@ -341,19 +341,27 @@
             const empId = document.getElementById('ppEmployee').value;
             const month = document.getElementById('ppMonth').value;
             const year = document.getElementById('ppYear').value;
+            // Same helper as onEmployeeChange - defined locally because no
+            // global set() exists on this page.
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val === null || val === undefined || val === '') ? 0 : val; };
             if (!empId || !month || !year) { if (!silent) showToast('Select an employee first', 'warning'); return; }
             const btn = document.getElementById('autoAttBtn');
             if (btn && !silent) { btn.disabled = true; btn.textContent = 'Calculating...'; }
             const d = await apiCall('/payroll/attendance-summary?employee_id=' + empId + '&month=' + month + '&year=' + year);
             if (btn && !silent) { btn.disabled = false; btn.textContent = '⚡ Auto-fill'; }
             if (d && d.success && d.summary) {
-                const s = d.summary;
-                set('working_days', s.working_days); set('present_days', s.present_days);
-                set('leave_days', s.leave_days); set('lop_days', s.lop_days);
-                updateSummary();
-                clearTimeout(previewTimer);
-                previewTimer = setTimeout(refreshPreview, 350);
-                if (!silent) showToast('Attendance auto-filled: W ' + s.working_days + ' / P ' + s.present_days + ' / L ' + s.leave_days + ' / LOP ' + s.lop_days, 'success');
+                try {
+                    const s = d.summary;
+                    set('working_days', s.working_days); set('present_days', s.present_days);
+                    set('leave_days', s.leave_days); set('lop_days', s.lop_days);
+                    updateSummary();
+                    clearTimeout(previewTimer);
+                    previewTimer = setTimeout(refreshPreview, 350);
+                    if (!silent) showToast('Attendance auto-filled: W ' + s.working_days + ' / P ' + s.present_days + ' / L ' + s.leave_days + ' / LOP ' + s.lop_days, 'success');
+                } catch (err) {
+                    console.error('Auto-fill attendance failed:', err);
+                    if (!silent) showToast('Auto-fill failed: ' + err.message, 'error');
+                }
             } else if (!silent) {
                 showToast((d && d.message) || 'Could not auto-calculate attendance', 'error');
             }
