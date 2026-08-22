@@ -66,13 +66,37 @@
         .cal-day:hover:not(:disabled) { background: var(--bg-light, #f3f4f6); }
         .cal-day.sel { background: var(--primary); color: #fff; font-weight: 700; }
         .cal-day:disabled { opacity: 0.25; cursor: default; }
-        .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 230px; overflow-y: auto; }
-        .time-chip {
-            border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 8px;
-            padding: 6px 2px; font-size: 0.7rem; cursor: pointer; color: var(--text-primary); white-space: nowrap;
+        .time-grid { display: none; }
+        /* Analog clock picker */
+        .clock-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .ampm-row { display: flex; gap: 8px; }
+        .ampm-pill {
+            border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 20px;
+            padding: 4px 16px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--text-primary);
         }
-        .time-chip:hover { border-color: var(--primary); color: var(--primary); }
-        .time-chip.sel { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .ampm-pill.sel { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .clock-face {
+            position: relative; width: 188px; height: 188px; border-radius: 50%;
+            border: 2px solid var(--border-color, #e5e7eb); background: var(--bg-light, #fafafa);
+        }
+        .clock-num {
+            position: absolute; left: 50%; top: 50%; width: 32px; height: 32px; margin: -16px 0 0 -16px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.82rem; cursor: pointer; color: var(--text-primary);
+        }
+        .clock-num:hover { background: rgba(37, 99, 235, 0.12); }
+        .clock-num.sel { background: var(--primary); color: #fff; font-weight: 700; }
+        .clock-center {
+            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            font-size: 0.95rem; font-weight: 700; color: var(--text-secondary);
+        }
+        .minute-row { display: flex; gap: 10px; }
+        .min-btn {
+            border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 10px;
+            padding: 8px 20px; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);
+        }
+        .min-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .min-btn:disabled { opacity: 0.35; cursor: default; }
     </style>
 </head>
 <body class="employee-app">
@@ -134,7 +158,7 @@
                             <label><i class="fas fa-calendar-day" style="color:var(--primary);margin-right:6px;"></i>Date *</label>
                             <div class="picker-wrap">
                                 <button type="button" class="form-control picker-trigger" onclick="openPicker('date')">
-                                    <i class="fas fa-calendar-day"></i><span class="label-txt" id="regDateLabel">Select date...</span><i class="fas fa-chevron-down chev"></i>
+                                    <span class="label-txt" id="regDateLabel">Select date...</span><i class="fas fa-chevron-down chev"></i>
                                 </button>
                                 <input type="hidden" id="regDate">
                                 <div class="picker-popup" id="datePopup">
@@ -151,7 +175,7 @@
                             <label><i class="fas fa-clock" style="color:var(--success);margin-right:6px;"></i>Check-in Time</label>
                             <div class="picker-wrap">
                                 <button type="button" class="form-control picker-trigger" onclick="openPicker('in')">
-                                    <i class="fas fa-clock in-ic"></i><span class="label-txt" id="regInLabel">Select time...</span><i class="fas fa-chevron-down chev"></i>
+                                    <span class="label-txt" id="regInLabel">Select time...</span><i class="fas fa-chevron-down chev"></i>
                                 </button>
                                 <input type="hidden" id="regIn">
                                 <div class="picker-popup" id="inPopup"><div class="time-grid" id="inGrid"></div></div>
@@ -161,7 +185,7 @@
                             <label><i class="fas fa-clock" style="color:var(--danger);margin-right:6px;"></i>Check-out Time</label>
                             <div class="picker-wrap">
                                 <button type="button" class="form-control picker-trigger" onclick="openPicker('out')">
-                                    <i class="fas fa-clock out-ic"></i><span class="label-txt" id="regOutLabel">Select time...</span><i class="fas fa-chevron-down chev"></i>
+                                    <span class="label-txt" id="regOutLabel">Select time...</span><i class="fas fa-chevron-down chev"></i>
                                 </button>
                                 <input type="hidden" id="regOut">
                                 <div class="picker-popup" id="outPopup"><div class="time-grid" id="outGrid"></div></div>
@@ -207,10 +231,7 @@
                 if (!calY) { const n = istNow(); calY = n.getFullYear(); calM = n.getMonth(); renderCal(); }
                 document.getElementById('datePopup').classList.add('open');
             } else {
-                const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
-                const grid = document.getElementById(kind === 'in' ? 'inGrid' : 'outGrid');
-                if (!grid.dataset.built) { buildTimes(grid, kind); grid.dataset.built = '1'; }
-                pop.classList.add('open');
+                openClock(kind);
             }
         }
         function closePickers() {
@@ -258,28 +279,77 @@
             closePickers();
         }
 
-        function buildTimes(grid, kind) {
-            const fmt = (h, mm) => {
-                const ampm = h < 12 ? 'AM' : 'PM';
-                const hh = h % 12 === 0 ? 12 : h % 12;
-                return `${hh}:${String(mm).padStart(2, '0')} ${ampm}`;
-            };
-            let html = '';
-            for (let h = 0; h < 24; h++) {
-                [0, 30].forEach(mm => {
-                    const v = String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
-                    html += `<button type="button" class="time-chip" data-v="${v}" onclick="pickTime('${kind}','${v}')">${fmt(h, mm)}</button>`;
-                });
-            }
-            grid.innerHTML = html;
+        // ---- Analog clock time picker ----
+        const timePick = {
+            in: { ampm: 'AM', h: null, m: null },
+            out: { ampm: 'AM', h: null, m: null }
+        };
+        function openClock(kind) {
+            const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
+            if (!pop.dataset.built) { renderClock(kind); pop.dataset.built = '1'; }
+            pop.classList.add('open');
         }
-        function pickTime(kind, v) {
+        function renderClock(kind) {
+            const st = timePick[kind];
+            const nums = [];
+            for (let hr = 1; hr <= 12; hr++) {
+                const ang = hr * 30;
+                nums.push(`<div class="clock-num" data-h="${hr}" style="transform:rotate(${ang}deg) translate(70px) rotate(${-ang}deg);" onclick="pickHour('${kind}',${hr})">${hr}</div>`);
+            }
+            const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
+            pop.innerHTML = `
+                <div class="clock-wrap">
+                    <div class="ampm-row">
+                        <button type="button" class="ampm-pill${st.ampm === 'AM' ? ' sel' : ''}" onclick="setAmpm('${kind}','AM')">AM</button>
+                        <button type="button" class="ampm-pill${st.ampm === 'PM' ? ' sel' : ''}" onclick="setAmpm('${kind}','PM')">PM</button>
+                    </div>
+                    <div class="clock-face">
+                        ${nums.join('')}
+                        <div class="clock-center" id="${kind}Preview">--:--</div>
+                    </div>
+                    <div class="minute-row">
+                        <button type="button" class="min-btn" id="${kind}Min0" onclick="pickMin('${kind}',0)" disabled>:00</button>
+                        <button type="button" class="min-btn" id="${kind}Min30" onclick="pickMin('${kind}',30)" disabled>:30</button>
+                    </div>
+                </div>`;
+            if (st.h != null) markHour(kind);
+        }
+        function setAmpm(kind, v) {
+            timePick[kind].ampm = v;
+            const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
+            pop.querySelectorAll('.ampm-pill').forEach(p => p.classList.toggle('sel', p.textContent === v));
+        }
+        function pickHour(kind, hr) {
+            timePick[kind].h = hr;
+            markHour(kind);
+            document.getElementById(kind + 'Min0').disabled = false;
+            document.getElementById(kind + 'Min30').disabled = false;
+            updatePreview(kind);
+        }
+        function markHour(kind) {
+            const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
+            pop.querySelectorAll('.clock-num').forEach(n => n.classList.toggle('sel', parseInt(n.dataset.h, 10) === timePick[kind].h));
+        }
+        function pickMin(kind, mm) {
+            timePick[kind].m = mm;
+            updatePreview(kind);
+            finalizeTime(kind);
+        }
+        function updatePreview(kind) {
+            const st = timePick[kind];
+            document.getElementById(kind + 'Preview').textContent =
+                `${st.h != null ? st.h : '--'}:${st.m != null ? String(st.m).padStart(2, '0') : '--'}`;
+        }
+        function finalizeTime(kind) {
+            const st = timePick[kind];
+            if (st.h == null || st.m == null) return;
+            const hh = (st.h % 12) + (st.ampm === 'PM' ? 12 : 0);
+            const v = String(hh).padStart(2, '0') + ':' + String(st.m).padStart(2, '0');
             const id = kind === 'in' ? 'regIn' : 'regOut';
             const labelId = kind === 'in' ? 'regInLabel' : 'regOutLabel';
             const popId = kind === 'in' ? 'inPopup' : 'outPopup';
             document.getElementById(id).value = v;
-            document.getElementById(labelId).textContent = v;
-            document.querySelectorAll(`#${popId} .time-chip`).forEach(c => c.classList.toggle('sel', c.dataset.v === v));
+            document.getElementById(labelId).textContent = `${st.h}:${String(st.m).padStart(2, '0')} ${st.ampm}`;
             document.getElementById(popId).closest('.picker-wrap').querySelector('.picker-trigger').classList.add('has-value');
             closePickers();
         }
