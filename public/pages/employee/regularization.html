@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -193,23 +193,11 @@
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
                             <label><i class="fas fa-clock" style="color:var(--success);margin-right:6px;"></i>Check-in Time</label>
-                            <div class="picker-wrap">
-                                <button type="button" class="form-control picker-trigger" onclick="openPicker('in')">
-                                    <span class="label-txt" id="regInLabel">Select time...</span><i class="fas fa-chevron-down chev"></i>
-                                </button>
-                                <input type="hidden" id="regIn">
-                                <div class="picker-popup" id="inPopup"><div class="time-grid" id="inGrid"></div></div>
-                            </div>
+                            <input type="text" id="regIn" class="form-control" placeholder="e.g. 09:40" maxlength="5" inputmode="numeric" oninput="formatTimeEntry(this)">
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
                             <label><i class="fas fa-clock" style="color:var(--danger);margin-right:6px;"></i>Check-out Time</label>
-                            <div class="picker-wrap">
-                                <button type="button" class="form-control picker-trigger" onclick="openPicker('out')">
-                                    <span class="label-txt" id="regOutLabel">Select time...</span><i class="fas fa-chevron-down chev"></i>
-                                </button>
-                                <input type="hidden" id="regOut">
-                                <div class="picker-popup" id="outPopup"><div class="time-grid" id="outGrid"></div></div>
-                            </div>
+                            <input type="text" id="regOut" class="form-control" placeholder="e.g. 18:22" maxlength="5" inputmode="numeric" oninput="formatTimeEntry(this)">
                         </div>
                     </div>
                     <div class="form-group" style="margin-top:12px;">
@@ -299,122 +287,26 @@
             document.querySelector('#datePopup').closest('.picker-wrap').querySelector('.picker-trigger').classList.add('has-value');
             closePickers();
         }
-
-        // ---- Analog clock time picker ----
-        const timePick = {
-            in: { ampm: 'AM', h: null, m: null },
-            out: { ampm: 'AM', h: null, m: null }
-        };
-        const clockTimers = {};
-        function openClock(kind) {
-            const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
-            if (!pop.dataset.built) { renderClock(kind); pop.dataset.built = '1'; }
-            pop.classList.add('open');
+        // ---- Time entry: just type digits, auto-formats to HH:MM ----
+        function formatTimeEntry(el) {
+            let d = el.value.replace(/\D/g, '').substring(0, 4);
+            if (d.length >= 3) el.value = d.substring(0, 2) + ':' + d.substring(2);
+            else el.value = d;
+            el.classList.toggle('has-value', d.length >= 3);
         }
-        // While nothing is picked yet, hands tick with the CURRENT time - feels alive.
-        function startLive(kind) {
-            stopLive(kind);
-            const tick = () => {
-                const n = istNow();
-                const st = timePick[kind];
-                st.h = n.getHours() % 12 || 12;
-                st.liveM = n.getMinutes();
-                updateHands(kind);
-                updatePreview(kind);
-            };
-            tick();
-            clockTimers[kind] = setInterval(tick, 1000);
-        }
-        function stopLive(kind) {
-            if (clockTimers[kind]) { clearInterval(clockTimers[kind]); delete clockTimers[kind]; }
-        }
-        function renderClock(kind) {
-            const st = timePick[kind];
-            let ticks = '', nums = [];
-            for (let hr = 1; hr <= 12; hr++) {
-                const ang = hr * 30;
-                ticks += `<div class="clock-tick" style="transform:rotate(${ang}deg) translate(0,-92px);"></div>`;
-                nums.push(`<div class="clock-num" data-h="${hr}" style="transform:rotate(${ang}deg) translate(72px) rotate(${-ang}deg);" onclick="pickHour('${kind}',${hr})">${hr}</div>`);
+        function validTimeEntry(el, label) {
+            const v = el.value.trim();
+            if (!v) return true;
+            const m = v.match(/^(\d{1,2}):(\d{2})$/);
+            if (!m || parseInt(m[1], 10) > 23 || parseInt(m[2], 10) > 59) {
+                showToast(label + ' must be a valid time like 09:40', 'error');
+                el.focus();
+                return false;
             }
-            const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
-            pop.innerHTML = `
-                <div class="clock-wrap">
-                    <div class="ampm-seg">
-                        <button type="button" class="ampm-pill${st.ampm === 'AM' ? ' sel' : ''}" onclick="setAmpm('${kind}','AM')">AM</button>
-                        <button type="button" class="ampm-pill${st.ampm === 'PM' ? ' sel' : ''}" onclick="setAmpm('${kind}','PM')">PM</button>
-                    </div>
-                    <div class="clock-face">
-                        ${ticks}
-                        ${nums.join('')}
-                        <div class="clock-hand" id="${kind}HourHand"></div>
-                        <div class="clock-hand min-hand" id="${kind}MinHand"></div>
-                        <div class="clock-dot"></div>
-                    </div>
-                    <div class="clock-digital" id="${kind}Preview">--:--</div>
-                    <div class="minute-row">
-                        <button type="button" class="min-btn" id="${kind}Min0" onclick="pickMin('${kind}',0)" disabled>:00</button>
-                        <button type="button" class="min-btn" id="${kind}Min30" onclick="pickMin('${kind}',30)" disabled>:30</button>
-                    </div>
-                </div>`;
-            if (st.h != null) { markHour(kind); updateHands(kind); updatePreview(kind); }
-            else startLive(kind);
+            const hh = String(parseInt(m[1], 10)).padStart(2, '0');
+            el.value = hh + ':' + m[2];
+            return true;
         }
-        function updateHands(kind) {
-            const st = timePick[kind];
-            const hh = document.getElementById(kind + 'HourHand');
-            const mh = document.getElementById(kind + 'MinHand');
-            if (!hh) return;
-            const mVal = st.m != null ? st.m : (st.liveM || 0);
-            const hDeg = ((st.h % 12) || 0) * 30 + mVal * 0.5;
-            hh.classList.add('on');
-            hh.style.transform = `rotate(${hDeg}deg)`;
-            mh.classList.add('on');
-            mh.style.transform = `rotate(${mVal * 6}deg)`;
-        }
-        function setAmpm(kind, v) {
-            stopLive(kind);
-            timePick[kind].ampm = v;
-            const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
-            pop.querySelectorAll('.ampm-pill').forEach(p => p.classList.toggle('sel', p.textContent === v));
-        }
-        function pickHour(kind, hr) {
-            stopLive(kind);
-            timePick[kind].h = hr;
-            markHour(kind);
-            updateHands(kind);
-            document.getElementById(kind + 'Min0').disabled = false;
-            document.getElementById(kind + 'Min30').disabled = false;
-            updatePreview(kind);
-        }
-        function markHour(kind) {
-            const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
-            pop.querySelectorAll('.clock-num').forEach(n => n.classList.toggle('sel', parseInt(n.dataset.h, 10) === timePick[kind].h));
-        }
-        function pickMin(kind, mm) {
-            timePick[kind].m = mm;
-            updatePreview(kind);
-            finalizeTime(kind);
-        }
-        function updatePreview(kind) {
-            const st = timePick[kind];
-            const mm = st.m != null ? st.m : (st.liveM != null ? st.liveM : null);
-            document.getElementById(kind + 'Preview').textContent =
-                `${st.h != null ? st.h : '--'}:${mm != null ? String(mm).padStart(2, '0') : '--'}`;
-        }
-        function finalizeTime(kind) {
-            const st = timePick[kind];
-            if (st.h == null || st.m == null) return;
-            const hh = (st.h % 12) + (st.ampm === 'PM' ? 12 : 0);
-            const v = String(hh).padStart(2, '0') + ':' + String(st.m).padStart(2, '0');
-            const id = kind === 'in' ? 'regIn' : 'regOut';
-            const labelId = kind === 'in' ? 'regInLabel' : 'regOutLabel';
-            const popId = kind === 'in' ? 'inPopup' : 'outPopup';
-            document.getElementById(id).value = v;
-            document.getElementById(labelId).textContent = `${st.h}:${String(st.m).padStart(2, '0')} ${st.ampm}`;
-            document.getElementById(popId).closest('.picker-wrap').querySelector('.picker-trigger').classList.add('has-value');
-            closePickers();
-        }
-
         async function submitRequest(event) {
             event.preventDefault();
             const date = document.getElementById('regDate').value;
@@ -423,6 +315,8 @@
             const reason = document.getElementById('regReason').value.trim();
 
             if (!date) { showToast('Please pick a date', 'error'); return; }
+            if (!validTimeEntry(document.getElementById('regIn'), 'Check-in')) return;
+            if (!validTimeEntry(document.getElementById('regOut'), 'Check-out')) return;
             if (!reason) { showToast('Please enter a reason', 'error'); return; }
             if (!checkIn && !checkOut) { showToast('Enter at least one time (check-in or check-out)', 'error'); return; }
             if (checkIn && checkOut && checkOut <= checkIn) { showToast('Check-out must be after check-in', 'error'); return; }
