@@ -161,7 +161,7 @@
                     html += '<td>' + formatDate(w.start_date) + '</td>';
                     html += '<td>' + formatDate(w.end_date) + '</td>';
                     html += '<td style="font-weight:600;">' + w.total_days + '</td>';
-                    html += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(w.reason || '-') + '</td>';
+                    html += '<td>' + escapeHtml(w.reason || '-') + '</td>';
                     html += '<td><span class="badge badge-' + getStatusBadge(w.status) + '">' + escapeHtml(w.status) + '</span></td>';
                     html += '<td>' + (w.approved_by_name ? escapeHtml(w.approved_by_name) : '<span style="color:var(--text-secondary);">-</span>') + '</td>';
                     html += '<td>' + formatDate(w.created_at) + '</td>';

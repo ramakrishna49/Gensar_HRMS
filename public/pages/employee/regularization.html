@@ -19,6 +19,15 @@
         .request-card .req-emp { font-weight: 600; }
         .request-card .req-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
         .req-meta { font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; }
+
+        /* Date/time fields: side by side on desktop, stacked full-width on phone
+           so the native pickers have room to breathe. */
+        .reg-fields { display: flex; flex-wrap: wrap; gap: 12px; }
+        .reg-fields .form-group { margin-bottom: 0; flex: 1 1 160px; min-width: 150px; }
+        @media (max-width: 600px) {
+            .reg-fields { flex-direction: column; }
+            .reg-fields .form-group { flex: 1 1 auto; min-width: 0; width: 100%; }
+        }
     </style>
 </head>
 <body class="employee-app">
@@ -75,7 +84,7 @@
                 <div style="font-weight:600;margin-bottom:14px;font-size:0.95rem;"><i class="fas fa-clock-rotate-left" style="color:var(--primary);margin-right:8px;"></i>New Regularization Request</div>
                 <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">Missed a check-in or check-out? Request a correction for any past date. Your reporting manager will review it.</p>
                 <form onsubmit="submitRequest(event)">
-                    <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                    <div class="reg-fields">
                         <div class="form-group" style="margin-bottom:0;">
                             <label>Date *</label>
                             <input type="date" class="form-control" id="regDate" required>

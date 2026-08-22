@@ -224,7 +224,7 @@
                     html += '<td>' + formatDate(l.start_date) + '</td>';
                     html += '<td>' + formatDate(l.end_date) + '</td>';
                     html += '<td style="font-weight:600;">' + l.total_days + '</td>';
-                    html += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(l.reason || '-') + '</td>';
+                    html += '<td>' + escapeHtml(l.reason || '-') + '</td>';
                     html += '<td><span class="badge badge-' + getStatusBadge(l.status) + '">' + escapeHtml(l.status) + '</span></td>';
                     html += '<td>' + (l.approved_by_name ? escapeHtml(l.approved_by_name) : '<span style="color:var(--text-secondary);">-</span>') + '</td>';
                     html += '<td>' + formatDate(l.applied_date || l.created_at) + '</td>';

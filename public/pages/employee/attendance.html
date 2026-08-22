@@ -180,16 +180,34 @@
         async function loadData() {
             const month = document.getElementById('filterMonth').value;
             const year = document.getElementById('filterYear').value;
+            const container = document.getElementById('tableContainer');
+
+            // Day-keyed cache paints the page instantly on revisit; the
+            // network call below keeps it accurate right after.
+            const cacheKey = 'gensar_att_' + month + '_' + year + '_' + getTodayIST();
+            let cached = null;
+            try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch (e) { cached = null; }
+            if (cached && Array.isArray(cached.records)) {
+                lastRecords = cached.records;
+                lastHolidays = cached.holidays || [];
+                applyAttendanceData(month, year);
+            }
+
             const [attRes, holRes] = await Promise.all([
                 apiCall(`/attendance/my?month=${month}&year=${year}`),
                 apiCall('/holidays?year=' + year)
             ]);
-            const container = document.getElementById('tableContainer');
-            const summaryEl = document.getElementById('summaryBar');
-
             const records = (attRes && attRes.success) ? (attRes.attendance || []) : [];
             lastRecords = records;
             lastHolidays = (holRes && holRes.success) ? (holRes.holidays || []) : [];
+            try { localStorage.setItem(cacheKey, JSON.stringify({ records, holidays: lastHolidays })); } catch (e) { /* ignore quota */ }
+            applyAttendanceData(month, year);
+        }
+
+        function applyAttendanceData(month, year) {
+            const records = lastRecords || [];
+            const container = document.getElementById('tableContainer');
+            const summaryEl = document.getElementById('summaryBar');
 
             const present = records.filter(a => a.status === 'present').length;
             const absent = records.filter(a => a.status === 'absent').length;
@@ -197,12 +215,31 @@
             const halfDay = records.filter(a => a.status === 'half-day').length;
             const overtime = records.reduce((s, a) => s + parseFloat(a.overtime_hours || 0), 0);
 
-            document.getElementById('presentDays').textContent = present + late + halfDay;
+            // Week offs + holidays count toward Present Days. Only elapsed
+            // days are tallied, and a day actually worked always wins.
+            const holidayMap = {};
+            (lastHolidays || []).forEach(h => { const k = (h.date || '').split('T')[0]; if (k) holidayMap[k] = h.name; });
+            const statusByDate = {};
+            records.forEach(a => { statusByDate[(a.date || '').split('T')[0]] = a.status; });
+            let offDays = 0;
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const nowD = new Date();
+            const isCurrentMonth = parseInt(month, 10) === nowD.getMonth() + 1 && parseInt(year, 10) === nowD.getFullYear();
+            const lastCounted = isCurrentMonth ? nowD.getDate() : daysInMonth;
+            for (let dd = 1; dd <= lastCounted; dd++) {
+                const key = year + '-' + String(month).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+                const st = statusByDate[key];
+                if (st === 'present' || st === 'late' || st === 'half-day') continue;
+                const dow = new Date(year, month - 1, dd).getDay();
+                if (holidayMap[key] || dow === 0 || dow === 6) offDays++;
+            }
+
+            document.getElementById('presentDays').textContent = present + late + halfDay + offDays;
             document.getElementById('absentDays').textContent = absent;
             document.getElementById('totalOvertime').textContent = overtime.toFixed(1);
 
-            const totalDaysInMonth = new Date(year, month, 0).getDate();
-            summaryEl.innerHTML = '<span style="font-weight:500;">Present Days (incl. late logins &amp; half days): <strong>' + (present + late + halfDay) + '</strong> / ' + totalDaysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
+            const totalDaysInMonth = daysInMonth;
+            summaryEl.innerHTML = '<span style="font-weight:500;">Present Days (incl. late logins, half days, week offs &amp; holidays): <strong>' + (present + late + halfDay + offDays) + '</strong> / ' + totalDaysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
 
             if (records.length === 0) {
                 showEmptyState(container, 'fa-clock', 'No Records', 'No attendance records for this period');
@@ -341,7 +378,7 @@
             }
             html += '</div>';
 
-            const presentTotal = counts.present + counts.late + counts['half-day'];
+            const presentTotal = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday;
             html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;">';
             html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + presentTotal + '</h3><p>Present Days</p></div></div>';
             html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.late + '</h3><p>Late Logins</p></div></div>';

@@ -50,6 +50,11 @@
             .clock-display { font-size: 2.5rem; }
             .checkin-buttons .btn { min-width: 130px; padding: 12px 20px; font-size: 0.9rem; }
         }
+
+        /* Birthdays: single swipeable line on every screen size */
+        .birthday-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+        .birthday-row::-webkit-scrollbar { height: 4px; }
+        .birthday-row::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
     </style>
 </head>
 <body class="employee-app">
@@ -610,13 +615,32 @@
             const now = new Date();
             const month = now.getMonth() + 1;
             const year = now.getFullYear();
-            const [attData, leaveData] = await Promise.all([
+            const [attData, leaveData, holData] = await Promise.all([
                 apiCall(`/attendance/my?month=${month}&year=${year}`),
-                apiCall('/leave/my')
+                apiCall('/leave/my'),
+                apiCall('/holidays?year=' + year)
             ]);
             if (attData && attData.success) {
-                const present = attData.attendance.filter(a => a.status === 'present' || a.status === 'late').length;
-                const overtime = attData.attendance.reduce((s, a) => s + parseFloat(a.overtime_hours || 0), 0);
+                const rows = attData.attendance || [];
+                // Present = worked days + week offs + holidays (elapsed only).
+                let present = 0;
+                const statusByDate = {};
+                rows.forEach(a => {
+                    statusByDate[String(a.date || '').substring(0, 10)] = a.status;
+                    if (a.status === 'present' || a.status === 'late' || a.status === 'half-day') present++;
+                });
+                const holidayMap = {};
+                ((holData && holData.holidays) || []).forEach(h => { const k = String(h.date || '').substring(0, 10); if (k) holidayMap[k] = h.name; });
+                const nowD = new Date();
+                const lastDay = (nowD.getMonth() + 1 === month && nowD.getFullYear() === year) ? nowD.getDate() : new Date(year, month, 0).getDate();
+                for (let d = 1; d <= lastDay; d++) {
+                    const key = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                    const st = statusByDate[key];
+                    if (st === 'present' || st === 'late' || st === 'half-day') continue;
+                    const dow = new Date(year, month - 1, d).getDay();
+                    if (holidayMap[key] || dow === 0 || dow === 6) present++;
+                }
+                const overtime = rows.reduce((s, a) => s + parseFloat(a.overtime_hours || 0), 0);
                 document.getElementById('daysPresent').textContent = present;
                 document.getElementById('overtimeHours').textContent = overtime.toFixed(1);
             }
@@ -697,18 +721,17 @@
             }
         }
 
-        async function loadBirthdays() {
-            const data = await apiCall('/employees/birthdays');
+        function renderBirthdays(list) {
             const card = document.getElementById('birthdayCard');
             const container = document.getElementById('birthdayList');
-            if (!data || !data.success || !data.birthdays || data.birthdays.length === 0) {
+            if (!list || list.length === 0) {
                 if (card) card.style.display = 'none';
                 return;
             }
             card.style.display = 'block';
-            const todayList = data.birthdays.filter(b => b.is_today);
-            const upcoming = data.birthdays.filter(b => !b.is_today).slice(0, 6);
-            let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;">';
+            const todayList = list.filter(b => b.is_today);
+            const upcoming = list.filter(b => !b.is_today).slice(0, 6);
+            let html = '<div class="birthday-row">';
                         todayList.forEach(b => {
                             html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:linear-gradient(90deg,rgba(217,70,239,0.12),transparent);border:1px solid rgba(217,70,239,0.25);min-width:0;">' +
                                 '\uD83C\uDF82' +
@@ -725,6 +748,25 @@
                         });
                         html += '</div>';
                         container.innerHTML = html;
+        }
+
+        async function loadBirthdays() {
+            // Day-keyed cache paints the section instantly on revisit;
+            // network refresh keeps it accurate in the background.
+            const cacheKey = 'gensar_birthdays_' + getTodayIST();
+            let cached = null;
+            try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch (e) { cached = null; }
+            if (Array.isArray(cached)) renderBirthdays(cached);
+            const data = await apiCall('/employees/birthdays');
+            if (!data || !data.success || !data.birthdays) {
+                if (!cached) {
+                    const card = document.getElementById('birthdayCard');
+                    if (card) card.style.display = 'none';
+                }
+                return;
+            }
+            renderBirthdays(data.birthdays);
+            try { localStorage.setItem(cacheKey, JSON.stringify(data.birthdays)); } catch (e) { /* ignore quota */ }
         }
 
         async function loadLatestAnnouncements() {
