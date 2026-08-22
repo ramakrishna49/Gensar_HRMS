@@ -74,6 +74,7 @@
             <a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
             <div class="nav-section-title">Analytics</div>
             <a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/pages/admin/audit-logs.html" class="nav-item"><i class="fas fa-clipboard-list"></i><span class="nav-text">Audit Logs</span></a>
             <a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
         </nav>
     </aside>
@@ -453,11 +454,14 @@
             }
         }
 
+        let photoTokenMap = [];
+
         async function loadRecentLogs() {
             const container = document.getElementById('recentLogsContainer');
             const data = await apiCall('/attendance/all?limit=20');
             if (data && data.success && data.attendance.length > 0) {
                 const records = data.attendance.slice(0, 20);
+                photoTokenMap = [];
                 let html = '<div class="table-container"><table><thead><tr><th>Employee</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Check In Location</th><th>Check Out Location</th><th>Photo</th><th>Status</th></tr></thead><tbody>';
                 records.forEach(a => {
                     const empName = escapeHtml(a.first_name + ' ' + (a.last_name || ''));
@@ -465,7 +469,7 @@
                     const ciLoc = a.check_in_location || '';
                     if (ciLoc && ciLoc.includes(',')) {
                         const [lat, lon] = ciLoc.split(',');
-                        ciLocHtml = '<a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(ciLoc) + '"><i class="fas fa-map-marker-alt"></i></a>';
+                        ciLocHtml = '<a href="https://www.google.com/maps?q=' + encodeURIComponent(lat.trim() + ',' + lon.trim()) + '" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(ciLoc) + '"><i class="fas fa-map-marker-alt"></i></a>';
                     } else if (ciLoc) {
                         ciLocHtml = '<span style="font-size:0.75rem;">' + escapeHtml(ciLoc) + '</span>';
                     }
@@ -473,17 +477,22 @@
                     const coLoc = a.check_out_location || '';
                     if (coLoc && coLoc.includes(',')) {
                         const [lat, lon] = coLoc.split(',');
-                        coLocHtml = '<a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(coLoc) + '"><i class="fas fa-map-marker-alt"></i></a>';
+                        coLocHtml = '<a href="https://www.google.com/maps?q=' + encodeURIComponent(lat.trim() + ',' + lon.trim()) + '" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(coLoc) + '"><i class="fas fa-map-marker-alt"></i></a>';
                     } else if (coLoc) {
                         coLocHtml = '<span style="font-size:0.75rem;">' + escapeHtml(coLoc) + '</span>';
                     }
                     let photoHtml = '-';
                     const photoBtns = [];
+                    // Tokens are kept in a page-level array and referenced by index
+                    // so nothing user-influenced is ever interpolated into an
+                    // inline JS string.
                     if (a.photo_token) {
-                        photoBtns.push('<button class="btn btn-sm btn-info" onclick="viewCheckInPhoto(\'' + a.photo_token + '\')" title="View check-in photo (one-time)"><i class="fas fa-camera"></i> In</button>');
+                        photoTokenMap.push(a.photo_token);
+                        photoBtns.push('<button class="btn btn-sm btn-info" onclick="viewCheckInPhotoByIndex(' + (photoTokenMap.length - 1) + ')" title="View check-in photo (one-time)"><i class="fas fa-camera"></i> In</button>');
                     }
                     if (a.photo_token_checkout) {
-                        photoBtns.push('<button class="btn btn-sm btn-warning" onclick="viewCheckInPhoto(\'' + a.photo_token_checkout + '\')" title="View check-out photo (one-time)"><i class="fas fa-sign-out-alt"></i> Out</button>');
+                        photoTokenMap.push(a.photo_token_checkout);
+                        photoBtns.push('<button class="btn btn-sm btn-warning" onclick="viewCheckInPhotoByIndex(' + (photoTokenMap.length - 1) + ')" title="View check-out photo (one-time)"><i class="fas fa-sign-out-alt"></i> Out</button>');
                     }
                     if (photoBtns.length > 0) {
                         photoHtml = '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">' + photoBtns.join('') + '</div>';
@@ -504,6 +513,10 @@
             } else {
                 showEmptyState(container, 'fa-clock', 'No Records', 'No recent attendance logs');
             }
+        }
+
+        function viewCheckInPhotoByIndex(i) {
+            viewCheckInPhoto(photoTokenMap[i] || '');
         }
 
         async function viewCheckInPhoto(token) {
@@ -618,7 +631,7 @@
         }
 
         function openMarkPresentModal() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayIST();
             document.getElementById('presentDate').value = today;
             loadAllEmployees();
             document.getElementById('markPresentModal').classList.add('active');
@@ -651,7 +664,7 @@
         }
 
         function openMarkAbsentModal() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayIST();
             document.getElementById('absentDate').value = today;
             loadAllEmployees();
             document.getElementById('markAbsentModal').classList.add('active');

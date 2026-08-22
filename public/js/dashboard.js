@@ -47,6 +47,8 @@ function toggleDarkMode() {
         icon.classList.add('fa-moon');
         localStorage.setItem('theme', 'light');
     }
+    // Pages with charts/theme-aware rendering listen for this.
+    document.dispatchEvent(new CustomEvent('themechange', { detail: { dark: document.body.classList.contains('dark-mode') } }));
 }
 
 // Toggle profile menu
@@ -165,15 +167,9 @@ function formatTimeAgo(dateStr) {
     return formatDate(dateStr);
 }
 
-function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
+// escapeHtml() is defined once in js/auth.js, which every page loads before
+// this file - do not redeclare it here (duplicate declarations silently
+// shadow the original and drift out of sync).
 
 function formatHours(h) {
     const val = parseFloat(h) || 0;
@@ -204,7 +200,7 @@ function loadUserInfo() {
     const initials = ((user.first_name || '')[0] || '') + ((user.last_name || '')[0] || '');
     profilePhotoEls.forEach(el => {
         if (user.profile_photo) {
-            el.innerHTML = '<img src="' + user.profile_photo + '" alt="Profile" data-initials="' + initials.toUpperCase() + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.remove();this.parentElement.textContent=this.getAttribute(\'data-initials\');">';
+            el.innerHTML = '<img src="' + escapeHtml(user.profile_photo) + '" alt="Profile" data-initials="' + escapeHtml(initials.toUpperCase()) + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.remove();this.parentElement.textContent=this.getAttribute(\'data-initials\');">';
         } else {
             el.textContent = initials.toUpperCase();
         }
@@ -307,7 +303,7 @@ async function loadRequestsSection(listEl, mode, limit) {
     listEl.innerHTML = feed.slice(0, limit).map(r => {
         const icon = iconMap[r.type] || 'fa-bell';
         const color = colorMap[r.type] || 'var(--primary)';
-        return '<a href="' + r.url + '" class="notification-item">' +
+        return '<a href="' + escapeHtml(r.url) + '" class="notification-item">' +
             '<span style="width:34px;height:34px;border-radius:50%;background:var(--primary-50);color:' + color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;"><i class="fas ' + icon + '"></i></span>' +
             '<span class="notif-body"><span class="notif-title">' + escapeHtml(r.title) + '</span>' +
             '<span class="notif-meta">' + escapeHtml(r.subtitle) + '</span></span></a>';
@@ -470,11 +466,11 @@ function showConfirmDialog(title, message, confirmText, confirmBtnClass, onConfi
 
     const header = document.createElement('div');
     header.className = 'modal-header';
-    header.innerHTML = '<h2><i class="fas fa-exclamation-triangle" style="color:var(--warning);margin-right:8px;"></i>' + title + '</h2><button class="modal-close" onclick="this.closest(\'.modal\').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>';
+    header.innerHTML = '<h2><i class="fas fa-exclamation-triangle" style="color:var(--warning);margin-right:8px;"></i>' + escapeHtml(title) + '</h2><button class="modal-close" onclick="this.closest(\'.modal\').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>';
 
     const body = document.createElement('div');
     body.className = 'modal-body';
-    body.innerHTML = '<p style="line-height:1.6;">' + message + '</p>';
+    body.innerHTML = '<p style="line-height:1.6;white-space:pre-wrap;">' + escapeHtml(message) + '</p>';
 
     const footer = document.createElement('div');
     footer.className = 'modal-footer';
@@ -513,9 +509,9 @@ function showEmptyState(container, icon, title, message) {
     if (!container) return;
     container.innerHTML = `
         <div class="empty-state">
-            <i class="fas ${icon}"></i>
-            <h3>${title}</h3>
-            <p>${message}</p>
+            <i class="fas ${escapeHtml(icon)}"></i>
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml(message)}</p>
         </div>
     `;
 }

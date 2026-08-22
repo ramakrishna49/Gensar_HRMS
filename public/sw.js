@@ -2,9 +2,12 @@
    - App shell (HTML/CSS/JS/icons) precached for offline use
    - API data (/api/*) is NEVER cached (privacy: attendance, payroll, PII)
    - Push notification handlers for installed PWA
-*/
-const APP_SHELL_CACHE = 'gensar-app-shell';
-const RUNTIME_CACHE = 'gensar-runtime';
+   Bump CACHE_VERSION on every deploy that changes cached assets so clients
+   pick up the new build instead of serving a stale app-shell forever. */
+const CACHE_VERSION = 'v4';
+const APP_SHELL_CACHE = 'gensar-app-shell-' + CACHE_VERSION;
+const RUNTIME_CACHE = 'gensar-runtime-' + CACHE_VERSION;
+const RUNTIME_CACHE_MAX_ENTRIES = 100;
 
 const APP_SHELL_URLS = [
     '/',
@@ -56,6 +59,28 @@ const CROSS_ORIGIN_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap'
 ];
+
+// Font binaries referenced by the CSS above. Without caching these, offline
+// mode shows blank boxes instead of icons/glyphs.
+const CROSS_ORIGIN_PATTERNS = [
+    /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/font-awesome\/[^/]+\/webfonts\//,
+    /^https:\/\/fonts\.gstatic\.com\//
+];
+
+function isCrossOriginAsset(url) {
+    return CROSS_ORIGIN_URLS.includes(url.href) ||
+        CROSS_ORIGIN_PATTERNS.some((re) => re.test(url.href));
+}
+
+// Keep the runtime cache bounded: evict the oldest entry when over capacity.
+async function trimRuntimeCache() {
+    const cache = await caches.open(RUNTIME_CACHE);
+    const keys = await cache.keys();
+    if (keys.length <= RUNTIME_CACHE_MAX_ENTRIES) return;
+    for (const key of keys.slice(0, keys.length - RUNTIME_CACHE_MAX_ENTRIES)) {
+        await cache.delete(key);
+    }
+}
 
 self.addEventListener('install', (event) => {
     event.waitUntil((async () => {
@@ -125,10 +150,21 @@ async function staticHandler(request) {
                 ? APP_SHELL_CACHE
                 : RUNTIME_CACHE);
             cache.then((c) => c.put(request, response.clone()));
+            if (!request.url.startsWith(self.location.origin)) {
+                cache.then(() => trimRuntimeCache());
+            }
         }
         return response;
     }).catch(() => null);
-    return cached || networkPromise;
+    if (cached) return cached;
+    // Cold cache + offline: never hand respondWith() a null (hard network
+    // error) - return an explicit 504 instead.
+    const fresh = await networkPromise;
+    return fresh || new Response('Offline and not cached', {
+        status: 504,
+        statusText: 'Gateway Timeout',
+        headers: { 'Content-Type': 'text/plain' }
+    });
 }
 
 self.addEventListener('fetch', (event) => {
@@ -146,7 +182,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Same-origin static assets + cross-origin CDN (fonts, font-awesome).
-    if (url.origin === self.location.origin || CROSS_ORIGIN_URLS.includes(url.href)) {
+    if (url.origin === self.location.origin || isCrossOriginAsset(url)) {
         event.respondWith(staticHandler(request));
     }
 });

@@ -14,8 +14,27 @@
     --pp-muted: #6B7280;
     --pp-border: #E5E7EB;
     --pp-head: #EEF2FF;
+    /* Surfaces - overridden by .dark-mode below */
+    --pp-surface: #FFFFFF;
+    --pp-row-hover: #F9FAFB;
+    --pp-row-border: #F3F4F6;
+    --pp-frame: #E0E7FF;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: var(--pp-text);
+}
+
+/* Dark mode: re-map the payroll tokens instead of sprinkling one-off rules.
+   The .pp-sheet stays white on purpose - it simulates the printed A4 payslip. */
+.dark-mode .payroll-module {
+    --pp-light: #232E4A;
+    --pp-text: #E5E7EB;
+    --pp-muted: #9CA3AF;
+    --pp-border: #374151;
+    --pp-head: #262F4D;
+    --pp-surface: #1B2338;
+    --pp-row-hover: #222C46;
+    --pp-row-border: #2B3550;
+    --pp-frame: #141B2E;
 }
 
 .payroll-module * {
@@ -101,7 +120,7 @@ body:not(.admin-app) .pp-page {
     display: flex;
     align-items: center;
     gap: 14px;
-    background: #FFFFFF;
+    background: var(--pp-surface);
     border: 1px solid var(--pp-border);
     border-radius: 14px;
     padding: 18px;
@@ -131,7 +150,7 @@ body:not(.admin-app) .pp-page {
 
 /* ---------- Cards ---------- */
 .pp-card {
-    background: #FFFFFF;
+    background: var(--pp-surface);
     border: 1px solid var(--pp-border);
     border-radius: 14px;
     box-shadow: 0 6px 18px rgba(79, 70, 229, 0.08);
@@ -177,7 +196,7 @@ body:not(.admin-app) .pp-page {
 .pp-chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .pp-chip {
-    background: #FFFFFF;
+    background: var(--pp-surface);
     border: 1px solid var(--pp-border);
     border-radius: 20px;
     padding: 4px 10px;
@@ -211,7 +230,7 @@ body:not(.admin-app) .pp-page {
     font-size: 0.84rem;
     font-family: inherit;
     color: var(--pp-text);
-    background: #FFFFFF;
+    background: var(--pp-surface);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -262,7 +281,7 @@ body:not(.admin-app) .pp-page {
 
 .pp-words {
     background: var(--pp-light);
-    border: 1px solid #E0E7FF;
+    border: 1px solid var(--pp-border);
     border-radius: 10px;
     padding: 12px 16px;
     font-size: 0.85rem;
@@ -290,12 +309,12 @@ body:not(.admin-app) .pp-page {
 
 .pp-table tbody td {
     padding: 10px 12px;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid var(--pp-row-border);
     color: var(--pp-text);
     vertical-align: middle;
 }
 
-.pp-table tbody tr:hover { background: #F9FAFB; }
+.pp-table tbody tr:hover { background: var(--pp-row-hover); }
 .pp-table tbody tr:last-child td { border-bottom: none; }
 
 .pp-table .pp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -337,7 +356,7 @@ body:not(.admin-app) .pp-page {
 
 /* ---------- Payslip preview ---------- */
 .pp-preview-frame {
-    background: #E0E7FF;
+    background: var(--pp-frame);
     border-radius: 14px;
     padding: 22px;
     overflow: auto;
@@ -371,6 +390,19 @@ body:not(.admin-app) .pp-page {
 .pp-empty i { font-size: 2rem; color: var(--pp-secondary); margin-bottom: 10px; display: block; }
 .pp-empty h3 { margin: 0 0 4px; font-size: 1rem; color: var(--pp-text); }
 .pp-empty p { margin: 0; font-size: 0.8rem; color: var(--pp-muted); }
+
+/* ---------- Badges (dark) ---------- */
+.dark-mode .payroll-module .pp-badge { background: #312E81; color: #C7D2FE; }
+.dark-mode .payroll-module .pp-badge.green { background: #064E3B; color: #6EE7B7; }
+.dark-mode .payroll-module .pp-badge.orange { background: #78350F; color: #FCD34D; }
+.dark-mode .payroll-module .pp-badge.red { background: #7F1D1D; color: #FCA5A5; }
+.dark-mode .payroll-module .pp-badge.purple { background: var(--pp-head); color: var(--pp-secondary); }
+.dark-mode .payroll-module .pp-badge.muted { background: #374151; color: #9CA3AF; }
+.dark-mode .payroll-module .pp-btn-light { background: transparent; color: var(--pp-secondary); border-color: var(--pp-border); }
+.dark-mode .payroll-module .pp-stat,
+.dark-mode .payroll-module .pp-card {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 760px) {

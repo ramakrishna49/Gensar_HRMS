@@ -21,20 +21,28 @@ const verifyToken = async (req, res, next) => {
 
         // Ensure the account still exists and is active (blocks terminated/paused/deleted users).
         // Also re-read the current role so role changes (e.g. demotions) take effect
-        // immediately instead of waiting for the JWT to expire.
+        // immediately instead of waiting for the JWT to expire. token_version is
+        // bumped whenever the password changes or an admin resets it, which
+        // instantly revokes every token issued before that moment.
         try {
-            const result = await query('SELECT id, role, status FROM employees WHERE id = $1', [decoded.id]);
+            const result = await query('SELECT id, role, status, token_version FROM employees WHERE id = $1', [decoded.id]);
             if (result.rows.length === 0) {
-                return res.status(401).json({ 
-                    success: false, 
-                    message: 'Account no longer exists.' 
+                return res.status(401).json({
+                    success: false,
+                    message: 'Account no longer exists.'
                 });
             }
             const current = result.rows[0];
             if (current.status !== 'active') {
-                return res.status(401).json({ 
-                    success: false, 
-                    message: 'Your account has been deactivated. Contact your administrator.' 
+                return res.status(401).json({
+                    success: false,
+                    message: 'Your account has been deactivated. Contact your administrator.'
+                });
+            }
+            if (Number(decoded.token_version || 0) !== Number(current.token_version || 0)) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Session expired due to a password change. Please sign in again.'
                 });
             }
             req.user.role = current.role;
@@ -77,12 +85,13 @@ const isManager = (req, res, next) => {
 // Generate JWT Token
 const generateToken = (user) => {
     return jwt.sign(
-        { 
-            id: user.id, 
+        {
+            id: user.id,
             employee_id: user.employee_id,
-            email: user.email, 
+            email: user.email,
             role: user.role,
-            name: `${user.first_name} ${user.last_name}`
+            name: `${user.first_name} ${user.last_name}`,
+            token_version: Number(user.token_version || 0)
         },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }

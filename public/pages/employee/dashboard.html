@@ -63,6 +63,7 @@
             <div class="nav-section-title">My Info</div>
             <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
             <a href="/pages/employee/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/employee/regularization.html" class="nav-item"><i class="fas fa-clock-rotate-left"></i><span class="nav-text">Regularization</span></a>
             <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
             <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
             <a href="/pages/employee/payslips.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
@@ -72,6 +73,7 @@
             <a href="/pages/employee/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
             <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
             <a href="/pages/employee/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+        <a href="/pages/employee/directory.html" class="nav-item"><i class="fas fa-address-book"></i><span class="nav-text">Directory</span></a>
         </nav>
     </aside>
 
@@ -221,6 +223,13 @@
                     </div>
                 </div>
             </div>
+
+            <div class="card slide-up stagger-2 mb-3" id="birthdayCard" style="display:none;">
+                <div class="card-header">
+                    <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-cake-candles" style="color:#D946EF;margin-right:8px;"></i>Birthdays</h3>
+                </div>
+                <div id="birthdayList"></div>
+            </div>
         </div>
     </main>
 
@@ -269,6 +278,7 @@
             loadLeaveBalance();
             loadUpcomingHolidays();
             loadLatestAnnouncements();
+            loadBirthdays();
         });
 
         function getTotalBreakSeconds(attendance, now) {
@@ -346,7 +356,7 @@
                         const el = document.getElementById('statusLocation');
                         if (loc.includes(',')) {
                             const [lat, lon] = loc.split(',');
-                            el.innerHTML = '<a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:var(--primary);text-decoration:none;"><i class="fas fa-map-marker-alt"></i> View on Map</a>';
+                            el.innerHTML = '<a href="https://www.google.com/maps?q=' + encodeURIComponent(lat.trim() + ',' + lon.trim()) + '" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;"><i class="fas fa-map-marker-alt"></i> View on Map</a>';
                         } else {
                             el.textContent = loc;
                         }
@@ -623,7 +633,7 @@
             const container = document.getElementById('recentAttendance');
             if (data && data.success && data.attendance.length > 0) {
                 const recent = data.attendance.slice(0, 5);
-                const todayStr = new Date().toISOString().split('T')[0];
+                const todayStr = getTodayIST();
                 let html = '<div class="table-container"><table><thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead><tbody>';
                 recent.forEach(a => {
                     const adate = a.date ? a.date.split('T')[0] : '';
@@ -684,6 +694,36 @@
             } else {
                 showEmptyState(container, 'fa-calendar-check', 'No Holidays', 'No holidays found');
             }
+        }
+
+        async function loadBirthdays() {
+            const data = await apiCall('/employees/birthdays');
+            const card = document.getElementById('birthdayCard');
+            const container = document.getElementById('birthdayList');
+            if (!data || !data.success || !data.birthdays || data.birthdays.length === 0) {
+                if (card) card.style.display = 'none';
+                return;
+            }
+            card.style.display = 'block';
+            const todayList = data.birthdays.filter(b => b.is_today);
+            const upcoming = data.birthdays.filter(b => !b.is_today).slice(0, 6);
+            let html = '';
+            todayList.forEach(b => {
+                html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 4px;border-radius:10px;background:linear-gradient(90deg,rgba(217,70,239,0.10),transparent);margin-bottom:4px;">' +
+                    '<span style="font-size:1.3rem;">🎉</span>' +
+                    '<div><div style="font-weight:700;font-size:0.92rem;">Today — ' + escapeHtml((b.first_name || '') + ' ' + (b.last_name || '')) +
+                    ' <span class="badge badge-secondary" style="font-size:0.65rem;">' + escapeHtml(b.employee_id || '') + '</span></div>' +
+                    '<div style="font-size:0.78rem;color:var(--text-secondary);">Wish them a happy birthday!</div></div></div>';
+            });
+            upcoming.forEach(b => {
+                const when = b.days_away === 1 ? 'Tomorrow' : 'In ' + b.days_away + ' days · ' + b.birthday;
+                html += '<div style="display:flex;align-items:center;gap:12px;padding:8px 4px;">' +
+                    '<span class="badge" style="background:var(--bg-light,#F3F4F6);color:var(--text-secondary);font-size:0.68rem;min-width:86px;text-align:center;">' + escapeHtml(when) + '</span>' +
+                    '<span style="font-weight:600;font-size:0.88rem;">' + escapeHtml((b.first_name || '') + ' ' + (b.last_name || '')) + '</span>' +
+                    '<span class="badge badge-secondary" style="font-size:0.62rem;">' + escapeHtml(b.employee_id || '') + '</span>' +
+                '</div>';
+            });
+            container.innerHTML = html;
         }
 
         async function loadLatestAnnouncements() {

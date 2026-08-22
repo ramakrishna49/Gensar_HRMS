@@ -6,20 +6,193 @@ const path = require('path');
 const crypto = require('crypto');
 const { query } = require('../config/database');
 const { verifyToken, generateToken } = require('../middleware/auth');
+const { logAudit } = require('../utils/audit');
 const { validateLogin, collectFieldErrors } = require('../middleware/validation');
 const { sendOTPEmail } = require('../services/email');
 const { uploadBuffer } = require('../services/storage');
 const { EDITABLE_FIELDS } = require('./profileUpdates');
+const { rateLimit, clientIp } = require('../utils/rateLimit');
 
 const uploadProfile = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const allowed = /jpeg|jpg|png|gif/; const ext = allowed.test(path.extname(file.originalname).toLowerCase()); const mime = allowed.test(file.mimetype); cb(null, ext && mime); } });
+
+// Brute-force protection. Per-IP for login (pre-login there is nothing else to
+// key on), per-account for authenticated password endpoints.
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyFn: (req) => 'login:' + clientIp(req),
+    message: 'Too many login attempts from this network. Please try again in a few minutes.'
+});
+
+const passwordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    keyFn: (req) => 'pwd:' + (req.user ? req.user.id : clientIp(req)),
+    message: 'Too many password attempts. Please try again later.'
+});
+
+// Constant bcrypt hash used only to equalize the response time of the
+// "unknown user" path with the "wrong password" path (prevents user
+// enumeration by timing). Computed once at startup.
+const TIMING_EQUALIZER_HASH = bcrypt.hashSync('gensar-timing-equalizer-' + Math.random(), 10);
+
+// ---------- Forgot password (OTP over email) ----------
+// The password_reset_otps table + sendOTPEmail service already existed; these
+// endpoints finally wire them up so users can self-reset without admin help.
+
+const forgotLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    keyFn: (req) => 'forgot:' + clientIp(req),
+    message: 'Too many reset requests. Please try again later.'
+});
+
+const otpResetLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyFn: (req) => 'otpreset:' + clientIp(req),
+    message: 'Too many attempts. Please try again later.'
+});
+
+function hashOtp(otp) {
+    // Short-lived 6-digit codes don't need bcrypt; a peppered SHA-256 keeps
+    // a database leak from exposing usable codes.
+    const pepper = process.env.JWT_SECRET || 'gensar-otp-pepper';
+    return crypto.createHash('sha256').update(String(otp) + ':' + pepper).digest('hex');
+}
+
+// @route   POST /api/auth/forgot-password
+// @desc    Email a one-time 6-digit code for password self-reset
+// @access  Public (rate limited)
+router.post('/forgot-password', forgotLimiter, async (req, res) => {
+    try {
+        const identifier = String((req.body && req.body.employee_id) || '').trim();
+        if (!identifier) {
+            return res.status(400).json({ success: false, message: 'Employee ID or email is required' });
+        }
+
+        const result = await query(
+            `SELECT id, email FROM employees
+            WHERE (LOWER(employee_id) = LOWER($1) OR LOWER(email) = LOWER($1)) AND status = $2
+            LIMIT 1`,
+            [identifier, 'active']
+        );
+
+        const genericMessage = 'If this account exists, a reset code has been sent to its email.';
+        if (result.rows.length === 0 || !result.rows[0].email) {
+            return res.json({ success: true, message: genericMessage });
+        }
+
+        const user = result.rows[0];
+
+        // Only one live code per account - older ones become unusable.
+        await query(
+            'UPDATE password_reset_otps SET is_used = 1 WHERE email = $1 AND is_used = 0',
+            [user.email]
+        );
+
+        const otp = crypto.randomInt(100000, 999999);
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+        await query(
+            'INSERT INTO password_reset_otps (email, otp, is_used, expires_at) VALUES ($1, $2, 0, $3)',
+            [user.email, hashOtp(otp), expiresAt]
+        );
+
+        await sendOTPEmail(user.email, otp);
+
+        // Deliberately vague - do not reveal whether the account exists or
+        // whether email delivery succeeded.
+        res.json({ success: true, message: genericMessage });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   POST /api/auth/reset-password
+// @desc    Verify OTP and set a new password (revokes all existing sessions)
+// @access  Public (rate limited)
+router.post('/reset-password', otpResetLimiter, async (req, res) => {
+    try {
+        const identifier = String((req.body && req.body.employee_id) || '').trim();
+        const otp = String((req.body && req.body.otp) || '').trim();
+        const new_password = String((req.body && req.body.new_password) || '');
+
+        if (!identifier || !otp || !new_password) {
+            return res.status(400).json({ success: false, message: 'All fields are required' });
+        }
+        if (new_password.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+
+        const result = await query(
+            `SELECT id, email FROM employees
+            WHERE (LOWER(employee_id) = LOWER($1) OR LOWER(email) = LOWER($1)) AND status = $2
+            LIMIT 1`,
+            [identifier, 'active']
+        );
+        if (result.rows.length === 0) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+        }
+        const user = result.rows[0];
+
+        const otpRows = await query(
+            `SELECT id, otp AS otp_hash FROM password_reset_otps
+            WHERE email = $1 AND is_used = 0 AND expires_at > NOW()
+            ORDER BY id DESC LIMIT 1`,
+            [user.email]
+        );
+
+        const storedHash = otpRows.rows.length > 0 ? otpRows.rows[0].otp_hash : null;
+        const providedHash = hashOtp(otp);
+        // Compare every byte even when no row exists (timing hygiene).
+        let match = storedHash !== null && storedHash.length === providedHash.length;
+        if (match) {
+            match = crypto.timingSafeEqual(Buffer.from(storedHash), Buffer.from(providedHash));
+        }
+        if (!match) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+        }
+
+        // Consume the code (and any siblings), set the new password, and bump
+        // token_version so other devices are signed out everywhere.
+        await query('UPDATE password_reset_otps SET is_used = 1 WHERE email = $1 AND is_used = 0', [user.email]);
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(new_password, salt);
+        await query(
+            `UPDATE employees SET password_hash = $1, must_change_password = 0,
+                token_version = COALESCE(token_version, 0) + 1, updated_at = NOW()
+            WHERE id = $2`,
+            [password_hash, user.id]
+        );
+
+        res.json({ success: true, message: 'Password reset successful. Please sign in with your new password.' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// Bump token_version and return a fresh token for the current session.
+// All other devices/tabs are signed out immediately; this one stays logged in.
+async function rotatePasswordCredential(userId) {
+    await query(
+        `UPDATE employees SET token_version = COALESCE(token_version, 0) + 1 WHERE id = $1`,
+        [userId]
+    );
+    const fresh = await query('SELECT * FROM employees WHERE id = $1', [userId]);
+    if (fresh.rows.length === 0) return null;
+    const { password_hash, ...userWithoutPassword } = fresh.rows[0];
+    return { token: generateToken(fresh.rows[0]), user: userWithoutPassword };
+}
 
 // @route   POST /api/auth/login
 // @desc    Login user (Admin/Employee)
 // @access  Public
-router.post('/login', validateLogin, async (req, res) => {
+router.post('/login', loginLimiter, validateLogin, async (req, res) => {
     try {
         const { employee_id, password, portal } = req.body;
-        
+
         // Find user by employee ID or email
         const result = await query(
             `SELECT * FROM employees 
@@ -28,6 +201,16 @@ router.post('/login', validateLogin, async (req, res) => {
         );
         
         if (result.rows.length === 0) {
+            // Burn the same bcrypt time as the found-user path so attackers
+            // cannot enumerate valid Employee IDs by response timing.
+            await bcrypt.compare(password, TIMING_EQUALIZER_HASH);
+            logAudit({
+                action: 'auth.login_failed',
+                entityType: 'employee',
+                entityId: null,
+                details: { identifier: String(employee_id || ''), reason: 'unknown_user' },
+                ip: req.ip
+            });
             return res.status(401).json({ 
                 success: false, 
                 message: 'Invalid Employee ID or password' 
@@ -40,6 +223,14 @@ router.post('/login', validateLogin, async (req, res) => {
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
         
         if (!isPasswordValid) {
+            logAudit({
+                actorId: user.id,
+                action: 'auth.login_failed',
+                entityType: 'employee',
+                entityId: user.id,
+                details: { reason: 'wrong_password' },
+                ip: req.ip
+            });
             return res.status(401).json({ 
                 success: false, 
                 message: 'Invalid Employee ID or password' 
@@ -66,6 +257,15 @@ router.post('/login', validateLogin, async (req, res) => {
         // Generate token
         const token = generateToken(user);
         
+        logAudit({
+            actorId: user.id,
+            action: 'auth.login_success',
+            entityType: 'employee',
+            entityId: user.id,
+            details: { portal: portal || 'employee' },
+            ip: req.ip
+        });
+
         // Return user info (without password)
         const { password_hash, ...userWithoutPassword } = user;
         
@@ -130,7 +330,7 @@ router.get('/me', verifyToken, async (req, res) => {
 // @route   PUT /api/auth/change-password
 // @desc    Change user password
 // @access  Private
-router.put('/change-password', verifyToken, async (req, res) => {
+router.put('/change-password', verifyToken, passwordLimiter, async (req, res) => {
     try {
         const { current_password, new_password } = req.body;
         
@@ -178,15 +378,19 @@ router.put('/change-password', verifyToken, async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(new_password, salt);
         
-        // Update password and clear must_change_password flag
+        // Update password and clear must_change_password flag. rotatePasswordCredential
+        // below bumps token_version, revoking all previously issued tokens.
         await query(
             'UPDATE employees SET password_hash = $1, must_change_password = 0, updated_at = NOW() WHERE id = $2',
             [password_hash, req.user.id]
         );
-        
+
+        const rotated = await rotatePasswordCredential(req.user.id);
+
         res.json({
             success: true,
-            message: 'Password changed successfully'
+            message: 'Password changed successfully',
+            token: rotated ? rotated.token : undefined
         });
         
     } catch (error) {
@@ -201,7 +405,7 @@ router.put('/change-password', verifyToken, async (req, res) => {
 // @route   POST /api/auth/set-password
 // @desc    Set a new password on first login after admin reset (forced change)
 // @access  Private
-router.post('/set-password', verifyToken, async (req, res) => {
+router.post('/set-password', verifyToken, passwordLimiter, async (req, res) => {
     try {
         const { new_password } = req.body;
 
@@ -230,7 +434,9 @@ router.post('/set-password', verifyToken, async (req, res) => {
             [password_hash, req.user.id]
         );
 
-        res.json({ success: true, message: 'Password set successfully' });
+        const rotated = await rotatePasswordCredential(req.user.id);
+
+        res.json({ success: true, message: 'Password set successfully', token: rotated ? rotated.token : undefined });
     } catch (error) {
         console.error('Set password error:', error);
         res.status(500).json({ success: false, message: 'Server error' });

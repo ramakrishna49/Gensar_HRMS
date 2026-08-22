@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { uploadBuffer, deleteFile, getStorageClient } = require('../services/storage');
+const { logAudit } = require('../utils/audit');
 
 const ALLOWED_MIME = new Set([
     'application/pdf',
@@ -84,7 +85,16 @@ router.post('/upload', verifyToken, (req, res, next) => {
             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
             [req.user.id, title || req.file.originalname, file_url, fileName, document_type, req.user.id]
         );
-        
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'document.upload',
+            entityType: 'document',
+            entityId: result.rows[0].id,
+            details: { title: result.rows[0].title, document_type: document_type || null },
+            ip: req.ip
+        });
+
         res.status(201).json({ success: true, document: result.rows[0] });
     } catch (error) {
         console.error('Document upload error:', error.message);
@@ -105,14 +115,16 @@ router.get('/:id/download', verifyToken, async (req, res) => {
         const isAdminUser = req.user.role === 'admin';
         let canAccess = isAdminUser || doc.employee_id === req.user.id;
         if (!canAccess && (req.user.role === 'manager' || req.user.role === 'team_lead')) {
+            // Grant access only if the document owner sits inside the requester's
+            // reporting subtree (requester is their manager, or higher up the chain).
             const teamCheck = await query(
                 `WITH RECURSIVE chain AS (
-                    SELECT id, reporting_manager_id FROM employees WHERE id = $1
+                    SELECT id FROM employees WHERE id = $1
                     UNION
-                    SELECT e.id, e.reporting_manager_id FROM employees e JOIN chain c ON e.reporting_manager_id = c.id
+                    SELECT e.id FROM employees e JOIN chain c ON e.reporting_manager_id = c.id
                  )
                  SELECT 1 AS found FROM chain WHERE id = $2 LIMIT 1`,
-                [doc.employee_id, req.user.id]
+                [req.user.id, doc.employee_id]
             );
             if (teamCheck.rows.length > 0) canAccess = true;
         }
@@ -145,6 +157,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
         );
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
         await deleteFile('documents', doc.rows[0].file_name);
+        logAudit({ actorId: req.user.id, action: 'document.delete', entityType: 'document', entityId: req.params.id, details: { scope: 'self' }, ip: req.ip });
         res.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
@@ -161,6 +174,7 @@ router.delete('/:id/admin', verifyToken, isAdmin, async (req, res) => {
         );
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
         await deleteFile('documents', doc.rows[0].file_name);
+        logAudit({ actorId: req.user.id, action: 'document.delete', entityType: 'document', entityId: req.params.id, details: { scope: 'admin', owner_id: doc.rows[0].employee_id }, ip: req.ip });
         res.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });

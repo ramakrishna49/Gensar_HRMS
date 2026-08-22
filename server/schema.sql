@@ -234,6 +234,43 @@ CREATE TABLE IF NOT EXISTS password_reset_otps (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- 15b. AUDIT LOGS
+-- Append-only trail for sensitive actions (employee lifecycle, document and
+-- payroll changes, logins). Rows are never updated or deleted by app code.
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    actor_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50),
+    entity_id TEXT,
+    details JSONB DEFAULT '{}',
+    ip_address VARCHAR(64),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs (actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action);
+
+-- 15c. ATTENDANCE REGULARIZATION
+-- Employees request corrections for missed/incorrect check-in or check-out.
+-- On approval the values are written back into the attendance table.
+CREATE TABLE IF NOT EXISTS attendance_regularizations (
+    id SERIAL PRIMARY KEY,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    check_in TIME,
+    check_out TIME,
+    reason TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    reviewed_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    review_note TEXT,
+    reviewed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (employee_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_att_reg_employee ON attendance_regularizations (employee_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_att_reg_status ON attendance_regularizations (status);
+
 -- 16. COMPANY SETTINGS
 CREATE TABLE IF NOT EXISTS company_settings (
     id SERIAL PRIMARY KEY,
@@ -348,19 +385,9 @@ INSERT INTO designations (name, level, department_id) VALUES
 ('Accountant', 1, 4)
 ON CONFLICT (name) DO NOTHING;
 
--- Admin (Password: admin123)
-INSERT INTO employees (employee_id, first_name, last_name, email, phone, password_hash, joining_date, salary, role, status, department_id, designation_id, gender)
-VALUES ('EMP001', 'Admin', 'User', 'admin@gensar.com', '+91-9876543210', '$2a$10$JBZsKgXIjT.0Jqqs7qkjK.VCVMcze7MWlJ1fVzk1cujkDAvJ20tYy', '2026-01-01', 50000, 'admin', 'active', 2, 4, NULL)
-ON CONFLICT (email) DO NOTHING;
-
--- Demo Employees (Password: welcome123)
-INSERT INTO employees (employee_id, first_name, last_name, email, phone, password_hash, joining_date, salary, role, status, department_id, designation_id, gender) VALUES
-('EMP002', 'Rahul', 'Sharma', 'rahul@gensar.com', '+91-9876543211', '$2a$10$sks15taut7UBFroTzZ3zQegIjsAa4rnzWsbvfATLQPyw4y5QlP8vK', '2026-02-01', 45000, 'employee', 'active', 1, 1, 'male'),
-('EMP003', 'Priya', 'Patel', 'priya@gensar.com', '+91-9876543212', '$2a$10$sks15taut7UBFroTzZ3zQegIjsAa4rnzWsbvfATLQPyw4y5QlP8vK', '2026-02-15', 50000, 'employee', 'active', 1, 2, 'female'),
-('EMP004', 'Amit', 'Kumar', 'amit@gensar.com', '+91-9876543213', '$2a$10$sks15taut7UBFroTzZ3zQegIjsAa4rnzWsbvfATLQPyw4y5QlP8vK', '2026-03-01', 60000, 'manager', 'active', 1, 3, 'male'),
-('EMP005', 'Sneha', 'Reddy', 'sneha@gensar.com', '+91-9876543214', '$2a$10$sks15taut7UBFroTzZ3zQegIjsAa4rnzWsbvfATLQPyw4y5QlP8vK', '2026-03-15', 40000, 'employee', 'active', 3, 6, 'female'),
-('EMP006', 'Vikram', 'Singh', 'vikram@gensar.com', '+91-9876543215', '$2a$10$sks15taut7UBFroTzZ3zQegIjsAa4rnzWsbvfATLQPyw4y5QlP8vK', '2026-04-01', 35000, 'employee', 'active', 4, 7, 'male')
-ON CONFLICT (email) DO NOTHING;
+-- SECURITY: no employee accounts are seeded here. The first admin account is
+-- created by scripts/init-db.js with a randomly generated password that is
+-- printed once and flagged must_change_password = 1.
 
 INSERT INTO holidays (name, date, description) VALUES
 ('Republic Day', '2026-01-26', 'National holiday'),
@@ -372,11 +399,14 @@ INSERT INTO holidays (name, date, description) VALUES
 ON CONFLICT (name, date) DO NOTHING;
 
 INSERT INTO announcements (title, content, priority, posted_by, target_audience)
-SELECT * FROM (VALUES
-    ('Welcome to Gensar HRMS', 'We are excited to announce the launch of our new Human Resource Management System. Please explore the features and provide your feedback.', 'high', 1, 'all'),
-    ('Office Timings Update', 'Effective immediately, office timings are 9:30 AM to 6:30 PM with a 15-minute grace period.', 'normal', 1, 'all'),
-    ('Team Building Event', 'Join us for a team building event this Friday at 4:00 PM in the conference room.', 'low', 1, 'all')
-) AS v(title, content, priority, posted_by, target_audience)
+SELECT v.title, v.content, v.priority,
+       (SELECT id FROM employees WHERE role = 'admin' AND status = 'active' ORDER BY id LIMIT 1),
+       v.target_audience
+FROM (VALUES
+    ('Welcome to Gensar HRMS', 'We are excited to announce the launch of our new Human Resource Management System. Please explore the features and provide your feedback.', 'high', 'all'),
+    ('Office Timings Update', 'Effective immediately, office timings are 9:30 AM to 6:30 PM with a 15-minute grace period.', 'normal', 'all'),
+    ('Team Building Event', 'Join us for a team building event this Friday at 4:00 PM in the conference room.', 'low', 'all')
+) AS v(title, content, priority, target_audience)
 WHERE NOT EXISTS (SELECT 1 FROM announcements);
 
 -- ============================================
@@ -393,6 +423,10 @@ CREATE INDEX IF NOT EXISTS idx_employees_reporting_manager ON employees(reportin
 CREATE INDEX IF NOT EXISTS idx_leave_rm ON leave_applications(reporting_manager_id);
 CREATE INDEX IF NOT EXISTS idx_wfh_rm ON wfh_requests(reporting_manager_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_rm ON support_tickets(reporting_manager_id);
+
+-- Token revocation: bumped on password change/reset so all previously issued
+-- JWTs become invalid immediately (verifyToken compares token_version).
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 
 -- Maternity Leave is a special leave: 0 days balance, no deduction, still approvable.
 UPDATE leave_types SET days_per_year = 0 WHERE name = 'Maternity Leave';

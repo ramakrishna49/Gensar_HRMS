@@ -12,7 +12,7 @@ router.get('/counts', verifyToken, isManager, async (req, res) => {
         const scopeClause = isAdminRole ? '' : ' AND reporting_manager_id = $1';
         const scopeParams = isAdminRole ? [] : [req.user.id];
 
-        const [pendingLeaves, pendingWfh, pendingTickets, announcementsUnread, pendingProfileUpdates] = await Promise.all([
+        const [pendingLeaves, pendingWfh, pendingTickets, announcementsUnread, pendingProfileUpdates, pendingRegularizations] = await Promise.all([
             query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'" + scopeClause, scopeParams),
             query("SELECT COUNT(*) as count FROM wfh_requests WHERE status = 'pending'" + scopeClause, scopeParams),
             query("SELECT COUNT(*) as count FROM support_tickets WHERE status IN ('open', 'in_progress')" + scopeClause, scopeParams),
@@ -24,7 +24,15 @@ router.get('/counts', verifyToken, isManager, async (req, res) => {
             ),
             isAdminRole
                 ? query("SELECT COUNT(*) as count FROM profile_update_requests WHERE status = 'pending'")
-                : Promise.resolve({ rows: [{ count: '0' }] })
+                : Promise.resolve({ rows: [{ count: '0' }] }),
+            isAdminRole
+                ? query("SELECT COUNT(*) as count FROM attendance_regularizations WHERE status = 'pending'")
+                : query(
+                    `SELECT COUNT(*) as count FROM attendance_regularizations r
+                    JOIN employees e ON e.id = r.employee_id
+                    WHERE r.status = 'pending' AND e.reporting_manager_id = $1`,
+                    [req.user.id]
+                )
         ]);
 
         const counts = {
@@ -32,9 +40,10 @@ router.get('/counts', verifyToken, isManager, async (req, res) => {
             pendingWfh: parseInt(pendingWfh.rows[0].count),
             pendingProfileUpdates: parseInt(pendingProfileUpdates.rows[0].count),
             announcementsUnread: parseInt(announcementsUnread.rows[0].count),
-            pendingTickets: parseInt(pendingTickets.rows[0].count)
+            pendingTickets: parseInt(pendingTickets.rows[0].count),
+            pendingRegularizations: parseInt(pendingRegularizations.rows[0].count)
         };
-        counts.total = counts.pendingLeaves + counts.pendingWfh + counts.pendingProfileUpdates + counts.announcementsUnread + counts.pendingTickets;
+        counts.total = counts.pendingLeaves + counts.pendingWfh + counts.pendingProfileUpdates + counts.announcementsUnread + counts.pendingTickets + counts.pendingRegularizations;
 
         res.json({ success: true, counts });
     } catch (error) {

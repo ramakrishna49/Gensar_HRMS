@@ -9,6 +9,7 @@ const PDFDocument = require('pdfkit');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { sendPayslipEmail } = require('../services/email');
+const { logAudit } = require('../utils/audit');
 
 const PP_MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -887,6 +888,15 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
 
         const payslip = result.rows[0];
 
+        logAudit({
+            actorId: req.user.id,
+            action: 'payroll.generate',
+            entityType: 'payslip',
+            entityId: payslip.id,
+            details: { employee_db_id: payslip.employee_id, month, year, net },
+            ip: req.ip
+        });
+
         // Auto-email the employee using their personal email ONLY (never the official/work email).
         // personal_email already comes back from getProfileSalaryValues (no extra query).
         let email_sent = null;
@@ -1011,6 +1021,15 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
             }
         }
 
+        logAudit({
+            actorId: req.user.id,
+            action: 'payroll.generate_bulk',
+            entityType: 'payslip',
+            entityId: null,
+            details: { created, emailed, failed, requested: items.length },
+            ip: req.ip
+        });
+
         res.json({ success: true, created, emailed, failed, results });
     } catch (error) {
         console.error('Bulk generate payroll error:', error);
@@ -1027,6 +1046,7 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Payslip not found' });
         }
+        logAudit({ actorId: req.user.id, action: 'payroll.delete', entityType: 'payslip', entityId: req.params.id, ip: req.ip });
         res.json({ success: true, message: 'Payslip deleted successfully' });
     } catch (error) {
         console.error('Delete payslip error:', error);

@@ -27,6 +27,58 @@ router.get('/team', verifyToken, isManager, async (req, res) => {
     }
 });
 
+// @route   GET /api/manager/today
+// @desc    Today's live status board for the team (present / WFH / leave / not checked in)
+// @access  Private (Manager+)
+router.get('/today', verifyToken, isManager, async (req, res) => {
+    try {
+        const today = istDateString();
+
+        const rows = await query(
+            `SELECT e.id, e.employee_id, e.first_name, e.last_name,
+                a.check_in::text AS check_in,
+                a.check_out::text AS check_out,
+                EXISTS (
+                    SELECT 1 FROM leave_applications la
+                    WHERE la.employee_id = e.id AND la.status = 'approved'
+                      AND la.start_date <= $2::date AND la.end_date >= $2::date
+                ) AS on_leave,
+                EXISTS (
+                    SELECT 1 FROM wfh_requests w
+                    WHERE w.employee_id = e.id AND w.status = 'approved'
+                      AND w.start_date <= $2::date AND w.end_date >= $2::date
+                ) AS on_wfh
+            FROM employees e
+            LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $2::date
+            WHERE e.reporting_manager_id = $1 AND e.status = 'active'
+            ORDER BY e.first_name`,
+            [req.user.id, today]
+        );
+
+        const members = rows.rows.map(r => {
+            let status;
+            if (r.on_leave) status = 'leave';
+            else if (r.check_in) status = r.on_wfh ? 'wfh' : 'present';
+            else if (r.on_wfh) status = 'wfh';
+            else status = 'not_checked_in';
+            return {
+                id: r.id,
+                employee_id: r.employee_id,
+                first_name: r.first_name,
+                last_name: r.last_name,
+                check_in: r.check_in ? String(r.check_in).slice(0, 5) : null,
+                check_out: r.check_out ? String(r.check_out).slice(0, 5) : null,
+                status
+            };
+        });
+
+        res.json({ success: true, date: today, members });
+    } catch (error) {
+        console.error('Manager today error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // @route   GET /api/manager/leaves
 // @desc    Pending leave requests from direct reports
 // @access  Private (Manager+)

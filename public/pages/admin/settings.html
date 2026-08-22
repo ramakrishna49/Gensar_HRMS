@@ -321,6 +321,9 @@
             if (r && r.success) {
                 showToast('Password changed successfully!', 'success');
                 document.getElementById('adminPasswordForm').reset();
+                // The server rotated token_version - keep the fresh JWT so this
+                // session stays signed in while all other devices are logged out.
+                if (r.token) localStorage.setItem('token', r.token);
             } else {
                 showToast(r?.message || 'Error changing password', 'error');
             }

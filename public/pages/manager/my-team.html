@@ -43,12 +43,14 @@
             <div class="nav-section-title">My Info</div>
             <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
             <a href="/pages/employee/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/employee/regularization.html" class="nav-item"><i class="fas fa-clock-rotate-left"></i><span class="nav-text">Regularization</span></a>
             <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
             <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
             <div class="nav-section-title">Support</div>
             <a href="/pages/employee/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
             <div class="nav-section-title">Resources</div>
             <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+        <a href="/pages/employee/directory.html" class="nav-item"><i class="fas fa-address-book"></i><span class="nav-text">Directory</span></a>
         </nav>
     </aside>
 
@@ -100,6 +102,16 @@
                 </div>
             </div>
 
+            <div class="card" style="padding:20px;margin-bottom:24px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                    <div style="font-weight:600;font-size:0.95rem;"><i class="fas fa-sun" style="color:#D97706;margin-right:8px;"></i>Team Today</div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="loadToday()"><i class="fas fa-rotate-right"></i> Refresh</button>
+                </div>
+                <div id="todayBoard" style="min-height:36px;">
+                    <div class="spinner" style="margin:0 auto;"></div>
+                </div>
+            </div>
+
             <div class="card" style="padding:20px;">
                 <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-user-friends" style="color:var(--secondary);margin-right:8px;"></i>My Team Members</div>
                 <div id="teamContainer" style="min-height:40px;">
@@ -111,10 +123,12 @@
                     <button class="tab-btn active" onclick="switchTab('leaves')">Leave Requests <span class="tab-badge" id="leaveTabBadge" style="display:none;">0</span></button>
                     <button class="tab-btn" onclick="switchTab('wfh')">WFH Requests <span class="tab-badge" id="wfhTabBadge" style="display:none;">0</span></button>
                     <button class="tab-btn" onclick="switchTab('tickets')">Queries <span class="tab-badge" id="ticketTabBadge" style="display:none;">0</span></button>
+                    <button class="tab-btn" onclick="switchTab('regularization')">Regularizations <span class="tab-badge" id="regTabBadge" style="display:none;">0</span></button>
                 </div>
                 <div id="tabLeaves"></div>
                 <div id="tabWfh" style="display:none;"></div>
                 <div id="tabTickets" style="display:none;"></div>
+                <div id="tabRegularization" style="display:none;"></div>
             </div>
         </div>
     </main>
@@ -165,14 +179,53 @@
                 return;
             }
             loadTeam();
+            loadToday();
             loadLeaves();
             loadWfh();
             loadTickets();
+            loadRegularizations();
         });
+
+        const TODAY_GROUPS = [
+            { key: 'present', label: 'Present', icon: 'fa-user-check', color: '#059669', bg: '#D1FAE5' },
+            { key: 'wfh', label: 'WFH', icon: 'fa-home', color: '#1D4ED8', bg: '#DBEAFE' },
+            { key: 'leave', label: 'On Leave', icon: 'fa-calendar-times', color: '#B45309', bg: '#FEF3C7' },
+            { key: 'not_checked_in', label: 'Not Checked In', icon: 'fa-user-clock', color: '#B91C1C', bg: '#FEE2E2' }
+        ];
+
+        async function loadToday() {
+            const container = document.getElementById('todayBoard');
+            const data = await apiCall('/manager/today');
+            if (!data || !data.success) {
+                container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--danger);font-size:0.9rem;">Failed to load today\'s board</div>';
+                return;
+            }
+            const members = data.members || [];
+            if (members.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:0.9rem;">No team members yet.</div>';
+                return;
+            }
+            container.innerHTML = TODAY_GROUPS.map(g => {
+                const group = members.filter(m => m.status === g.key);
+                if (group.length === 0) return '';
+                const chips = group.map(m =>
+                    '<span title="' + escapeHtml(m.employee_id || '') + (m.check_in ? ' · in ' + escapeHtml(m.check_in) : '') + '" style="display:inline-flex;align-items:center;gap:6px;background:' + g.bg + ';color:' + g.color + ';border-radius:999px;padding:4px 10px;font-size:0.75rem;font-weight:600;margin:0 6px 6px 0;">' +
+                        escapeHtml((m.first_name || '') + ' ' + (m.last_name || '')) +
+                        (g.key === 'present' && m.check_in ? '<span style="font-weight:400;">· in ' + escapeHtml(m.check_in) + '</span>' : '') +
+                    '</span>'
+                ).join('');
+                return '<div style="margin-bottom:10px;">' +
+                    '<span class="badge" style="background:' + g.bg + ';color:' + g.color + ';font-size:0.7rem;margin-right:8px;"><i class="fas ' + g.icon + '" style="margin-right:4px;"></i>' + g.label + ' (' + group.length + ')</span>' +
+                    chips +
+                '</div>';
+            }).join('');
+        }
 
         let pendingLeaveCount = 0;
         let pendingWfhCount = 0;
         let openTicketCount = 0;
+        let pendingRegCount = 0;
+        let teamRegRequests = [];
 
         async function loadTeam() {
             const data = await apiCall('/manager/team');
@@ -254,6 +307,7 @@
             const container = document.getElementById('tabTickets');
             if (data && data.success) {
                 const tickets = data.tickets || [];
+                teamTickets = tickets;
                 openTicketCount = tickets.length;
                 renderCounts();
                 if (tickets.length === 0) {
@@ -269,12 +323,41 @@
                         '</div>' +
                         '<span class="badge badge-warning">' + escapeHtml(t.status) + '</span></div>' +
                         '<div class="req-actions">' +
-                            '<button class="btn btn-sm btn-primary" onclick="openTicket(' + t.id + ', \'' + escapeHtml(t.employee_name) + '\', \'' + escapeHtml(t.subject) + '\')"><i class="fas fa-reply"></i> Respond</button>' +
+                            '<button class="btn btn-sm btn-primary" onclick="openTicket(' + t.id + ')"><i class="fas fa-reply"></i> Respond</button>' +
                         '</div>' +
                     '</div>'
                 ).join('');
             } else {
                 showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load queries');
+            }
+        }
+
+        async function loadRegularizations() {
+            const data = await apiCall('/regularization/pending');
+            const container = document.getElementById('tabRegularization');
+            if (data && data.success) {
+                const regs = data.requests || [];
+                teamRegRequests = regs;
+                pendingRegCount = regs.length;
+                renderCounts();
+                if (regs.length === 0) {
+                    showEmptyState(container, 'fa-clock-rotate-left', 'No Pending Regularizations', 'No attendance correction requests from your team right now');
+                    return;
+                }
+                container.innerHTML = regs.map(r =>
+                    '<div class="request-card">' +
+                        '<div class="req-top"><div><div class="req-emp">' + escapeHtml((r.first_name || '') + ' ' + (r.last_name || '')) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(r.employee_id || '') + '</span></div>' +
+                        '<div class="req-meta">' + formatDate(r.date) + ' · Check-in: ' + escapeHtml(r.check_in ? String(r.check_in).slice(0, 5) : '—') + ' · Check-out: ' + escapeHtml(r.check_out ? String(r.check_out).slice(0, 5) : '—') + '</div></div>' +
+                        '<span class="badge badge-warning">Pending</span></div>' +
+                        (r.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(r.reason) + '</div>' : '') +
+                        '<div class="req-actions">' +
+                            '<button class="btn btn-sm btn-success" onclick="openRegDecision(' + r.id + ', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
+                            '<button class="btn btn-sm btn-danger" onclick="openRegDecision(' + r.id + ', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
+                        '</div>' +
+                    '</div>'
+                ).join('');
+            } else {
+                showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load regularization requests');
             }
         }
 
@@ -288,6 +371,8 @@
             document.getElementById('wfhTabBadge').textContent = pendingWfhCount;
             document.getElementById('ticketTabBadge').style.display = openTicketCount > 0 ? 'inline-block' : 'none';
             document.getElementById('ticketTabBadge').textContent = openTicketCount;
+            document.getElementById('regTabBadge').style.display = pendingRegCount > 0 ? 'inline-block' : 'none';
+            document.getElementById('regTabBadge').textContent = pendingRegCount;
         }
 
         function switchTab(tab) {
@@ -296,13 +381,27 @@
             document.getElementById('tabLeaves').style.display = tab === 'leaves' ? 'block' : 'none';
             document.getElementById('tabWfh').style.display = tab === 'wfh' ? 'block' : 'none';
             document.getElementById('tabTickets').style.display = tab === 'tickets' ? 'block' : 'none';
+            document.getElementById('tabRegularization').style.display = tab === 'regularization' ? 'block' : 'none';
         }
 
         let pendingDecision = null;
 
         function openDecision(id, type, status) {
-            pendingDecision = { id, type, status };
+            pendingDecision = { id, type: type, status };
             document.getElementById('decisionTitle').textContent = (status === 'approved' ? 'Approve' : 'Reject') + (type === 'leaves' ? ' Leave' : ' WFH') + ' Request';
+            document.getElementById('decisionRemarks').value = '';
+            document.getElementById('decisionConfirmBtn').className = 'btn ' + (status === 'approved' ? 'btn-success' : 'btn-danger');
+            document.getElementById('decisionConfirmBtn').innerHTML = (status === 'approved' ? '<i class="fas fa-check"></i> Approve' : '<i class="fas fa-times"></i> Reject');
+            document.getElementById('decisionModal').classList.add('active');
+        }
+
+        function openRegDecision(id, status) {
+            const r = teamRegRequests.find(x => x.id === id);
+            if (!r) return;
+            pendingDecision = { id, type: 'regularization', status };
+            document.getElementById('decisionTitle').textContent =
+                (status === 'approved' ? 'Approve' : 'Reject') + ' Regularization — ' +
+                ((r.first_name || '') + ' ' + (r.last_name || '')) + ' (' + formatDate(r.date) + ')';
             document.getElementById('decisionRemarks').value = '';
             document.getElementById('decisionConfirmBtn').className = 'btn ' + (status === 'approved' ? 'btn-success' : 'btn-danger');
             document.getElementById('decisionConfirmBtn').innerHTML = (status === 'approved' ? '<i class="fas fa-check"></i> Approve' : '<i class="fas fa-times"></i> Reject');
@@ -315,23 +414,40 @@
             if (!pendingDecision) return;
             const { id, type, status } = pendingDecision;
             const remarks = document.getElementById('decisionRemarks').value.trim();
+            // Guard against double-submit: disable the button until the call resolves.
+            const confirmBtn = document.getElementById('decisionConfirmBtn');
+            if (confirmBtn.disabled) return;
+            const originalBtn = confirmBtn.innerHTML;
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            let data;
+            if (type === 'regularization') {
+                data = await apiCall('/regularization/' + id + '/review', 'POST', { status, review_note: remarks });
+            } else {
+                data = await apiCall('/manager/' + type + '/' + id, 'PUT', { status, remarks });
+            }
             closeDecisionModal();
-            const data = await apiCall('/manager/' + type + '/' + id, 'PUT', { status, remarks });
             if (data && data.success) {
                 showToast('Request ' + status + '!', 'success');
                 loadLeaves();
                 loadWfh();
+                loadRegularizations();
                 loadNotifBadge();
             } else {
                 showToast(data?.message || 'Failed to update request', 'error');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalBtn;
             }
         }
 
         let currentTicket = null;
+        let teamTickets = [];
 
-        function openTicket(id, empName, subject) {
+        function openTicket(id) {
+            const t = teamTickets.find(x => x.id === id);
+            if (!t) return;
             currentTicket = id;
-            document.getElementById('ticketInfo').innerHTML = '<strong>' + escapeHtml(empName) + '</strong> — ' + escapeHtml(subject);
+            document.getElementById('ticketInfo').innerHTML = '<strong>' + escapeHtml(t.employee_name) + '</strong> — ' + escapeHtml(t.subject);
             document.getElementById('ticketResponse').value = '';
             document.getElementById('ticketStatus').value = 'in_progress';
             document.getElementById('ticketModal').classList.add('active');
@@ -344,15 +460,27 @@
             const response = document.getElementById('ticketResponse').value.trim();
             const status = document.getElementById('ticketStatus').value;
             if (!response) { showToast('Please write a response', 'error'); return; }
+            // Guard against double-submit: disable the button until the call resolves.
+            const submitBtn = document.querySelector('#ticketModal button.btn-primary');
+            if (submitBtn && submitBtn.disabled) return;
+            if (submitBtn) {
+                submitBtn.dataset.original = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            }
             const id = currentTicket;
-            closeTicketModal();
             const data = await apiCall('/manager/tickets/' + id, 'PUT', { response, status });
+            closeTicketModal();
             if (data && data.success) {
                 showToast('Response submitted!', 'success');
                 loadTickets();
                 loadNotifBadge();
             } else {
                 showToast(data?.message || 'Failed to submit response', 'error');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = submitBtn.dataset.original;
+                }
             }
         }
     </script>

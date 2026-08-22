@@ -25,6 +25,7 @@
             <div class="nav-section-title">My Info</div>
             <a href="/pages/employee/profile.html" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
             <a href="/pages/employee/attendance.html" class="nav-item active"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+        <a href="/pages/employee/regularization.html" class="nav-item"><i class="fas fa-clock-rotate-left"></i><span class="nav-text">Regularization</span></a>
             <a href="/pages/employee/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
             <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
             <a href="/pages/employee/payslips.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
@@ -34,6 +35,7 @@
             <a href="/pages/employee/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
             <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
             <a href="/pages/employee/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+        <a href="/pages/employee/directory.html" class="nav-item"><i class="fas fa-address-book"></i><span class="nav-text">Directory</span></a>
         </nav>
     </aside>
 
@@ -205,7 +207,7 @@
                 return;
             }
 
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getTodayIST();
                     let html = '<div class="table-container"><table><thead><tr><th>Date</th><th>Day</th><th>Check In</th><th>Check Out</th><th>Location</th><th>Hours Worked</th><th>Status</th><th>Overtime</th></tr></thead><tbody>';
                     records.forEach(a => {
                         const d = new Date(a.date);
@@ -237,7 +239,7 @@
                         const loc = a.check_in_location || '';
                         if (loc && loc.includes(',')) {
                             const [lat, lon] = loc.split(',');
-                            locHtml = '<a href="https://www.google.com/maps?q=' + lat + ',' + lon + '" target="_blank" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(loc) + '"><i class="fas fa-map-marker-alt"></i></a>';
+                            locHtml = '<a href="https://www.google.com/maps?q=' + encodeURIComponent(lat.trim() + ',' + lon.trim()) + '" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;" title="' + escapeHtml(loc) + '"><i class="fas fa-map-marker-alt"></i></a>';
                         } else if (loc) {
                             locHtml = '<span style="font-size:0.75rem;">' + escapeHtml(loc) + '</span>';
                         }
@@ -273,7 +275,7 @@
             const firstDay = new Date(year, month - 1, 1);
             const lastDay = new Date(year, month, 0).getDate();
             const lead = firstDay.getDay();
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getTodayIST();
             const padStart = new Date(year, month - 1, -(lead) + 1);
 
             let html = '<div class="cal-legend">' +
@@ -314,10 +316,15 @@
                     if (rec.check_in) checkIn = 'In ' + rec.check_in;
                 } else if (isFuture) {
                     cls = 'future';
+                } else if (holidayDates[dateStr]) {
+                    // Holidays must win over weekends: a Sunday holiday should
+                    // show its name, not "Week Off".
+                    cls = 'cal-holiday'; tag = holidayDates[dateStr]; counts.holiday++;
                 } else if (dayOfWeek === 0 || dayOfWeek === 6) {
                     cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++;
-                } else if (holidayDates[dateStr]) {
-                    cls = 'cal-holiday'; tag = holidayDates[dateStr]; counts.holiday++;
+                } else if (dateStr === todayStr) {
+                    // Today before check-in is not an absence yet.
+                    cls = 'cal-cell';
                 } else {
                     cls = 'cal-absent'; tag = 'Absent'; counts.absent++;
                 }

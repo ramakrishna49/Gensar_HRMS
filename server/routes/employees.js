@@ -7,6 +7,7 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateEmployee, collectFieldErrors } = require('../middleware/validation');
 const { deleteFile, deleteFileByUrl } = require('../services/storage');
 const { runWithSchemaRepair, pgErrorResponse } = require('../utils/schemaRepair');
+const { logAudit } = require('../utils/audit');
 
 const MAIN_ADMIN_ID = 1;
 
@@ -118,6 +119,74 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
+// @route   GET /api/employees/directory
+// @desc    Company-wide staff directory (active employees, work contact fields only)
+// @access  Private (any authenticated employee)
+router.get('/directory', verifyToken, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
+                    d.name AS department_name, g.name AS designation_name,
+                    rm.first_name || ' ' || rm.last_name AS reporting_manager
+            FROM employees e
+            LEFT JOIN departments d ON d.id = e.department_id
+            LEFT JOIN designations g ON g.id = e.designation_id
+            LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
+            WHERE e.status = 'active'
+            ORDER BY e.first_name, e.last_name`
+        );
+        res.json({ success: true, directory: result.rows });
+    } catch (error) {
+        console.error('Directory error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/employees/birthdays
+// @desc    Today's and upcoming birthdays (next 30 days), company-wide
+// @access  Private (any authenticated employee)
+router.get('/birthdays', verifyToken, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT id, employee_id, first_name, last_name, date_of_birth
+            FROM employees
+            WHERE status = 'active' AND date_of_birth IS NOT NULL`
+        );
+
+        const { istDateString } = require('../utils/date');
+        const today = new Date(istDateString() + 'T00:00:00Z');
+        const todayKey = (d) => String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+        const todayMmDd = todayKey(today);
+
+        const list = [];
+        for (const e of result.rows) {
+            // Normalise the birth year onto the current/next calendar year so
+            // Feb-29 people still get a slot (moved to Mar-01 on non-leap years).
+            let next = new Date(Date.UTC(today.getUTCFullYear(), e.date_of_birth.getUTCMonth(), e.date_of_birth.getUTCDate()));
+            if (next < today) {
+                next = new Date(Date.UTC(today.getUTCFullYear() + 1, e.date_of_birth.getUTCMonth(), e.date_of_birth.getUTCDate()));
+            }
+            const daysAway = Math.round((next - today) / 86400000);
+            if (daysAway > 30) continue;
+            list.push({
+                id: e.id,
+                employee_id: e.employee_id,
+                first_name: e.first_name,
+                last_name: e.last_name,
+                birthday: `${String(e.date_of_birth.getUTCDate()).padStart(2, '0')} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][e.date_of_birth.getUTCMonth()]}`,
+                days_away: daysAway,
+                is_today: todayKey(next) === todayMmDd
+            });
+        }
+
+        list.sort((a, b) => a.days_away - b.days_away);
+        res.json({ success: true, birthdays: list });
+    } catch (error) {
+        console.error('Birthdays error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // @route   GET /api/employees/:id
 // @desc    Get single employee
 // @access  Private (Admin/HR full access; others self or reporting-chain members only, PII stripped)
@@ -130,14 +199,16 @@ router.get('/:id', verifyToken, async (req, res) => {
 
         const isAdminUser = req.user.role === 'admin';
         if (!isAdminUser) {
+            // Grant access only if the target employee sits inside the requester's
+            // reporting subtree (requester is their manager, or higher up the chain).
             const canView = await query(
                 `WITH RECURSIVE chain AS (
-                    SELECT id, reporting_manager_id FROM employees WHERE id = $1
+                    SELECT id FROM employees WHERE id = $1
                     UNION
-                    SELECT e.id, e.reporting_manager_id FROM employees e JOIN chain c ON e.reporting_manager_id = c.id
+                    SELECT e.id FROM employees e JOIN chain c ON e.reporting_manager_id = c.id
                  )
                  SELECT 1 AS found FROM chain WHERE id = $2 LIMIT 1`,
-                [targetId, req.user.id]
+                [req.user.id, targetId]
             );
             if (canView.rows.length === 0) {
                 return res.status(403).json({ success: false, message: 'Access denied' });
@@ -183,108 +254,130 @@ router.get('/:id', verifyToken, async (req, res) => {
 // @route   POST /api/employees
 // @desc    Create new employee
 // @access  Private (Admin/HR)
+// Shared single-employee creation used by POST / and the CSV bulk import.
+// Returns { ok, employee, tempPassword, errors } instead of throwing so the
+// bulk importer can report per-row failures.
+async function createEmployeeRecord(body, req) {
+    const fieldErrors = collectFieldErrors(body);
+    if (fieldErrors.length > 0) {
+        return { ok: false, errors: fieldErrors };
+    }
+
+    const {
+        employee_id, first_name, last_name, email, phone,
+        password, department_id, designation_id, joining_date,
+        salary, role, address, date_of_birth, gender,
+        permanent_address, languages_spoken, marital_status, personal_email,
+        qualification, specialization, pan_number, aadhaar_number, passport_number,
+        uan_number, pf_number, esi_number,
+        bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id,
+        basic_salary, hra, conveyance, medical, special_allowance, other_allowance,
+        pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
+        incentive, bonus, extra_work, employer_pf, employer_esi, employer_contribution
+    } = body;
+
+    // Only the main Admin can create admin accounts.
+    if (role === 'admin' && Number(req.user.id) !== MAIN_ADMIN_ID) {
+        return { ok: false, errors: ['Only the main Admin can create admin accounts.'] };
+    }
+
+    // Check if email exists
+    const emailCheck = await query('SELECT id FROM employees WHERE email = $1', [email]);
+    if (emailCheck.rows.length > 0) {
+        return { ok: false, errors: ['Email already exists'] };
+    }
+
+    // Check if employee_id exists (uniqueness pre-check so users get a clear message)
+    const empIdCheck = await query('SELECT id FROM employees WHERE employee_id = $1', [employee_id]);
+    if (empIdCheck.rows.length > 0) {
+        return { ok: false, errors: ['Employee ID already exists'] };
+    }
+
+    // Validate numeric fields early so a bad value gives a friendly message
+    // instead of a Postgres cast error.
+    const numFields = {
+        salary: 'Salary', basic_salary: 'Basic Salary', hra: 'HRA', conveyance: 'Conveyance',
+        medical: 'Medical Allowance', special_allowance: 'Special Allowance', other_allowance: 'Medical Allowance',
+        pf: 'Employee PF', esi: 'Employee ESI', professional_tax: 'Professional Tax', income_tax: 'Income Tax',
+        loan_deduction: 'Loan Deduction', advance_salary: 'Advance Salary', other_deduction: 'Other Deduction',
+        incentive: 'Incentive', bonus: 'Attendance Incentive (Bonus)', extra_work: 'Extra Work',
+        employer_pf: 'Employer PF', employer_esi: 'Employer ESI', employer_contribution: 'Employer Contribution'
+    };
+    const numErrors = [];
+    for (const [key, label] of Object.entries(numFields)) {
+        const v = body[key];
+        if (v !== undefined && v !== null && String(v).trim() !== '' && isNaN(Number(String(v).trim()))) {
+            numErrors.push(label + ' must be a valid number');
+        }
+    }
+    if (numErrors.length > 0) {
+        return { ok: false, errors: numErrors };
+    }
+
+    // Generate random temp password if not provided
+    const tempPassword = password || crypto.randomBytes(6).toString('base64url');
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(tempPassword, salt);
+
+    const result = await runWithSchemaRepair(() => query(
+        `INSERT INTO employees 
+        (employee_id, first_name, last_name, email, phone, password_hash, 
+         department_id, designation_id, joining_date, salary, role, address, 
+         date_of_birth, gender, must_change_password,
+         permanent_address, languages_spoken, marital_status, personal_email,
+         qualification, specialization, pan_number, aadhaar_number, passport_number,
+         uan_number, pf_number, esi_number,
+         bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id,
+         basic_salary, hra, conveyance, medical, special_allowance, other_allowance,
+         pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
+         incentive, bonus, extra_work, employer_pf, employer_esi, employer_contribution) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1,
+         $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
+         $28, $29, $30, $31,
+         $32, $33, $34, $35, $36, $37,
+         $38, $39, $40, $41, $42, $43, $44,
+         $45, $46, $47, $48, $49, $50) 
+        RETURNING id, employee_id, first_name, last_name, email, role`,
+        [
+            employee_id, first_name, last_name, email, phone, password_hash,
+            cleanNum(department_id) ?? null, cleanNum(designation_id) ?? null, joining_date,
+            cleanNum(salary), role || 'employee', address || null,
+            date_of_birth || null, gender || null,
+            permanent_address || null, languages_spoken || null, marital_status || null, personal_email || null,
+            qualification || null, specialization || null, pan_number || null, aadhaar_number || null, passport_number || null,
+            uan_number || null, pf_number || null, esi_number || null,
+            bank_name || null, bank_branch || null, bank_account || null, bank_ifsc || null,
+            cleanNum(reporting_manager_id) ?? null,
+            cleanNum(basic_salary) ?? 0, cleanNum(hra) ?? 0, cleanNum(conveyance) ?? 0, cleanNum(medical) ?? 0,
+            cleanNum(special_allowance) ?? 0, cleanNum(other_allowance) ?? 0,
+            cleanNum(pf) ?? 0, cleanNum(esi) ?? 0, cleanNum(professional_tax) ?? 0, cleanNum(income_tax) ?? 0,
+            cleanNum(loan_deduction) ?? 0, cleanNum(advance_salary) ?? 0, cleanNum(other_deduction) ?? 0,
+            cleanNum(incentive) ?? 0, cleanNum(bonus) ?? 0, cleanNum(extra_work) ?? 0,
+            cleanNum(employer_pf) ?? 0, cleanNum(employer_esi) ?? 0, cleanNum(employer_contribution) ?? 0
+        ]
+    ));
+
+    return { ok: true, employee: result.rows[0], tempPassword };
+}
+
 router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
     try {
-        const fieldErrors = collectFieldErrors(req.body);
-        if (fieldErrors.length > 0) {
-            return res.status(400).json({ success: false, errors: fieldErrors });
-        }
-        const { 
-            employee_id, first_name, last_name, email, phone, 
-            password, department_id, designation_id, joining_date, 
-            salary, role, address, date_of_birth, gender,
-            permanent_address, languages_spoken, marital_status, personal_email,
-            qualification, specialization, pan_number, aadhaar_number, passport_number,
-            uan_number, pf_number, esi_number,
-            bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id,
-            basic_salary, hra, conveyance, medical, special_allowance, other_allowance,
-            pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
-            incentive, bonus, extra_work, employer_pf, employer_esi, employer_contribution
-        } = req.body;
-
-        // Only the main Admin can create admin accounts.
-        if (role === 'admin' && Number(req.user.id) !== MAIN_ADMIN_ID) {
-            return res.status(403).json({ success: false, message: 'Only the main Admin can create admin accounts.' });
-        }
-        
-        // Check if email exists
-        const emailCheck = await query('SELECT id FROM employees WHERE email = $1', [email]);
-        if (emailCheck.rows.length > 0) {
-            return res.status(400).json({ success: false, message: 'Email already exists' });
+        const created = await createEmployeeRecord(req.body, req);
+        if (!created.ok) {
+            return res.status(400).json({ success: false, errors: created.errors });
         }
 
-        // Check if employee_id exists (uniqueness pre-check so users get a clear message)
-        const empIdCheck = await query('SELECT id FROM employees WHERE employee_id = $1', [employee_id]);
-        if (empIdCheck.rows.length > 0) {
-            return res.status(400).json({ success: false, message: 'Employee ID already exists' });
-        }
+        logAudit({
+            actorId: req.user.id,
+            action: 'employee.create',
+            entityType: 'employee',
+            entityId: created.employee.id,
+            details: { employee_code: created.employee.employee_id, email: created.employee.email },
+            ip: req.ip
+        });
 
-        // Validate numeric fields early so a bad value gives a friendly message
-        // instead of a Postgres cast error.
-        const numFields = {
-            salary: 'Salary', basic_salary: 'Basic Salary', hra: 'HRA', conveyance: 'Conveyance',
-            medical: 'Medical Allowance', special_allowance: 'Special Allowance', other_allowance: 'Medical Allowance',
-            pf: 'Employee PF', esi: 'Employee ESI', professional_tax: 'Professional Tax', income_tax: 'Income Tax',
-            loan_deduction: 'Loan Deduction', advance_salary: 'Advance Salary', other_deduction: 'Other Deduction',
-            incentive: 'Incentive', bonus: 'Attendance Incentive (Bonus)', extra_work: 'Extra Work',
-            employer_pf: 'Employer PF', employer_esi: 'Employer ESI', employer_contribution: 'Employer Contribution'
-        };
-        const numErrors = [];
-        for (const [key, label] of Object.entries(numFields)) {
-            const v = req.body[key];
-            if (v !== undefined && v !== null && String(v).trim() !== '' && isNaN(Number(String(v).trim()))) {
-                numErrors.push(label + ' must be a valid number');
-            }
-        }
-        if (numErrors.length > 0) {
-            return res.status(400).json({ success: false, errors: numErrors });
-        }
-        
-        // Generate random temp password if not provided
-        const tempPassword = password || crypto.randomBytes(6).toString('base64url');
-        const salt = await bcrypt.genSalt(10);
-        const password_hash = await bcrypt.hash(tempPassword, salt);
-        
-        const result = await runWithSchemaRepair(() => query(
-            `INSERT INTO employees 
-            (employee_id, first_name, last_name, email, phone, password_hash, 
-             department_id, designation_id, joining_date, salary, role, address, 
-             date_of_birth, gender, must_change_password,
-             permanent_address, languages_spoken, marital_status, personal_email,
-             qualification, specialization, pan_number, aadhaar_number, passport_number,
-             uan_number, pf_number, esi_number,
-             bank_name, bank_branch, bank_account, bank_ifsc, reporting_manager_id,
-             basic_salary, hra, conveyance, medical, special_allowance, other_allowance,
-             pf, esi, professional_tax, income_tax, loan_deduction, advance_salary, other_deduction,
-             incentive, bonus, extra_work, employer_pf, employer_esi, employer_contribution) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1,
-             $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
-             $28, $29, $30, $31,
-             $32, $33, $34, $35, $36, $37,
-             $38, $39, $40, $41, $42, $43, $44,
-             $45, $46, $47, $48, $49, $50) 
-            RETURNING id, employee_id, first_name, last_name, email, role`,
-            [
-                employee_id, first_name, last_name, email, phone, password_hash,
-                cleanNum(department_id) ?? null, cleanNum(designation_id) ?? null, joining_date,
-                cleanNum(salary), role || 'employee', address || null,
-                date_of_birth || null, gender || null,
-                permanent_address || null, languages_spoken || null, marital_status || null, personal_email || null,
-                qualification || null, specialization || null, pan_number || null, aadhaar_number || null, passport_number || null,
-                uan_number || null, pf_number || null, esi_number || null,
-                bank_name || null, bank_branch || null, bank_account || null, bank_ifsc || null,
-                cleanNum(reporting_manager_id) ?? null,
-                cleanNum(basic_salary) ?? 0, cleanNum(hra) ?? 0, cleanNum(conveyance) ?? 0, cleanNum(medical) ?? 0,
-                cleanNum(special_allowance) ?? 0, cleanNum(other_allowance) ?? 0,
-                cleanNum(pf) ?? 0, cleanNum(esi) ?? 0, cleanNum(professional_tax) ?? 0, cleanNum(income_tax) ?? 0,
-                cleanNum(loan_deduction) ?? 0, cleanNum(advance_salary) ?? 0, cleanNum(other_deduction) ?? 0,
-                cleanNum(incentive) ?? 0, cleanNum(bonus) ?? 0, cleanNum(extra_work) ?? 0,
-                cleanNum(employer_pf) ?? 0, cleanNum(employer_esi) ?? 0, cleanNum(employer_contribution) ?? 0
-            ]
-        ));
-        
-        res.status(201).json({ success: true, employee: result.rows[0], temp_password: tempPassword });
-        
+        res.status(201).json({ success: true, employee: created.employee, temp_password: created.tempPassword });
+
     } catch (error) {
         console.error('Create employee error:', error);
         const mapped = pgErrorResponse(error);
@@ -293,6 +386,62 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
             body.detail = error && error.message;
         }
         res.status(mapped.status).json(body);
+    }
+});
+
+// @route   POST /api/employees/import
+// @desc    Bulk-create employees from parsed CSV rows (per-row error report)
+// @access  Private (Admin/HR)
+router.post('/import', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const items = req.body.items;
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'No rows to import' });
+        }
+        if (items.length > 500) {
+            return res.status(400).json({ success: false, message: 'Maximum 500 rows per import. Split the file.' });
+        }
+
+        const results = [];
+        let created = 0;
+
+        for (let i = 0; i < items.length; i++) {
+            const rowNum = i + 1;
+            try {
+                const r = await createEmployeeRecord(items[i] || {}, req);
+                if (r.ok) {
+                    created++;
+                    logAudit({
+                        actorId: req.user.id,
+                        action: 'employee.import_create',
+                        entityType: 'employee',
+                        entityId: r.employee.id,
+                        details: { employee_code: r.employee.employee_id, row: rowNum },
+                        ip: req.ip
+                    });
+                    results.push({ row: rowNum, ok: true, employee_id: r.employee.employee_id, temp_password: r.tempPassword });
+                } else {
+                    results.push({ row: rowNum, ok: false, error: (r.errors || ['Invalid row']).join('; ') });
+                }
+            } catch (rowError) {
+                const mapped = pgErrorResponse(rowError);
+                results.push({ row: rowNum, ok: false, error: mapped.message });
+            }
+        }
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'employee.import_bulk',
+            entityType: 'employee',
+            entityId: null,
+            details: { created, failed: results.length - created, total: items.length },
+            ip: req.ip
+        });
+
+        res.json({ success: true, created, failed: results.length - created, results });
+    } catch (error) {
+        console.error('Import employees error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
@@ -441,7 +590,16 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
-        
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'employee.update',
+            entityType: 'employee',
+            entityId: result.rows[0].id,
+            details: { fields: Object.keys(req.body || {}) },
+            ip: req.ip
+        });
+
         res.json({ success: true, employee: result.rows[0] });
         
     } catch (error) {
@@ -470,7 +628,8 @@ router.post('/:id/reset-password', verifyToken, isAdmin, async (req, res) => {
         const password_hash = await bcrypt.hash(tempPassword, salt);
 
         const result = await query(
-            `UPDATE employees SET password_hash = $1, must_change_password = 1, updated_at = NOW()
+            `UPDATE employees SET password_hash = $1, must_change_password = 1,
+                token_version = COALESCE(token_version, 0) + 1, updated_at = NOW()
             WHERE id = $2 RETURNING id, first_name, last_name`,
             [password_hash, req.params.id]
         );
@@ -478,6 +637,15 @@ router.post('/:id/reset-password', verifyToken, isAdmin, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'employee.reset_password',
+            entityType: 'employee',
+            entityId: result.rows[0].id,
+            details: { target: (result.rows[0].first_name || '') + ' ' + (result.rows[0].last_name || '') },
+            ip: req.ip
+        });
 
         res.json({ success: true, message: 'Password reset', temp_password: tempPassword, employee: result.rows[0] });
     } catch (error) {
@@ -510,6 +678,7 @@ router.post('/:id/pause', verifyToken, isAdmin, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
+        logAudit({ actorId: req.user.id, action: 'employee.pause', entityType: 'employee', entityId: req.params.id, ip: req.ip });
         res.json({ success: true, message: 'Employee paused successfully' });
     } catch (error) {
         console.error('Pause employee error:', error);
@@ -530,6 +699,7 @@ router.post('/:id/resume', verifyToken, isAdmin, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(400).json({ success: false, message: 'Employee is not paused' });
         }
+        logAudit({ actorId: req.user.id, action: 'employee.resume', entityType: 'employee', entityId: req.params.id, ip: req.ip });
         res.json({ success: true, message: 'Employee resumed successfully' });
     } catch (error) {
         console.error('Resume employee error:', error);
@@ -559,7 +729,9 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
-        
+
+        logAudit({ actorId: req.user.id, action: 'employee.terminate', entityType: 'employee', entityId: req.params.id, ip: req.ip });
+
         res.json({ success: true, message: 'Employee terminated successfully' });
         
     } catch (error) {
@@ -632,6 +804,15 @@ router.delete('/:id/permanent', verifyToken, isAdmin, async (req, res) => {
         } catch (e) {
             console.error('Permanent delete storage cleanup error:', e.message);
         }
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'employee.permanent_delete',
+            entityType: 'employee',
+            entityId: employee.id,
+            details: { employee_code: employee.employee_id, email: employee.email },
+            ip: req.ip
+        });
 
         res.json({ success: true, message: 'Employee permanently deleted along with all their data' });
     } catch (error) {

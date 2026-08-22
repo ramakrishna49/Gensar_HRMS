@@ -41,6 +41,7 @@
             <a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
             <div class="nav-section-title">Analytics</div>
             <a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/pages/admin/audit-logs.html" class="nav-item"><i class="fas fa-clipboard-list"></i><span class="nav-text">Audit Logs</span></a>
             <a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
         </nav>
     </aside>
@@ -53,6 +54,7 @@
             </div>
             <div class="header-right">
                 <button class="btn btn-success" onclick="downloadEmployeesExcel()"><i class="fas fa-file-excel"></i> <span class="btn-label">Download Excel</span></button>
+                <button class="btn btn-secondary" onclick="openImportModal()"><i class="fas fa-file-csv"></i> <span class="btn-label">Import CSV</span></button>
                 <button class="btn btn-primary" onclick="openAddEmployeeModal()"><i class="fas fa-plus"></i> <span class="btn-label">Add Employee</span></button>
                 <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
                 <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
@@ -297,6 +299,34 @@
                 <div id="viewTabBank" style="display:none;"></div>
                 <div id="viewTabJob" style="display:none;"></div>
                 <div id="viewTabRequests" style="display:none;"></div>
+                <div style="border-top:1px solid var(--border-light);margin-top:16px;padding-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openLetterModal()"><i class="fas fa-file-lines"></i> Experience Letter</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openLetterModal('employment')"><i class="fas fa-file-lines"></i> Employment Letter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="letterModal">
+        <div class="modal-content" style="max-width:440px;">
+            <div class="modal-header">
+                <h2 id="letterModalTitle">Generate Letter</h2>
+                <button onclick="closeModal('letterModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="letterEmpInfo" style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:12px;"></p>
+                <div class="form-group" id="letterLwdGroup">
+                    <label>Last Working Date (optional)</label>
+                    <input type="date" class="form-control" id="letterLwd">
+                </div>
+                <div class="form-group">
+                    <label>Signatory Name (optional)</label>
+                    <input type="text" class="form-control" id="letterSignatory" placeholder="e.g. HR Manager name">
+                </div>
+                <div class="modal-footer" style="padding:0;margin-top:8px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('letterModal')">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="letterGenerateBtn" onclick="generateLetter()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                </div>
             </div>
         </div>
     </div>
@@ -337,6 +367,34 @@
         </div>
     </div>
 
+    <div class="modal" id="importModal">
+        <div class="modal-content" style="max-width:640px;">
+            <div class="modal-header">
+                <h2>Import Employees from CSV</h2>
+                <button onclick="closeModal('importModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;">
+                    Required columns: <code>employee_id, first_name, last_name, email</code>.
+                    Optional: <code>phone, department_id, designation_id, joining_date (YYYY-MM-DD), salary, role</code>.
+                    Download the template for the full column list.
+                </p>
+                <div style="display:flex;gap:10px;margin-bottom:14px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="downloadCsvTemplate()"><i class="fas fa-download"></i> Template</button>
+                    <input type="file" id="csvFile" accept=".csv,text/csv" style="flex:1;" onchange="previewCsv()">
+                </div>
+                <div id="csvPreviewWrap" style="max-height:260px;overflow:auto;border:1px solid var(--border-light);border-radius:8px;display:none;margin-bottom:14px;">
+                    <table style="width:100%;font-size:0.78rem;"><thead><tr id="csvPreviewHead"></tr></thead><tbody id="csvPreviewBody"></tbody></table>
+                </div>
+                <div id="csvSummary" style="font-size:0.85rem;font-weight:600;display:none;"></div>
+                <div class="modal-footer" style="padding:0;margin-top:8px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('importModal')">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="csvImportBtn" onclick="runImport()" disabled><i class="fas fa-file-import"></i> Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="../../js/auth.js"></script>
     <script src="../../js/dashboard.js"></script>
     <script>
@@ -355,7 +413,15 @@
                 document.querySelectorAll('#addRole option[value="admin"], #editRole option[value="admin"]').forEach(o => o.remove());
             }
             loadEmployees();
-            loadDepartments();
+            // Apply ?department=<id> (e.g. from the Departments page cards)
+            // once the filter dropdown options exist.
+            loadDepartments().then(() => {
+                const deptParam = new URLSearchParams(window.location.search).get('department');
+                if (deptParam) {
+                    document.getElementById('filterDept').value = deptParam;
+                    filterEmployees();
+                }
+            });
             loadDesignations();
             loadReportingManagers();
             loadPendingCounts().then(() => {
@@ -745,6 +811,8 @@
                     showToast('Employee terminated successfully', 'success');
                     await Promise.all([loadEmployees(), loadPendingCounts()]);
                     if (currentViewEmployee && String(currentViewEmployee.id) === String(id)) viewEmployee(id);
+                } else {
+                    showToast(result?.message || 'Failed to terminate employee', 'error');
                 }
             });
         }
@@ -1123,6 +1191,205 @@
                 loadNotifBadge();
             } else {
                 showToast(result?.message || 'Failed to reject', 'error');
+            }
+        }
+
+        // ---------- Letters (experience / employment PDF) ----------
+        let letterType = 'experience';
+
+        function openLetterModal(type) {
+            letterType = type || 'experience';
+            if (!currentViewEmployee) { showToast('Open an employee first', 'error'); return; }
+            document.getElementById('letterModalTitle').textContent = (letterType === 'employment' ? 'Employment' : 'Experience') + ' Letter';
+            document.getElementById('letterEmpInfo').innerHTML =
+                '<strong>' + escapeHtml((currentViewEmployee.first_name || '') + ' ' + (currentViewEmployee.last_name || '')) + '</strong> (' + escapeHtml(currentViewEmployee.employee_id || '') + ')';
+            document.getElementById('letterLwdGroup').style.display = letterType === 'employment' ? 'none' : 'block';
+            document.getElementById('letterLwd').value = '';
+            document.getElementById('letterSignatory').value = '';
+            document.getElementById('letterModal').classList.add('active');
+        }
+
+        async function generateLetter() {
+            if (!currentViewEmployee) return;
+            const btn = document.getElementById('letterGenerateBtn');
+            if (btn.disabled) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/letters/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        employee_id: currentViewEmployee.id,
+                        letter_type: letterType,
+                        last_working_date: document.getElementById('letterLwd').value || undefined,
+                        signatory_name: document.getElementById('letterSignatory').value.trim() || undefined
+                    })
+                });
+                if (!response.ok) {
+                    let msg = 'Letter generation failed';
+                    try { const j = await response.json(); if (j.message) msg = j.message; } catch (_) {}
+                    showToast(msg, 'error');
+                    return;
+                }
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = letterType + '_letter_' + (currentViewEmployee.employee_id || '') + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                closeModal('letterModal');
+                showToast('Letter downloaded!', 'success');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF';
+            }
+        }
+
+        // ---------- CSV bulk import ----------
+        let csvRows = null;
+
+        const CSV_COLUMNS = ['employee_id', 'first_name', 'last_name', 'email', 'phone',
+            'department_id', 'designation_id', 'joining_date', 'salary', 'role',
+            'date_of_birth', 'gender', 'personal_email', 'blood_group', 'marital_status',
+            'bank_name', 'bank_branch', 'bank_account', 'bank_ifsc',
+            'pan_number', 'aadhaar_number', 'uan_number', 'pf_number', 'esi_number'];
+        const CSV_REQUIRED = ['employee_id', 'first_name', 'last_name', 'email'];
+
+        function openImportModal() {
+            document.getElementById('csvFile').value = '';
+            document.getElementById('csvPreviewWrap').style.display = 'none';
+            document.getElementById('csvSummary').style.display = 'none';
+            document.getElementById('csvImportBtn').disabled = true;
+            csvRows = null;
+            document.getElementById('importModal').classList.add('active');
+        }
+
+        function downloadCsvTemplate() {
+            const rows = [CSV_COLUMNS, ['EMP010', 'Ravi', 'Kumar', 'ravi@example.com', '9876543210', '', '', '2025-01-15', '30000', 'employee']];
+            const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'employee_import_template.csv';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        // Minimal RFC-4180-ish CSV parser: handles quoted fields and escaped quotes.
+        function parseCsv(text) {            const rows = [];
+            let row = [], field = '', inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                if (inQuotes) {
+                    if (ch === '"') {
+                        if (text[i + 1] === '"') { field += '"'; i++; }
+                        else inQuotes = false;
+                    } else field += ch;
+                } else if (ch === '"') {
+                    inQuotes = true;
+                } else if (ch === ',') {
+                    row.push(field); field = '';
+                } else if (ch === '\n' || ch === '\r') {
+                    if (ch === '\r' && text[i + 1] === '\n') i++;
+                    row.push(field); field = '';
+                    if (row.some(c => c.trim() !== '')) rows.push(row);
+                    row = [];
+                } else field += ch;
+            }
+            row.push(field);
+            if (row.some(c => c.trim() !== '')) rows.push(row);
+            return rows;
+        }
+
+        function previewCsv() {
+            const input = document.getElementById('csvFile');
+            if (!input.files || !input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try { handleCsvText(String(reader.result)); }
+                catch (e) { showToast('Could not read the file: ' + e.message, 'error'); }
+            };
+            reader.readAsText(input.files[0]);
+        }
+
+        function handleCsvText(text) {
+            const parsed = parseCsv(text.replace(/^\uFEFF/, ''));
+            if (parsed.length < 2) { showToast('CSV needs a header row plus at least one data row', 'error'); return; }
+            const headers = parsed[0].map(h => h.trim().toLowerCase());
+            const missing = CSV_REQUIRED.filter(r => !headers.includes(r));
+            if (missing.length > 0) { showToast('Missing required column(s): ' + missing.join(', '), 'error'); return; }
+            if (parsed.length - 1 > 500) { showToast('Maximum 500 rows per import. Split the file.', 'error'); return; }
+
+            csvRows = parsed.slice(1).map(cells => {
+                const obj = {};
+                headers.forEach((h, idx) => { obj[h] = cells[idx] !== undefined ? cells[idx].trim() : ''; });
+                return obj;
+            });
+
+            // Preview first 5 rows
+            document.getElementById('csvPreviewHead').innerHTML =
+                '<th>Row</th>' + CSV_REQUIRED.map(h => '<th>' + escapeHtml(h) + '</th>').join('');
+            document.getElementById('csvPreviewBody').innerHTML =
+                csvRows.slice(0, 5).map((r, i) => {
+                    const bad = CSV_REQUIRED.some(h => !r[h]);
+                    return '<tr' + (bad ? ' style="background:var(--danger-light,#FEE2E2);"' : '') + '>' +
+                        '<td>' + (i + 1) + '</td>' +
+                        CSV_REQUIRED.map(h => '<td>' + escapeHtml(r[h] || '') + '</td>').join('') +
+                    '</tr>';
+                }).join('') +
+                (csvRows.length > 5 ? '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);">...and ' + (csvRows.length - 5) + ' more rows</td></tr>' : '');
+            document.getElementById('csvPreviewWrap').style.display = 'block';
+
+            const invalidCount = csvRows.filter(r => CSV_REQUIRED.some(h => !r[h])).length;
+            const summary = document.getElementById('csvSummary');
+            summary.style.display = 'block';
+            summary.textContent = csvRows.length + ' row(s) found' + (invalidCount ? ', ' + invalidCount + ' with missing required fields (they will be skipped by the server)' : '');
+            summary.style.color = invalidCount ? 'var(--warning, #B45309)' : 'var(--success, #059669)';
+
+            document.getElementById('csvImportBtn').disabled = false;
+        }
+
+        async function runImport() {
+            if (!csvRows || csvRows.length === 0) return;
+            const btn = document.getElementById('csvImportBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+
+            const result = await apiCall('/employees/import', 'POST', { items: csvRows });
+
+            btn.innerHTML = '<i class="fas fa-file-import"></i> Import';
+            if (result && result.success) {
+                showToast(result.created + ' employee(s) created' + (result.failed ? ', ' + result.failed + ' failed' : ''), result.failed ? 'warning' : 'success');
+                closeModal('importModal');
+                await Promise.all([loadEmployees(), loadPendingCounts()]);
+                if (result.results && result.results.length <= 20) {
+                    result.results.filter(r => !r.ok).forEach(r =>
+                        showToast('Row ' + r.row + ': ' + (r.error || 'failed'), 'error'));
+                }
+                // Show temp passwords for created accounts so admin can share them.
+                const createdRows = (result.results || []).filter(r => r.ok);
+                if (createdRows.length > 0 && createdRows.length <= 10) {
+                    showConfirmDialog(
+                        'Import Complete — Temp Passwords',
+                        'Save these now, they are shown only once:\n\n' +
+                        createdRows.map(r => r.employee_id + ': ' + r.temp_password).join('\n'),
+                        'Got it', 'btn-primary'
+                    );
+                } else if (createdRows.length > 10) {
+                    showToast(createdRows.length + ' accounts created. Temp passwords were random - use Reset Password to reissue.', 'info');
+                }
+            } else {
+                showToast((result && result.message) || 'Import failed', 'error');
+                btn.disabled = false;
             }
         }
     </script>

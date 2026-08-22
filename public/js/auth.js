@@ -284,6 +284,13 @@ function formatDate(dateString, options = {}) {
     return new Date(dateString).toLocaleDateString('en-IN', { ...defaults, ...options });
 }
 
+// Today's date in IST as YYYY-MM-DD. Never use toISOString().split('T')[0]
+// for "today" checks - that is UTC and returns yesterday between 00:00 and
+// 05:29 IST.
+function getTodayIST() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+}
+
 // Escape HTML for both text and attribute contexts.
 // div.textContent/div.innerHTML escapes &, <, > and (in browsers) " and ',
 // but relying on the browser mapping is fragile, so we also escape quotes
@@ -303,6 +310,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
+        // Sync the header toggle icon with the restored theme.
+        const icon = document.getElementById('themeIcon');
+        if (icon) { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); }
     }
 });
 

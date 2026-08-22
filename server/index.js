@@ -11,9 +11,21 @@ const { query } = require('./config/database');
 // 15MB JSON limit: payroll generate/generate-bulk payloads carry base64 PDFs
 // (default 100KB limit rejected them with 413). Vercel caps at ~4.5MB anyway,
 // and the bulk flow chunks requests client-side to stay under that.
-app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+// CORS lock-down: only the origins listed in ALLOWED_ORIGINS may call the API
+// from a browser. Requests without an Origin header (mobile apps, curl,
+// server-to-server) are still allowed since they are not subject to CORS.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ||
+    'https://gensarhrms.in,https://www.gensarhrms.in,http://localhost:3000,http://127.0.0.1:3000')
+    .split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({
+    origin(origin, callback) {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        return callback(null, false);
+    }
+}));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
@@ -24,6 +36,7 @@ app.use('/api/employees', require('./routes/employees'));
 app.use('/api/departments', require('./routes/departments'));
 app.use('/api/designations', require('./routes/designations'));
 app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/regularization', require('./routes/regularization'));
 app.use('/api/leave', require('./routes/leave'));
 app.use('/api/wfh', require('./routes/wfh'));
 app.use('/api/payroll', require('./routes/payroll'));
@@ -31,6 +44,8 @@ app.use('/api/documents', require('./routes/documents'));
 app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/holidays', require('./routes/holidays'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/audit-logs', require('./routes/auditLogs'));
+app.use('/api/letters', require('./routes/letters'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/profile-updates', require('./routes/profileUpdates'));
 app.use('/api/notifications', require('./routes/notifications'));
