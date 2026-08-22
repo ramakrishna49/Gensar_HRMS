@@ -102,8 +102,15 @@
 
     <style>
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-        .cal-weekday { text-align: center; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); padding: 6px 0; }
-        .cal-cell { border: 1px solid var(--border-light); border-radius: var(--radius); min-height: 74px; padding: 6px; position: relative; display: flex; flex-direction: column; }
+        #monthlyContainer { overflow-x: auto; }
+        .cal-weekday { text-align: center; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); background: var(--primary-50, #EEF2FF); border-radius: 8px; padding: 7px 0; }
+        .cal-cell { border: 1px solid var(--border-light); border-radius: var(--radius); min-height: 74px; padding: 6px; position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+        .cal-day, .cal-tag, .cal-in { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Month summary cards - compact grid above the calendar */
+        .att-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+        .att-stats-grid .stat-card { padding: 10px 12px; margin: 0; }
+        .att-stats-grid .stat-info h3 { font-size: 1.05rem; }
         .cal-cell .cal-day { font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
         .cal-cell .cal-tag { font-size: 0.62rem; font-weight: 600; border-radius: 4px; padding: 1px 5px; align-self: flex-start; }
         .cal-cell .cal-in { font-size: 0.62rem; color: var(--text-secondary); margin-top: 2px; }
@@ -132,6 +139,11 @@
             .cal-cell { min-height: 46px; padding: 3px; }
             .cal-cell .cal-day { font-size: 0.7rem; }
             .cal-cell .cal-in { font-size: 0.55rem; }
+            .att-stats-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+            .att-stats-grid .stat-card { padding: 8px 6px; }
+            .att-stats-grid .stat-info h3 { font-size: 0.95rem; }
+            .att-stats-grid .stat-info p { font-size: 0.62rem; }
+            .cal-weekday { font-size: 0.58rem; padding: 5px 0; }
         }
     </style>
 
@@ -318,16 +330,7 @@
             const todayStr = getTodayIST();
             const padStart = new Date(year, month - 1, -(lead) + 1);
 
-            let html = '<div class="cal-legend">' +
-                '<span class="legend-item"><span class="legend-dot cal-present"></span> Present</span>' +
-                '<span class="legend-item"><span class="legend-dot cal-late"></span> Late Login</span>' +
-                '<span class="legend-item"><span class="legend-dot cal-half-day"></span> Half Day</span>' +
-                '<span class="legend-item"><span class="legend-dot cal-absent"></span> Absent</span>' +
-                '<span class="legend-item"><span class="legend-dot cal-weekoff"></span> Week Off</span>' +
-                '<span class="legend-item"><span class="legend-dot cal-holiday"></span> Holiday</span>' +
-                '</div>';
-
-            html += '<div class="calendar-grid">';
+            let html = '<div class="calendar-grid">';
             shortDayNames.forEach(s => { html += '<div class="cal-weekday">' + s + '</div>'; });
 
             for (let i = 0; i < lead; i++) {
@@ -378,17 +381,18 @@
             }
             html += '</div>';
 
+            // Summary cards render ABOVE the calendar for an at-a-glance month.
             const presentTotal = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday;
-            html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;">';
-            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + presentTotal + '</h3><p>Present Days</p></div></div>';
-            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.late + '</h3><p>Late Logins</p></div></div>';
-            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts['half-day'] + '</h3><p>Half Days</p></div></div>';
-            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.absent + '</h3><p>Absent Days</p></div></div>';
-            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.weekoff + '</h3><p>Week Offs</p></div></div>';
-            html += '<div class="stat-card" style="flex:1;min-width:130px;padding:14px;"><div class="stat-info"><h3>' + counts.holiday + '</h3><p>Holidays</p></div></div>';
-            html += '</div>';
+            let statsHtml = '<div class="att-stats-grid">';
+            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + presentTotal + '</h3><p>Present Days</p></div></div>';
+            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts.late + '</h3><p>Late Logins</p></div></div>';
+            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts['half-day'] + '</h3><p>Half Days</p></div></div>';
+            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts.absent + '</h3><p>Absent Days</p></div></div>';
+            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts.weekoff + '</h3><p>Week Offs</p></div></div>';
+            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts.holiday + '</h3><p>Holidays</p></div></div>';
+            statsHtml += '</div>';
 
-            container.innerHTML = html;
+            container.innerHTML = statsHtml + html;
         }
     </script>
 </body>
