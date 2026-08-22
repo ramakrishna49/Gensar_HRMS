@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>WFH - Gensar HRMS</title>
     <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
     <link rel="manifest" href="/manifest.json">
@@ -17,7 +17,7 @@
         .date-info { background: var(--primary-50); border-radius: var(--radius); padding: 12px 16px; margin-top: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--primary-dark); font-weight: 500; }
     </style>
 </head>
-<body>
+<body class="employee-app">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
@@ -67,7 +67,7 @@
             </div>
         </header>
 
-        <div style="padding:30px;">
+        <div class="page-body">
             <div id="rmWarning" style="display:none;border:1px solid var(--warning);background:var(--warning-light,#FEF3C7);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:0.9rem;line-height:1.5;color:#92400E;">
                 <i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i><strong>Reporting To not assigned.</strong> You cannot request WFH until an admin assigns your reporting person. Please contact your administrator.
             </div>

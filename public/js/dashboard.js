@@ -7,7 +7,7 @@ function toggleSidebar() {
     
     if (window.innerWidth <= 1024) {
         const isActive = sidebar.classList.toggle('active');
-        if (document.body.classList.contains('admin-app')) {
+        if (isShellApp()) {
             const bd = getSidebarBackdrop();
             bd.classList.toggle('show', isActive);
         }
@@ -653,7 +653,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminMobile();
 });
 
-// --- Admin app mobile helpers (gated on body.admin-app) ---
+// --- App shell mobile helpers (gated on admin/employee app body class) ---
+
+function isShellApp() {
+    return document.body.classList.contains('admin-app') ||
+        document.body.classList.contains('employee-app');
+}
 
 let adminTableTimer = null;
 
@@ -678,7 +683,7 @@ function adminTableRescan() {
 }
 
 function initAdminMobile() {
-    if (!document.body.classList.contains('admin-app')) return;
+    if (!isShellApp()) return;
     adminStampTableLabels();
     const mo = new MutationObserver(adminTableRescan);
     mo.observe(document.body, { childList: true, subtree: true });

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
     --primary: #4F46E5;
@@ -1697,6 +1697,7 @@ textarea.form-control {
     
     .header-right {
         gap: 8px;
+        flex-wrap: wrap;
     }
     
     #profileName {
@@ -1876,14 +1877,14 @@ textarea.form-control {
 
 /* ============================================
    ADMIN MOBILE UI (phone PWA - admin pages only)
-   Scoped under body.admin-app; desktop untouched.
+   Scoped under body:is(.admin-app,.employee-app); desktop untouched.
    ============================================ */
-body.admin-app .page-body {
+body:is(.admin-app,.employee-app) .page-body {
     padding: 30px;
 }
 
 /* Sidebar backdrop for mobile drawer */
-body.admin-app .sidebar-backdrop {
+body:is(.admin-app,.employee-app) .sidebar-backdrop {
     display: none;
     position: fixed;
     top: 0;
@@ -1893,63 +1894,63 @@ body.admin-app .sidebar-backdrop {
     background: rgba(15, 23, 42, 0.45);
     z-index: 999;
 }
-body.admin-app .sidebar-backdrop.show {
+body:is(.admin-app,.employee-app) .sidebar-backdrop.show {
     display: block;
     animation: fadeIn 0.2s ease;
 }
-body.admin-app .sidebar {
+body:is(.admin-app,.employee-app) .sidebar {
     padding-top: env(safe-area-inset-top, 0px);
 }
 
 @media (max-width: 768px) {
-    body.admin-app .page-body {
+    body:is(.admin-app,.employee-app) .page-body {
         padding: 14px;
         padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     }
 
-    body.admin-app .grid-4 {
+    body:is(.admin-app,.employee-app) .grid-4 {
         grid-template-columns: repeat(2, 1fr);
     }
 
-    body.admin-app .card {
+    body:is(.admin-app,.employee-app) .card {
         padding: 14px;
     }
 
-    body.admin-app .card-header {
+    body:is(.admin-app,.employee-app) .card-header {
         margin-bottom: 14px;
     }
 
-    body.admin-app .stat-card {
+    body:is(.admin-app,.employee-app) .stat-card {
         padding: 12px;
         gap: 10px;
     }
 
-    body.admin-app .stat-icon {
+    body:is(.admin-app,.employee-app) .stat-icon {
         width: 44px;
         height: 44px;
         font-size: 1.15rem;
     }
 
     /* Tables -> stacked label:value cards */
-    body.admin-app .table-container {
+    body:is(.admin-app,.employee-app) .table-container {
         overflow: visible;
         border-radius: 0;
     }
 
-    body.admin-app .table-container table {
+    body:is(.admin-app,.employee-app) .table-container table {
         min-width: 0;
         display: block;
     }
 
-    body.admin-app .table-container thead {
+    body:is(.admin-app,.employee-app) .table-container thead {
         display: none;
     }
 
-    body.admin-app .table-container tbody {
+    body:is(.admin-app,.employee-app) .table-container tbody {
         display: block;
     }
 
-    body.admin-app .table-container tbody tr {
+    body:is(.admin-app,.employee-app) .table-container tbody tr {
         display: block;
         background: #fff;
         border: 1px solid var(--border-light);
@@ -1959,11 +1960,11 @@ body.admin-app .sidebar {
         margin-bottom: 12px;
     }
 
-    body.admin-app .table-container tbody tr:hover {
+    body:is(.admin-app,.employee-app) .table-container tbody tr:hover {
         background: #fff;
     }
 
-    body.admin-app .table-container tbody td {
+    body:is(.admin-app,.employee-app) .table-container tbody td {
         display: block;
         border: none;
         padding: 7px 0;
@@ -1971,7 +1972,7 @@ body.admin-app .sidebar {
         text-align: left;
     }
 
-    body.admin-app .table-container tbody td::before {
+    body:is(.admin-app,.employee-app) .table-container tbody td::before {
         content: attr(data-label);
         display: block;
         font-size: 0.66rem;
@@ -1982,85 +1983,85 @@ body.admin-app .sidebar {
         margin-bottom: 2px;
     }
 
-    body.admin-app .table-container tbody td[colspan] {
+    body:is(.admin-app,.employee-app) .table-container tbody td[colspan] {
         text-align: center;
         padding: 20px 0;
     }
 
-    body.admin-app .table-container tbody td[colspan]::before {
+    body:is(.admin-app,.employee-app) .table-container tbody td[colspan]::before {
         display: none;
     }
 
-    body.admin-app .table-container tbody td > div {
+    body:is(.admin-app,.employee-app) .table-container tbody td > div {
         max-width: 100%;
     }
 
     /* Modals -> bottom sheets */
-    body.admin-app .modal {
+    body:is(.admin-app,.employee-app) .modal {
         padding: 0;
         align-items: flex-end;
     }
 
-    body.admin-app .modal-content {
+    body:is(.admin-app,.employee-app) .modal-content {
         max-width: 100%;
         max-height: 88vh;
         border-radius: 18px 18px 0 0;
     }
 
-    body.admin-app .modal-header {
+    body:is(.admin-app,.employee-app) .modal-header {
         border-radius: 18px 18px 0 0;
     }
 
-    body.admin-app .modal-footer {
+    body:is(.admin-app,.employee-app) .modal-footer {
         border-radius: 0;
     }
 }
 
 @media (max-width: 480px) {
-    body.admin-app .grid-4 {
+    body:is(.admin-app,.employee-app) .grid-4 {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
 
-    body.admin-app .grid-2,
-    body.admin-app .grid-3 {
+    body:is(.admin-app,.employee-app) .grid-2,
+    body:is(.admin-app,.employee-app) .grid-3 {
         grid-template-columns: 1fr;
     }
 
-    body.admin-app .stat-card {
+    body:is(.admin-app,.employee-app) .stat-card {
         padding: 10px;
     }
 
-    body.admin-app .stat-info h3 {
+    body:is(.admin-app,.employee-app) .stat-info h3 {
         font-size: 1.2rem;
     }
 
     /* Header action buttons: icon-only on phones */
-    body.admin-app .btn-label {
+    body:is(.admin-app,.employee-app) .btn-label {
         display: none;
     }
 
-    body.admin-app .header-right .btn {
+    body:is(.admin-app,.employee-app) .header-right .btn {
         padding: 9px 11px;
         font-size: 0.85rem;
     }
 
     /* Toast -> bottom, full width */
-    body.admin-app .toast-container {
+    body:is(.admin-app,.employee-app) .toast-container {
         top: auto;
         bottom: calc(16px + env(safe-area-inset-bottom, 0px));
         left: 16px;
         right: 16px;
     }
 
-    body.admin-app .toast {
+    body:is(.admin-app,.employee-app) .toast {
         min-width: 0;
         width: 100%;
         max-width: 100%;
     }
 
     /* Notification panel -> bottom sheet */
-    body.admin-app .notification-panel {
+    body:is(.admin-app,.employee-app) .notification-panel {
         top: auto;
         bottom: 0;
         left: 0;
@@ -2074,12 +2075,12 @@ body.admin-app .sidebar {
 }
 
 /* Dark mode: card rows + bottom sheets follow theme */
-body.admin-app.dark-mode .table-container tbody tr,
-body.admin-app.dark-mode .modal-content,
-body.admin-app.dark-mode .notification-panel {
+body:is(.admin-app,.employee-app).dark-mode .table-container tbody tr,
+body:is(.admin-app,.employee-app).dark-mode .modal-content,
+body:is(.admin-app,.employee-app).dark-mode .notification-panel {
     background: var(--bg-card);
 }
-body.admin-app.dark-mode .table-container tbody tr {
+body:is(.admin-app,.employee-app).dark-mode .table-container tbody tr {
     border-color: var(--border);
 }
 
