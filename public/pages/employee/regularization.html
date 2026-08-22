@@ -92,16 +92,18 @@
         .clock-num:hover { background: rgba(37, 99, 235, 0.12); }
         .clock-num.sel { background: var(--primary); color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(37,99,235,0.45); }
         .clock-hand {
-            position: absolute; left: calc(50% - 1.5px); bottom: 50%;
-            width: 3px; height: 64px; transform-origin: 50% 100%;
-            background: linear-gradient(180deg, var(--primary) 55%, transparent);
-            border-radius: 3px; opacity: 0; transition: transform 0.25s ease, opacity 0.2s ease;
-            pointer-events: none;
+            position: absolute; left: calc(50% - 2px); bottom: 50%;
+            width: 4px; height: 46px; transform-origin: 50% 100%;
+            background: var(--text-primary); border-radius: 4px;
+            opacity: 0; transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.25s ease;
+            pointer-events: none; z-index: 2;
         }
-        .clock-hand.on { opacity: 0.85; }
+        .clock-hand.min-hand { left: calc(50% - 1.25px); width: 2.5px; height: 66px; background: var(--primary); }
+        .clock-hand.on { opacity: 1; }
         .clock-dot {
-            position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
-            border-radius: 50%; background: var(--primary); pointer-events: none;
+            position: absolute; left: 50%; top: 50%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px;
+            border-radius: 50%; background: var(--primary); pointer-events: none; z-index: 3;
+            box-shadow: 0 0 0 2.5px var(--card-bg, #fff);
         }
         .clock-digital {
             font-size: 1.15rem; font-weight: 800; letter-spacing: 0.06em;
@@ -254,6 +256,7 @@
         }
         function closePickers() {
             document.querySelectorAll('.picker-popup.open').forEach(p => p.classList.remove('open'));
+            stopLive('in'); stopLive('out');
         }
         document.addEventListener('click', e => { if (!e.target.closest('.picker-wrap')) closePickers(); });
 
@@ -302,10 +305,28 @@
             in: { ampm: 'AM', h: null, m: null },
             out: { ampm: 'AM', h: null, m: null }
         };
+        const clockTimers = {};
         function openClock(kind) {
             const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
             if (!pop.dataset.built) { renderClock(kind); pop.dataset.built = '1'; }
             pop.classList.add('open');
+        }
+        // While nothing is picked yet, hands tick with the CURRENT time - feels alive.
+        function startLive(kind) {
+            stopLive(kind);
+            const tick = () => {
+                const n = istNow();
+                const st = timePick[kind];
+                st.h = n.getHours() % 12 || 12;
+                st.liveM = n.getMinutes();
+                updateHands(kind);
+                updatePreview(kind);
+            };
+            tick();
+            clockTimers[kind] = setInterval(tick, 1000);
+        }
+        function stopLive(kind) {
+            if (clockTimers[kind]) { clearInterval(clockTimers[kind]); delete clockTimers[kind]; }
         }
         function renderClock(kind) {
             const st = timePick[kind];
@@ -325,7 +346,8 @@
                     <div class="clock-face">
                         ${ticks}
                         ${nums.join('')}
-                        <div class="clock-hand" id="${kind}Hand"></div>
+                        <div class="clock-hand" id="${kind}HourHand"></div>
+                        <div class="clock-hand min-hand" id="${kind}MinHand"></div>
                         <div class="clock-dot"></div>
                     </div>
                     <div class="clock-digital" id="${kind}Preview">--:--</div>
@@ -335,20 +357,28 @@
                     </div>
                 </div>`;
             if (st.h != null) { markHour(kind); updateHands(kind); updatePreview(kind); }
+            else startLive(kind);
         }
         function updateHands(kind) {
             const st = timePick[kind];
-            const hand = document.getElementById(kind + 'Hand');
-            if (!hand) return;
-            if (st.h != null) { hand.classList.add('on'); hand.style.transform = `rotate(${st.h * 30}deg)`; }
-            else hand.classList.remove('on');
+            const hh = document.getElementById(kind + 'HourHand');
+            const mh = document.getElementById(kind + 'MinHand');
+            if (!hh) return;
+            const mVal = st.m != null ? st.m : (st.liveM || 0);
+            const hDeg = ((st.h % 12) || 0) * 30 + mVal * 0.5;
+            hh.classList.add('on');
+            hh.style.transform = `rotate(${hDeg}deg)`;
+            mh.classList.add('on');
+            mh.style.transform = `rotate(${mVal * 6}deg)`;
         }
         function setAmpm(kind, v) {
+            stopLive(kind);
             timePick[kind].ampm = v;
             const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
             pop.querySelectorAll('.ampm-pill').forEach(p => p.classList.toggle('sel', p.textContent === v));
         }
         function pickHour(kind, hr) {
+            stopLive(kind);
             timePick[kind].h = hr;
             markHour(kind);
             updateHands(kind);
@@ -367,8 +397,9 @@
         }
         function updatePreview(kind) {
             const st = timePick[kind];
+            const mm = st.m != null ? st.m : (st.liveM != null ? st.liveM : null);
             document.getElementById(kind + 'Preview').textContent =
-                `${st.h != null ? st.h : '--'}:${st.m != null ? String(st.m).padStart(2, '0') : '--'}`;
+                `${st.h != null ? st.h : '--'}:${mm != null ? String(mm).padStart(2, '0') : '--'}`;
         }
         function finalizeTime(kind) {
             const st = timePick[kind];
