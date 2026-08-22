@@ -214,7 +214,7 @@ async function computeAttendanceSummary(employeeId, month, year) {
         };
     }
 
-    const [attRes, leaveRes, wfhRes, holRes] = await Promise.all([
+    const [attRes, leaveRes, wfhRes, holRes, pendRes] = await Promise.all([
         query(`SELECT date, status FROM attendance
                WHERE employee_id = $1 AND date >= $2 AND date <= $3`, [employeeId, effStart, end]),
         query(`SELECT start_date, end_date FROM leave_applications
@@ -223,7 +223,10 @@ async function computeAttendanceSummary(employeeId, month, year) {
         query(`SELECT start_date, end_date FROM wfh_requests
                WHERE employee_id = $1 AND status = 'approved'
                  AND end_date >= $2 AND start_date <= $3`, [employeeId, effStart, end]),
-        query(`SELECT date FROM holidays WHERE is_active = 1 AND date >= $1 AND date <= $2`, [effStart, end])
+        query(`SELECT date FROM holidays WHERE is_active = 1 AND date >= $1 AND date <= $2`, [effStart, end]),
+        query(`SELECT start_date, end_date FROM leave_applications
+               WHERE employee_id = $1 AND status = 'pending'
+                 AND end_date >= $2 AND start_date <= $3`, [employeeId, effStart, end])
     ]);
 
     const fmtD = (v) => formatDateOnly(v);
@@ -357,6 +360,24 @@ async function computeAttendanceSummary(employeeId, month, year) {
         // Extra context for the admin UI derivation note.
         leave_taken: leaveDays,
         monthly_leave_quota: MONTHLY_LEAVE_QUOTA,
+        // Pending leaves are NOT protected - they currently count as LOP.
+        pending_leave_days: (() => {
+            let n = 0;
+            const seen = new Set();
+            for (const p of pendRes.rows) {
+                let c = new Date(fmtD(p.start_date) + 'T00:00:00Z');
+                const cE = new Date(fmtD(p.end_date) + 'T00:00:00Z');
+                while (c <= cE) {
+                    const ds = c.toISOString().substring(0, 10);
+                    if (ds >= effStart && ds <= end && ds <= todayStr && !seen.has(ds)) {
+                        const dw = c.getUTCDay();
+                        if (dw !== 0 && dw !== 6 && !holidaySet.has(ds)) { n++; seen.add(ds); }
+                    }
+                    c.setUTCDate(c.getUTCDate() + 1);
+                }
+            }
+            return n;
+        })(),
         breakdown: {
             present: tally.present,
             late: tally.late,

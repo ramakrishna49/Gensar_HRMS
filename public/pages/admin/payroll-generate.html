@@ -373,6 +373,9 @@
                                 const covered = Math.min(s.leave_taken, q);
                                 extra = ' | Leaves taken ' + s.leave_taken + ': ' + covered + ' paid (monthly quota) + ' + (s.leave_taken - covered) + ' LOP';
                             }
+                            if ((s.pending_leave_days || 0) > 0) {
+                                extra += ' | NOTE: ' + s.pending_leave_days + ' PENDING leave day' + (s.pending_leave_days > 1 ? 's' : '') + ' not protected - approve them first!';
+                            }
                             dv.style.display = 'block';
                             dv.textContent = parts.join(' + ') + ' = ' + s.working_days + ' total days | Present ' + s.present_days + ' (incl. check-ins, WFH, week offs & holidays)' + extra + ' | LOP ' + s.lop_days + ' days will be deducted (period ' + s.period_start + ' to ' + s.period_end + ')';
                         }
