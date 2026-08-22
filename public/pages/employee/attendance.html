@@ -30,12 +30,12 @@
             <a href="/pages/employee/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
             <a href="/pages/employee/payslips.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
             <div class="nav-section-title">Support</div>
-            <a href="/pages/employee/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
-            <div class="nav-section-title">Resources</div>
             <a href="/pages/employee/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <div class="nav-section-title">Resources</div>
             <a href="/pages/employee/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
             <a href="/pages/employee/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
         <a href="/pages/employee/directory.html" class="nav-item"><i class="fas fa-address-book"></i><span class="nav-text">Directory</span></a>
+            <a href="/pages/employee/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
         </nav>
     </aside>
 
@@ -76,8 +76,9 @@
                         <input type="number" id="filterYear" class="form-control" style="width:100px;" onchange="loadData()">
                     </div>
                 </div>
-                <div id="summaryBar" style="margin-bottom:16px;font-size:0.9rem;color:var(--text-secondary);"></div>
-                <div id="tableContainer" style="display:block;">
+            <div id="summaryBar" style="margin-bottom:16px;font-size:0.9rem;color:var(--text-secondary);"></div>
+            <div id="attStatsBar"></div>
+            <div id="tableContainer" style="display:block;">
                     <div style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></div>
                 </div>
                 <div id="monthlyContainer" style="display:none;"></div>
@@ -144,6 +145,7 @@
         let currentView = 'month';
         let lastRecords = [];
         let lastHolidays = [];
+        let lastMonthCounts = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             if (!checkAuth()) throw new Error('Not authenticated');
@@ -206,33 +208,39 @@
             const container = document.getElementById('tableContainer');
             const summaryEl = document.getElementById('summaryBar');
 
-            const present = records.filter(a => a.status === 'present').length;
-            const absent = records.filter(a => a.status === 'absent').length;
-            const late = records.filter(a => a.status === 'late').length;
-            const halfDay = records.filter(a => a.status === 'half-day').length;
-            const overtime = records.reduce((s, a) => s + parseFloat(a.overtime_hours || 0), 0);
-
-            // Week offs + holidays count toward Present Days. Only elapsed
-            // days are tallied, and a day actually worked always wins.
+            // Month counters shared by the list and monthly views. Week offs +
+            // holidays count toward Total Present Days (elapsed days only, and
+            // a day actually worked always wins).
+            const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0 };
+            records.forEach(a => {
+                if (a.status === 'present') counts.present++;
+                else if (a.status === 'late') counts.late++;
+                else if (a.status === 'half-day') counts['half-day']++;
+                else if (a.status === 'absent') counts.absent++;
+            });
             const holidayMap = {};
             (lastHolidays || []).forEach(h => { const k = (h.date || '').split('T')[0]; if (k) holidayMap[k] = h.name; });
             const statusByDate = {};
             records.forEach(a => { statusByDate[(a.date || '').split('T')[0]] = a.status; });
-            let offDays = 0;
             const daysInMonth = new Date(year, month, 0).getDate();
             const nowD = new Date();
             const isCurrentMonth = parseInt(month, 10) === nowD.getMonth() + 1 && parseInt(year, 10) === nowD.getFullYear();
+            const todayKey = getTodayIST();
             const lastCounted = isCurrentMonth ? nowD.getDate() : daysInMonth;
             for (let dd = 1; dd <= lastCounted; dd++) {
                 const key = year + '-' + String(month).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
                 const st = statusByDate[key];
                 if (st === 'present' || st === 'late' || st === 'half-day') continue;
+                if (holidayMap[key]) { counts.holiday++; continue; }
                 const dow = new Date(year, month - 1, dd).getDay();
-                if (holidayMap[key] || dow === 0 || dow === 6) offDays++;
+                if (dow === 0 || dow === 6) { counts.weekoff++; continue; }
+                if (key < todayKey) counts.absent++;
             }
+            lastMonthCounts = counts;
 
-            const totalDaysInMonth = daysInMonth;
-            summaryEl.innerHTML = '<span style="font-weight:500;">Present Days (incl. late logins, half days, week offs &amp; holidays): <strong>' + (present + late + halfDay + offDays) + '</strong> / ' + totalDaysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
+            const totalPresent = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday;
+            document.getElementById('attStatsBar').innerHTML = buildStatsCardsHtml(counts);
+            summaryEl.innerHTML = '<span style="font-weight:500;">Total Present Days (incl. late logins, half days, week offs &amp; holidays): <strong>' + totalPresent + '</strong> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
 
             if (records.length === 0) {
                 showEmptyState(container, 'fa-clock', 'No Records', 'No attendance records for this period');
@@ -362,8 +370,11 @@
             }
             html += '</div>';
 
-            // Summary cards render ABOVE the calendar with status colors.
-            const presentTotal = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday;
+            container.innerHTML = html;
+        }
+
+        // Shared colored summary cards (list + monthly views).
+        function buildStatsCardsHtml(counts) {
             const cardColors = {
                 present: ['#10B981', '#ECFDF5'],
                 late: ['#F59E0B', '#FFFBEB'],
@@ -373,16 +384,16 @@
                 holiday: ['#D946EF', '#FDF4FF']
             };
             const statCard = (val, label, c) => '<div class="stat-card" style="margin:0;border-left:4px solid ' + c[0] + ';background:' + c[1] + ';"><div class="stat-info" style="text-align:center;"><h3 style="color:' + c[0] + ';">' + val + '</h3><p>' + label + '</p></div></div>';
-            let statsHtml = '<div class="att-stats-grid">';
-            statsHtml += statCard(presentTotal, 'Present Days', cardColors.present);
-            statsHtml += statCard(counts.late, 'Late Logins', cardColors.late);
-            statsHtml += statCard(counts['half-day'], 'Half Days', cardColors.half);
-            statsHtml += statCard(counts.absent, 'Absent Days', cardColors.absent);
-            statsHtml += statCard(counts.weekoff, 'Week Offs', cardColors.weekoff);
-            statsHtml += statCard(counts.holiday, 'Holidays', cardColors.holiday);
-            statsHtml += '</div>';
-
-            container.innerHTML = statsHtml + html;
+            const presentTotal = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday;
+            let html = '<div class="att-stats-grid">';
+            html += statCard(presentTotal, 'Total Present Days', cardColors.present);
+            html += statCard(counts.late, 'Late Logins', cardColors.late);
+            html += statCard(counts['half-day'], 'Half Days', cardColors.half);
+            html += statCard(counts.absent, 'Absent Days', cardColors.absent);
+            html += statCard(counts.weekoff, 'Week Offs', cardColors.weekoff);
+            html += statCard(counts.holiday, 'Holidays', cardColors.holiday);
+            html += '</div>';
+            return html;
         }
     </script>
 </body>
