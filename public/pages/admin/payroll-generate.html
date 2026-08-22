@@ -173,7 +173,7 @@
                     <div class="pp-card-title"><i class="fas fa-pen-square"></i> Monthly Values <span class="pp-chip-note">Salary values are auto-filled from the employee profile. Add Bonus (C) values for this payslip.</span></div>
                     <div class="pp-form-grid" oninput="onFormInput()">
 
-                        <div class="pp-section-head"><i class="fas fa-calendar-day" style="margin-right:6px;"></i>Attendance</div>
+                        <div class="pp-section-head" style="display:flex;align-items:center;justify-content:space-between;grid-column:1/-1;"><span><i class="fas fa-calendar-day" style="margin-right:6px;"></i>Attendance</span><button type="button" id="autoAttBtn" onclick="autoFillAttendance()" style="background:#7c6ca8;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.75rem;font-weight:600;cursor:pointer;">⚡ Auto-fill</button></div>
                         <div class="pp-field"><label>Working Days</label><input type="number" id="working_days" class="pp-input" value="30" min="0"></div>
                         <div class="pp-field"><label>Present Days</label><input type="number" id="present_days" class="pp-input" value="0" min="0"></div>
                         <div class="pp-field"><label>Leave Days</label><input type="number" id="leave_days" class="pp-input" value="0" min="0"></div>
@@ -328,6 +328,35 @@
             document.getElementById('formCard').style.display = 'block';
             document.getElementById('previewCard').style.display = 'block';
             refreshPreview();
+            // Fully automatic: fetch real attendance numbers for this employee
+            // and period as soon as they are picked (skipped in edit mode so
+            // saved values are not overwritten).
+            if (!editingPayslip) autoFillAttendance(true);
+        }
+
+        // Pull attendance/leave/holiday numbers from the server and fill the
+        // four attendance fields. silent=true is used for the automatic fill;
+        // the button passes silent=false for explicit feedback.
+        async function autoFillAttendance(silent) {
+            const empId = document.getElementById('ppEmployee').value;
+            const month = document.getElementById('ppMonth').value;
+            const year = document.getElementById('ppYear').value;
+            if (!empId || !month || !year) { if (!silent) showToast('Select an employee first', 'warning'); return; }
+            const btn = document.getElementById('autoAttBtn');
+            if (btn && !silent) { btn.disabled = true; btn.textContent = 'Calculating...'; }
+            const d = await apiCall('/payroll/attendance-summary?employee_id=' + empId + '&month=' + month + '&year=' + year);
+            if (btn && !silent) { btn.disabled = false; btn.textContent = '⚡ Auto-fill'; }
+            if (d && d.success && d.summary) {
+                const s = d.summary;
+                set('working_days', s.working_days); set('present_days', s.present_days);
+                set('leave_days', s.leave_days); set('lop_days', s.lop_days);
+                updateSummary();
+                clearTimeout(previewTimer);
+                previewTimer = setTimeout(refreshPreview, 350);
+                if (!silent) showToast('Attendance auto-filled: W ' + s.working_days + ' / P ' + s.present_days + ' / L ' + s.leave_days + ' / LOP ' + s.lop_days, 'success');
+            } else if (!silent) {
+                showToast((d && d.message) || 'Could not auto-calculate attendance', 'error');
+            }
         }
 
         function showProfileBanner(emp) {
@@ -553,6 +582,12 @@
 
         function enableSingleMode() {
             document.getElementById('singlePanel').style.display = 'block';
+            // Period change re-runs the automatic attendance fill.
+            ['ppMonth', 'ppYear'].forEach(idc => {
+                document.getElementById(idc).addEventListener('change', () => {
+                    if (document.getElementById('formCard').style.display !== 'none' && !editingPayslip) autoFillAttendance(true);
+                });
+            });
         }
 
         // ---- Bulk mode ----
@@ -567,6 +602,57 @@
             document.getElementById('bulkPanel').style.display = 'block';
             bulkEmployees = employees.filter(e => e.status === 'active' && e.role !== 'admin');
             bulkRender();
+            // Prefill every row with real attendance numbers; the admin can
+            // still override any cell before generating.
+            ['bulkMonth', 'bulkYear'].forEach(idc => {
+                document.getElementById(idc).addEventListener('change', () => {
+                    bulkAttCache = {};
+                    bulkRender();
+                    bulkPrefillAttendance();
+                });
+            });
+            bulkPrefillAttendance();
+        }
+
+        let bulkPrefillBusy = false;
+        let bulkAttCache = {};
+        async function bulkPrefillAttendance() {
+            if (bulkPrefillBusy) return;
+            const month = document.getElementById('bulkMonth').value;
+            const year = document.getElementById('bulkYear').value;
+            const ids = Array.from(document.querySelectorAll('#bulkBody tr[data-emp]')).map(r => r.getAttribute('data-emp'));
+            if (!ids.length || !month || !year) return;
+            bulkPrefillBusy = true;
+            try {
+                const results = {};
+                for (let i = 0; i < ids.length; i += 6) {
+                    const batch = ids.slice(i, i + 6);
+                    const responses = await Promise.all(batch.map(id =>
+                        apiCall('/payroll/attendance-summary?employee_id=' + id + '&month=' + month + '&year=' + year)
+                            .then(d => ({ id, d })).catch(() => ({ id, d: null }))
+                    ));
+                    responses.forEach(({ id, d }) => { if (d && d.success && d.summary) results[id] = d.summary; });
+                }
+                // Cache survives search re-renders so prefilled values persist.
+                bulkAttCache = results;
+                applyBulkAttCache();
+            } finally {
+                bulkPrefillBusy = false;
+            }
+        }
+
+        function applyBulkAttCache() {
+            let changed = false;
+            document.querySelectorAll('#bulkBody tr[data-emp]').forEach(r => {
+                const s = bulkAttCache[r.getAttribute('data-emp')];
+                if (!s) return;
+                r.querySelector('.bulk-work').value = s.working_days;
+                r.querySelector('.bulk-pres').value = s.present_days;
+                r.querySelector('.bulk-leave').value = s.leave_days;
+                r.querySelector('.bulk-lop').value = s.lop_days;
+                changed = true;
+            });
+            if (changed) bulkRowCalc(null);
         }
 
         function bulkComponents(emp, basic) {
@@ -592,16 +678,23 @@
             }
             body.innerHTML = list.map(e => {
                 const comps = bulkComponents(e, null);
-                const t = ppCompute({ ...comps, working_days: 30, present_days: 30, leave_days: 0, lop_days: 0 });
+                // Use cached auto-attendance numbers when available so search
+                // re-renders do not reset prefilled rows back to 30/30.
+                const s0 = bulkAttCache[e.id] || {};
+                const work0 = s0.working_days != null ? s0.working_days : 30;
+                const pres0 = s0.present_days != null ? s0.present_days : 30;
+                const leave0 = s0.leave_days != null ? s0.leave_days : 0;
+                const lop0 = s0.lop_days != null ? s0.lop_days : 0;
+                const t = ppCompute({ ...comps, working_days: work0, present_days: pres0, leave_days: leave0, lop_days: lop0 });
                 return '<tr data-emp="' + e.id + '">' +
                     '<td><input type="checkbox" class="bulk-check" checked style="width:16px;height:16px;accent-color:#4F46E5;"></td>' +
                     '<td><div class="pp-emp"><div class="pp-emp-avatar">' + ppEsc(getInitials(e.first_name, e.last_name)) + '</div>' +
                         '<div><b>' + ppEsc(e.first_name) + ' ' + ppEsc(e.last_name) + '</b><small>' + ppEsc(e.employee_id) + (e.department_name ? ' &middot; ' + ppEsc(e.department_name) : '') + '</small></div></div></td>' +
                     '<td><input type="number" class="pp-input bulk-basic" value="' + (comps.basic_salary || 0) + '" step="0.01" min="0" readonly></td>' +
-                    '<td><input type="number" class="pp-input bulk-work" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
-                    '<td><input type="number" class="pp-input bulk-pres" value="30" min="0" oninput="bulkRowCalc(this)"></td>' +
-                    '<td><input type="number" class="pp-input bulk-leave" value="0" min="0" readonly></td>' +
-                    '<td><input type="number" class="pp-input bulk-lop" value="0" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-work" value="' + work0 + '" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-pres" value="' + pres0 + '" min="0" oninput="bulkRowCalc(this)"></td>' +
+                    '<td><input type="number" class="pp-input bulk-leave" value="' + leave0 + '" min="0" readonly></td>' +
+                    '<td><input type="number" class="pp-input bulk-lop" value="' + lop0 + '" min="0" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-bonus" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-incentive" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +
                     '<td><input type="number" class="pp-input bulk-extra" value="0" min="0" step="0.01" oninput="bulkRowCalc(this)"></td>' +

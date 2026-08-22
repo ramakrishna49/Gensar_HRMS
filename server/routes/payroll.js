@@ -180,6 +180,74 @@ async function getProfileSalaryValues(employeeId, values) {
     return { ...values, ...merged, personal_email: profile.personal_email || null };
 }
 
+// Auto-calculate payroll attendance numbers straight from the attendance,
+// leave and holiday tables so admins no longer hand-count days.
+// Working days = non-weekend days (Sat+Sun off) minus declared holidays,
+// starting from the joining date for mid-month joiners.
+async function computeAttendanceSummary(employeeId, month, year) {
+    const empRes = await query('SELECT joining_date FROM employees WHERE id = $1', [employeeId]);
+    if (empRes.rows.length === 0) return null;
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const start = `${year}-${pad(month)}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const end = `${year}-${pad(month)}-${pad(lastDay)}`;
+
+    let effStart = start;
+    const join = empRes.rows[0].joining_date ? String(empRes.rows[0].joining_date).substring(0, 10) : null;
+    if (join && join > start && join <= end) effStart = join;
+
+    const [attRes, leaveRes, holRes] = await Promise.all([
+        query(`SELECT status, COUNT(*)::int AS c FROM attendance
+               WHERE employee_id = $1 AND date >= $2 AND date <= $3 GROUP BY status`,
+              [employeeId, effStart, end]),
+        query(`SELECT COALESCE(SUM((LEAST(la.end_date::date, $3::date) - GREATEST(la.start_date::date, $2::date)) + 1), 0)::int AS leave_days
+               FROM leave_applications la
+               WHERE la.employee_id = $1 AND la.status = 'approved'
+                 AND la.end_date >= $2 AND la.start_date <= $3`,
+              [employeeId, effStart, end]),
+        query(`SELECT date FROM holidays WHERE is_active = 1 AND date >= $1 AND date <= $2`, [effStart, end])
+    ]);
+
+    const counts = {};
+    attRes.rows.forEach(r => { counts[r.status] = parseInt(r.c) || 0; });
+    const holidaySet = new Set(holRes.rows.map(r => formatDateOnly(r.date)));
+
+    let workingDays = 0;
+    const cursor = new Date(effStart + 'T00:00:00Z');
+    const endDate = new Date(end + 'T00:00:00Z');
+    while (cursor <= endDate) {
+        const dow = cursor.getUTCDay();
+        if (dow !== 0 && dow !== 6 && !holidaySet.has(cursor.toISOString().substring(0, 10))) workingDays++;
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    // Half-days count as half presence. Values are kept in whole days so the
+    // stored rows stay integers and working = present + leave + LOP holds
+    // exactly (computeTotals validates this identity).
+    const presentExact = (counts.present || 0) + (counts.late || 0) + 0.5 * (counts['half-day'] || 0);
+    const leaveDays = parseInt(leaveRes.rows[0].leave_days) || 0;
+    const presentDays = Math.min(workingDays, Math.round(presentExact));
+    const lopDays = Math.max(0, workingDays - presentDays - leaveDays);
+
+    return {
+        working_days: workingDays,
+        present_days: presentDays,
+        leave_days: leaveDays,
+        lop_days: lopDays,
+        breakdown: {
+            present: counts.present || 0,
+            late: counts.late || 0,
+            half_day: counts['half-day'] || 0,
+            absent: counts.absent || 0,
+            weekoff: counts.weekoff || 0,
+            holiday: counts.holiday || 0
+        },
+        period_start: effStart,
+        period_end: end
+    };
+}
+
 // Company branding + contact block used on the payslip.
 async function getCompanyData() {
     const comp = await query('SELECT * FROM companies LIMIT 1');
@@ -767,6 +835,26 @@ router.get('/all', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
+// @route   GET /api/payroll/attendance-summary?employee_id=&month=&year=
+// @desc    Auto-computed attendance numbers for a payslip period
+// @access  Admin
+router.get('/attendance-summary', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const employee_id = parseInt(req.query.employee_id, 10);
+        const month = parseInt(req.query.month, 10);
+        const year = parseInt(req.query.year, 10);
+        if (!employee_id || !month || !year || month < 1 || month > 12) {
+            return res.status(400).json({ success: false, message: 'employee_id, month and year are required' });
+        }
+        const summary = await computeAttendanceSummary(employee_id, month, year);
+        if (!summary) return res.status(404).json({ success: false, message: 'Employee not found' });
+        res.json({ success: true, summary });
+    } catch (error) {
+        console.error('Attendance summary error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // @route   POST /api/payroll/render-pdf
 // @desc    Render a PDF from payslip payload data (for unsaved / live preview downloads)
 // @access  Private
@@ -837,7 +925,16 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
         if (!payrollValues) {
             return res.status(404).json({ success: false, message: 'Employee profile not found' });
         }
-        const totals = computeTotals(payrollValues);
+        // Fully automatic mode: when attendance days are missing or all-zero,
+        // compute them from the attendance/leave/holiday tables.
+        const hasAtt = num(v.working_days) > 0 &&
+            (num(v.present_days) + num(v.leave_days) + num(v.lop_days)) > 0;
+        let attVals = { working_days: v.working_days, present_days: v.present_days, leave_days: v.leave_days, lop_days: v.lop_days };
+        if (!hasAtt) {
+            attVals = (await computeAttendanceSummary(employee_id, month, year)) || attVals;
+        }
+        const finalValues = { ...payrollValues, ...attVals };
+        const totals = computeTotals(finalValues);
         if (!totals.attendanceValid) {
             return res.status(400).json({ success: false, message: 'Attendance calculation is incorrect.' });
         }
@@ -874,8 +971,8 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
             RETURNING *`,
             [
                 employee_id, month, year,
-                parseInt(v.working_days) || 0, parseInt(v.present_days) || 0,
-                parseInt(v.leave_days) || 0, parseInt(v.lop_days) || 0,
+                Math.round(num(finalValues.working_days)), Math.round(num(finalValues.present_days)),
+                Math.round(num(finalValues.leave_days)), Math.round(num(finalValues.lop_days)),
                 num(payrollValues.basic_salary), num(payrollValues.hra), num(payrollValues.conveyance), num(payrollValues.medical),
                 num(payrollValues.special_allowance), num(payrollValues.bonus), num(payrollValues.incentive), num(payrollValues.other_allowance),
                 num(payrollValues.extra_work),
@@ -948,7 +1045,15 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                     results.push({ employee_id, ok: false, reason: 'Employee profile not found' });
                     continue;
                 }
-                const totals = computeTotals(payrollValues);
+                // Same auto-attendance fallback as single generation.
+                const hasAtt = num(v.working_days) > 0 &&
+                    (num(v.present_days) + num(v.leave_days) + num(v.lop_days)) > 0;
+                let attVals = { working_days: v.working_days, present_days: v.present_days, leave_days: v.leave_days, lop_days: v.lop_days };
+                if (!hasAtt) {
+                    attVals = (await computeAttendanceSummary(employee_id, month, year)) || attVals;
+                }
+                const finalValues = { ...payrollValues, ...attVals };
+                const totals = computeTotals(finalValues);
                 if (!totals.attendanceValid) {
                     failed++;
                     results.push({ employee_id, ok: false, reason: 'Attendance calculation is incorrect.' });
@@ -986,8 +1091,8 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                     RETURNING id`,
                     [
                         employee_id, month, year,
-                        parseInt(v.working_days) || 0, parseInt(v.present_days) || 0,
-                        parseInt(v.leave_days) || 0, parseInt(v.lop_days) || 0,
+                        Math.round(num(finalValues.working_days)), Math.round(num(finalValues.present_days)),
+                        Math.round(num(finalValues.leave_days)), Math.round(num(finalValues.lop_days)),
                         num(payrollValues.basic_salary), num(payrollValues.hra), num(payrollValues.conveyance), num(payrollValues.medical),
                         num(payrollValues.special_allowance), num(payrollValues.bonus), num(payrollValues.incentive), num(payrollValues.other_allowance),
                         num(payrollValues.extra_work),

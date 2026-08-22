@@ -124,7 +124,7 @@ router.post('/check-out', verifyToken, async (req, res) => {
         const location = req.body.location || '';
         
         const checkIn = await query(
-            'SELECT check_in FROM attendance WHERE employee_id = $1 AND date = $2 AND check_out IS NULL',
+            'SELECT check_in, status FROM attendance WHERE employee_id = $1 AND date = $2 AND check_out IS NULL',
             [req.user.id, today]
         );
         
@@ -145,9 +145,20 @@ router.post('/check-out', verifyToken, async (req, res) => {
             const nowMins = nowParts[0] * 60 + nowParts[1];
             overtime = Math.max(0, (nowMins - endMins) / 60);
         }
-        
+
+        // Short-day rule: a morning login that ends up working under 3 hours
+        // counts as a half day. Only downgrades present/late - never touches
+        // an already half-day/absent/on-leave row.
+        const inParts = String(checkInTime || '').split(':').map(Number);
+        const outParts = now.split(':').map(Number);
+        const workedMins = (inParts.length >= 2 && !isNaN(inParts[0]))
+            ? (outParts[0] * 60 + outParts[1]) - (inParts[0] * 60 + inParts[1])
+            : 9999;
+        const shortDay = workedMins < 180 &&
+            ['present', 'late'].includes(checkIn.rows[0].status);
+
         const result = await query(
-            `UPDATE attendance SET check_out = $1, overtime_hours = $2, check_out_location = $3
+            `UPDATE attendance SET check_out = $1, overtime_hours = $2, check_out_location = $3${shortDay ? ", status = 'half-day'" : ''}
             WHERE employee_id = $4 AND date = $5 AND check_out IS NULL 
             RETURNING *`,
             [now, overtime, location, req.user.id, today]

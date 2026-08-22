@@ -50,12 +50,27 @@ async function markAbsentForDate(dateStr) {
     return result.changes || 0;
 }
 
+// Remove auto-marked absent rows that fall on a declared holiday. Covers
+// holidays added AFTER the cron already ran for that date.
+async function clearHolidayAbsents() {
+    const result = await query(
+        `DELETE FROM attendance a
+         USING holidays h
+         WHERE a.date = h.date AND h.is_active = 1
+           AND a.status = 'absent' AND a.remarks LIKE 'Auto-marked%'`
+    );
+    return result.changes || 0;
+}
+
 // Process weekdays from (inclusive) startDate through (inclusive) endDate.
 // For today, only mark absent once the office end time has passed.
 async function runAutoMark() {
     const now = new Date();
     const todayStr = istDateString();
     const today = new Date(todayStr + 'T00:00:00');
+
+    // Self-heal first: holidays declared late must never keep stale absents.
+    await clearHolidayAbsents().catch(() => {});
 
     let total = 0;
     let processedDates = [];

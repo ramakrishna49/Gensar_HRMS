@@ -144,7 +144,7 @@
         const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         const fullMonthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-        let currentView = 'list';
+        let currentView = 'month';
         let lastRecords = [];
         let lastHolidays = [];
 
@@ -160,6 +160,9 @@
             const now = new Date();
             select.value = now.getMonth() + 1;
             document.getElementById('filterYear').value = now.getFullYear();
+            // Open on the visual month grid - it communicates the month at a
+            // glance far better than the row list.
+            setView('month');
             loadData();
         });
 
@@ -306,7 +309,8 @@
                 const isFuture = date > new Date();
 
                 let cls = '', tag = '', tagColor = '', checkIn = '', extra = '';
-                if (rec) {
+                // A declared holiday always wins over a stale auto-absent row.
+                if (rec && !(rec.status === 'absent' && holidayDates[dateStr])) {
                     const status = rec.status;
                     if (status === 'present') { cls = 'cal-present'; tag = 'Present'; counts.present++; }
                     else if (status === 'late') { cls = 'cal-late'; tag = 'Late'; counts.late++; }
