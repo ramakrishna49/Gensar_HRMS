@@ -64,21 +64,6 @@
         </header>
 
         <div class="page-body">
-            <div class="grid grid-3 mb-3">
-                <div class="stat-card slide-up stagger-1">
-                    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
-                    <div class="stat-info"><h3 id="presentDays">0</h3><p>Present Days</p></div>
-                </div>
-                <div class="stat-card slide-up stagger-2">
-                    <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
-                    <div class="stat-info"><h3 id="absentDays">0</h3><p>Absent Days</p></div>
-                </div>
-                <div class="stat-card slide-up stagger-3">
-                    <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
-                    <div class="stat-info"><h3 id="totalOvertime">0</h3><p>Total Overtime (hrs)</p></div>
-                </div>
-            </div>
-
             <div class="card slide-up stagger-2">
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
                     <h3 style="font-weight:600;"><i class="fas fa-history" style="color:var(--info);margin-right:8px;"></i>Attendance History</h3>
@@ -246,10 +231,6 @@
                 if (holidayMap[key] || dow === 0 || dow === 6) offDays++;
             }
 
-            document.getElementById('presentDays').textContent = present + late + halfDay + offDays;
-            document.getElementById('absentDays').textContent = absent;
-            document.getElementById('totalOvertime').textContent = overtime.toFixed(1);
-
             const totalDaysInMonth = daysInMonth;
             summaryEl.innerHTML = '<span style="font-weight:500;">Present Days (incl. late logins, half days, week offs &amp; holidays): <strong>' + (present + late + halfDay + offDays) + '</strong> / ' + totalDaysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
 
@@ -381,15 +362,24 @@
             }
             html += '</div>';
 
-            // Summary cards render ABOVE the calendar for an at-a-glance month.
+            // Summary cards render ABOVE the calendar with status colors.
             const presentTotal = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday;
+            const cardColors = {
+                present: ['#10B981', '#ECFDF5'],
+                late: ['#F59E0B', '#FFFBEB'],
+                half: ['#F97316', '#FFF7ED'],
+                absent: ['#EF4444', '#FEF2F2'],
+                weekoff: ['#3B82F6', '#EFF6FF'],
+                holiday: ['#D946EF', '#FDF4FF']
+            };
+            const statCard = (val, label, c) => '<div class="stat-card" style="margin:0;border-left:4px solid ' + c[0] + ';background:' + c[1] + ';"><div class="stat-info" style="text-align:center;"><h3 style="color:' + c[0] + ';">' + val + '</h3><p>' + label + '</p></div></div>';
             let statsHtml = '<div class="att-stats-grid">';
-            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + presentTotal + '</h3><p>Present Days</p></div></div>';
-            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts.late + '</h3><p>Late Logins</p></div></div>';
-            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts['half-day'] + '</h3><p>Half Days</p></div></div>';
-            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts.absent + '</h3><p>Absent Days</p></div></div>';
-            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts.weekoff + '</h3><p>Week Offs</p></div></div>';
-            statsHtml += '<div class="stat-card"><div class="stat-info"><h3>' + counts.holiday + '</h3><p>Holidays</p></div></div>';
+            statsHtml += statCard(presentTotal, 'Present Days', cardColors.present);
+            statsHtml += statCard(counts.late, 'Late Logins', cardColors.late);
+            statsHtml += statCard(counts['half-day'], 'Half Days', cardColors.half);
+            statsHtml += statCard(counts.absent, 'Absent Days', cardColors.absent);
+            statsHtml += statCard(counts.weekoff, 'Week Offs', cardColors.weekoff);
+            statsHtml += statCard(counts.holiday, 'Holidays', cardColors.holiday);
             statsHtml += '</div>';
 
             container.innerHTML = statsHtml + html;
