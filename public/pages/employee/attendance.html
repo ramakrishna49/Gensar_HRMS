@@ -101,6 +101,7 @@
         .cal-cell .cal-day { font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
         .cal-cell .cal-tag { font-size: 0.62rem; font-weight: 600; border-radius: 4px; padding: 1px 5px; align-self: flex-start; }
         .cal-cell .cal-in { font-size: 0.62rem; color: var(--text-secondary); margin-top: 2px; }
+        .cal-cell .cal-out { font-size: 0.62rem; color: var(--text-secondary); margin-top: 1px; }
         .cal-cell.today { outline: 2px solid var(--primary); outline-offset: -1px; }
         .cal-cell.weekoff { background: var(--bg-light); }
         .cal-cell.future { background: transparent; color: var(--text-tertiary); }
@@ -338,7 +339,7 @@
                 const isToday = dateStr === todayStr;
                 const isFuture = date > new Date();
 
-                let cls = '', tag = '', tagColor = '', checkIn = '', extra = '';
+                let cls = '', tag = '', tagColor = '', checkIn = '', checkOut = '', extra = '';
                 // A declared holiday always wins over a stale auto-absent row.
                 if (rec && !(rec.status === 'absent' && holidayDates[dateStr])) {
                     const status = rec.status;
@@ -348,6 +349,7 @@
                     else if (status === 'absent') { cls = 'cal-absent'; tag = 'Absent'; counts.absent++; }
                     else { cls = 'cal-weekoff'; tag = status; counts.weekoff++; }
                     if (rec.check_in) checkIn = 'In ' + rec.check_in;
+                    if (rec.check_out) checkOut = 'Out ' + rec.check_out;
                 } else if (isFuture) {
                     cls = 'future';
                 } else if (holidayDates[dateStr]) {
@@ -367,6 +369,7 @@
                 html += '<div class="cal-day">' + d + (isToday ? ' <span style="font-size:0.55rem;font-weight:700;color:var(--primary);">TODAY</span>' : '') + '</div>';
                 if (tag) html += '<div class="cal-tag">' + escapeHtml(tag) + '</div>';
                 if (checkIn) html += '<div class="cal-in">' + escapeHtml(checkIn) + '</div>';
+                if (checkOut) html += '<div class="cal-out">' + escapeHtml(checkOut) + '</div>';
                 html += '</div>';
             }
             html += '</div>';

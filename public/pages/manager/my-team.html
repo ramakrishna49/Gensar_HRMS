@@ -110,7 +110,7 @@
             <div class="card" style="padding:20px;margin-bottom:24px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
                     <div style="font-weight:600;font-size:0.95rem;"><i class="fas fa-sun" style="color:#D97706;margin-right:8px;"></i>Team Today</div>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="loadToday()"><i class="fas fa-rotate-right"></i> Refresh</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="loadToday(true)"><i class="fas fa-rotate-right"></i> Refresh</button>
                 </div>
                 <div id="todayBoard" style="min-height:36px;">
                     <div class="spinner" style="margin:0 auto;"></div>
@@ -205,25 +205,33 @@
             { key: 'not_checked_in', label: 'Not Checked In', icon: 'fa-user-clock', color: '#B91C1C', bg: '#FEE2E2' }
         ];
 
-        async function loadToday() {
+        async function loadToday(manual) {
             const container = document.getElementById('todayBoard');
             const data = await apiCall('/manager/today');
             if (!data || !data.success) {
-                container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--danger);font-size:0.9rem;">Failed to load today\'s board</div>';
+                container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--danger);font-size:0.9rem;">Failed to load today board</div>';
+                if (manual) showToast('Refresh failed', 'error');
                 return;
             }
             const members = data.members || [];
             if (members.length === 0) {
                 container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:0.9rem;">No team members yet.</div>';
+                if (manual) showToast('Refreshed - no members', 'success');
                 return;
             }
             container.innerHTML = TODAY_GROUPS.map(g => {
                 const group = members.filter(m => m.status === g.key);
                 if (group.length === 0) return '';
+                // Checked-in members are always GREEN, everyone else RED.
+                const chipStyle = (m) => {
+                    const isIn = !!m.check_in;
+                    if (g.key === 'leave') return 'background:' + g.bg + ';color:' + g.color + ';';
+                    return isIn ? 'background:#D1FAE5;color:#059669;' : 'background:#FEE2E2;color:#B91C1C;';
+                };
                 const chips = group.map(m =>
-                    '<span title="' + escapeHtml(m.employee_id || '') + (m.check_in ? ' · in ' + escapeHtml(m.check_in) : '') + '" style="display:inline-flex;align-items:center;gap:6px;background:' + g.bg + ';color:' + g.color + ';border-radius:999px;padding:4px 10px;font-size:0.75rem;font-weight:600;margin:0 6px 6px 0;">' +
+                    '<span title="' + escapeHtml(m.employee_id || '') + (m.check_in ? ' | In at ' + escapeHtml(m.check_in) : '') + '" style="display:inline-flex;align-items:center;gap:6px;' + chipStyle(m) + 'border-radius:999px;padding:4px 10px;font-size:0.75rem;font-weight:600;margin:0 6px 6px 0;">' +
                         escapeHtml((m.first_name || '') + ' ' + (m.last_name || '')) +
-                        (g.key === 'present' && m.check_in ? '<span style="font-weight:400;">· in ' + escapeHtml(m.check_in) + '</span>' : '') +
+                        (m.check_in ? '<span style="font-weight:400;">In ' + escapeHtml(m.check_in) + '</span>' : '') +
                     '</span>'
                 ).join('');
                 return '<div style="margin-bottom:10px;">' +
@@ -231,6 +239,7 @@
                     chips +
                 '</div>';
             }).join('');
+            if (manual) showToast('Refreshed', 'success');
         }
 
         let pendingLeaveCount = 0;

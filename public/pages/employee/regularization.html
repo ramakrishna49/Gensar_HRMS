@@ -66,36 +66,54 @@
         .cal-day:hover:not(:disabled) { background: var(--bg-light, #f3f4f6); }
         .cal-day.sel { background: var(--primary); color: #fff; font-weight: 700; }
         .cal-day:disabled { opacity: 0.25; cursor: default; }
-        .time-grid { display: none; }
-        /* Analog clock picker */
+        /* Analog clock picker - polished */
         .clock-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .ampm-row { display: flex; gap: 8px; }
+        .ampm-seg { display: flex; background: var(--bg-light, #f3f4f6); border-radius: 999px; padding: 3px; }
         .ampm-pill {
-            border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 20px;
-            padding: 4px 16px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--text-primary);
+            border: none; background: transparent; border-radius: 999px;
+            padding: 5px 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--text-secondary);
         }
-        .ampm-pill.sel { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .ampm-pill.sel { background: var(--primary); color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
         .clock-face {
-            position: relative; width: 188px; height: 188px; border-radius: 50%;
-            border: 2px solid var(--border-color, #e5e7eb); background: var(--bg-light, #fafafa);
+            position: relative; width: 204px; height: 204px; border-radius: 50%;
+            border: 2px solid var(--border-color, #e5e7eb);
+            background: radial-gradient(circle, var(--card-bg, #fff) 60%, rgba(37, 99, 235, 0.05));
+        }
+        .clock-tick {
+            position: absolute; left: 50%; top: 50%; width: 2px; height: 8px;
+            margin: -4px 0 0 -1px; background: var(--border-light, #d1d5db); border-radius: 2px;
         }
         .clock-num {
-            position: absolute; left: 50%; top: 50%; width: 32px; height: 32px; margin: -16px 0 0 -16px;
+            position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 0.82rem; cursor: pointer; color: var(--text-primary);
+            font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--text-primary);
+            transition: background 0.15s ease;
         }
         .clock-num:hover { background: rgba(37, 99, 235, 0.12); }
-        .clock-num.sel { background: var(--primary); color: #fff; font-weight: 700; }
-        .clock-center {
-            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-            font-size: 0.95rem; font-weight: 700; color: var(--text-secondary);
+        .clock-num.sel { background: var(--primary); color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(37,99,235,0.45); }
+        .clock-hand {
+            position: absolute; left: calc(50% - 1.5px); bottom: 50%;
+            width: 3px; height: 64px; transform-origin: 50% 100%;
+            background: linear-gradient(180deg, var(--primary) 55%, transparent);
+            border-radius: 3px; opacity: 0; transition: transform 0.25s ease, opacity 0.2s ease;
+            pointer-events: none;
+        }
+        .clock-hand.on { opacity: 0.85; }
+        .clock-dot {
+            position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
+            border-radius: 50%; background: var(--primary); pointer-events: none;
+        }
+        .clock-digital {
+            font-size: 1.15rem; font-weight: 800; letter-spacing: 0.06em;
+            color: var(--text-primary); font-variant-numeric: tabular-nums;
         }
         .minute-row { display: flex; gap: 10px; }
         .min-btn {
-            border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 10px;
-            padding: 8px 20px; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);
+            border: 1.5px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 12px;
+            padding: 8px 24px; font-size: 0.92rem; font-weight: 700; cursor: pointer; color: var(--text-primary);
+            transition: all 0.15s ease;
         }
-        .min-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .min-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: rgba(37,99,235,0.06); }
         .min-btn:disabled { opacity: 0.35; cursor: default; }
     </style>
 </head>
@@ -291,28 +309,39 @@
         }
         function renderClock(kind) {
             const st = timePick[kind];
-            const nums = [];
+            let ticks = '', nums = [];
             for (let hr = 1; hr <= 12; hr++) {
                 const ang = hr * 30;
-                nums.push(`<div class="clock-num" data-h="${hr}" style="transform:rotate(${ang}deg) translate(70px) rotate(${-ang}deg);" onclick="pickHour('${kind}',${hr})">${hr}</div>`);
+                ticks += `<div class="clock-tick" style="transform:rotate(${ang}deg) translate(0,-92px);"></div>`;
+                nums.push(`<div class="clock-num" data-h="${hr}" style="transform:rotate(${ang}deg) translate(72px) rotate(${-ang}deg);" onclick="pickHour('${kind}',${hr})">${hr}</div>`);
             }
             const pop = document.getElementById(kind === 'in' ? 'inPopup' : 'outPopup');
             pop.innerHTML = `
                 <div class="clock-wrap">
-                    <div class="ampm-row">
+                    <div class="ampm-seg">
                         <button type="button" class="ampm-pill${st.ampm === 'AM' ? ' sel' : ''}" onclick="setAmpm('${kind}','AM')">AM</button>
                         <button type="button" class="ampm-pill${st.ampm === 'PM' ? ' sel' : ''}" onclick="setAmpm('${kind}','PM')">PM</button>
                     </div>
                     <div class="clock-face">
+                        ${ticks}
                         ${nums.join('')}
-                        <div class="clock-center" id="${kind}Preview">--:--</div>
+                        <div class="clock-hand" id="${kind}Hand"></div>
+                        <div class="clock-dot"></div>
                     </div>
+                    <div class="clock-digital" id="${kind}Preview">--:--</div>
                     <div class="minute-row">
                         <button type="button" class="min-btn" id="${kind}Min0" onclick="pickMin('${kind}',0)" disabled>:00</button>
                         <button type="button" class="min-btn" id="${kind}Min30" onclick="pickMin('${kind}',30)" disabled>:30</button>
                     </div>
                 </div>`;
-            if (st.h != null) markHour(kind);
+            if (st.h != null) { markHour(kind); updateHands(kind); updatePreview(kind); }
+        }
+        function updateHands(kind) {
+            const st = timePick[kind];
+            const hand = document.getElementById(kind + 'Hand');
+            if (!hand) return;
+            if (st.h != null) { hand.classList.add('on'); hand.style.transform = `rotate(${st.h * 30}deg)`; }
+            else hand.classList.remove('on');
         }
         function setAmpm(kind, v) {
             timePick[kind].ampm = v;
@@ -322,6 +351,7 @@
         function pickHour(kind, hr) {
             timePick[kind].h = hr;
             markHour(kind);
+            updateHands(kind);
             document.getElementById(kind + 'Min0').disabled = false;
             document.getElementById(kind + 'Min30').disabled = false;
             updatePreview(kind);
