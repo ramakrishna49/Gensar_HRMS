@@ -146,12 +146,16 @@ async function sendPayslipEmail(email, filename, pdfBuffer, meta) {
     }
 }
 
-async function sendOTPEmail(email, otp) {
+async function sendOTPEmail(email, otp, meta) {
+    meta = meta || {};
     const mailTransporter = getTransporter();
     if (!mailTransporter) {
         console.log(`[DEV] OTP for ${email}: ${otp}`);
         return true;
     }
+    // Show the employee ID in the copy when we have it - it is less
+    // sensitive than the email address and easier to recognise.
+    const accountLabel = meta.empId || email;
     const subject = `Your Gensar HRMS verification code: ${otp}`;
     const html = baseEmail({
         preheader: `Use code ${otp} to reset your password. Valid for 5 minutes.`,
@@ -159,7 +163,7 @@ async function sendOTPEmail(email, otp) {
         headerSubline: '',
         bodyHtml: `
             <p style="margin:0 0 6px;font-size:16px;font-weight:600;color:#111827;">Hello,</p>
-            <p style="margin:0 0 20px;">We received a request to reset the password for your Gensar HRMS account (<strong>${email}</strong>). Use the one-time verification code below to continue.</p>
+            <p style="margin:0 0 20px;">We received a request to reset the password for your Gensar HRMS account (<strong>${accountLabel}</strong>). Use the one-time verification code below to continue.</p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
                 <td align="center" bgcolor="#eef2ff" style="background:#eef2ff;padding:22px 16px;border:2px dashed #4F46E5;border-radius:12px;">
                     <div style="font-size:11px;font-weight:600;color:#6366F1;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Verification Code</div>

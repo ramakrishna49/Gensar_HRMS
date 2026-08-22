@@ -108,10 +108,10 @@
         btn.innerHTML = original;
 
         if (data && data.success) {
-            showToast(data.message || 'If this account exists, a reset code has been sent.', 'success');
+            showToast(data.message || 'Reset code sent to your registered email.', 'success');
             return true;
         }
-        showToast((data && data.message) || 'Failed to send reset code', 'error');
+        showToast((data && data.message) || 'Invalid Employee ID or Email', 'error');
         return false;
     }
 

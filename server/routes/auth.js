@@ -72,15 +72,18 @@ router.post('/forgot-password', forgotLimiter, async (req, res) => {
         }
 
         const result = await query(
-            `SELECT id, email, personal_email FROM employees
-            WHERE (LOWER(employee_id) = LOWER($1) OR LOWER(email) = LOWER($1)) AND status = $2
+            `SELECT id, employee_id, email, personal_email FROM employees
+            WHERE (LOWER(employee_id) = LOWER($1) OR LOWER(email) = LOWER($1)
+                OR LOWER(personal_email) = LOWER($1)) AND status = $2
             LIMIT 1`,
             [identifier, 'active']
         );
 
-        const genericMessage = 'If this account exists, a reset code has been sent to its email.';
+        // Be explicit: an identifier that does not match any active account
+        // (employee ID, office email or personal email) is simply invalid -
+        // no OTP is generated for unknown users.
         if (result.rows.length === 0 || !result.rows[0].email) {
-            return res.json({ success: true, message: genericMessage });
+            return res.status(404).json({ success: false, message: 'Invalid Employee ID or Email' });
         }
 
         const user = result.rows[0];
@@ -103,11 +106,9 @@ router.post('/forgot-password', forgotLimiter, async (req, res) => {
             [user.email, hashOtp(otp), expiresAt]
         );
 
-        await sendOTPEmail(deliveryEmail, otp);
+        await sendOTPEmail(deliveryEmail, otp, { empId: user.employee_id });
 
-        // Deliberately vague - do not reveal whether the account exists or
-        // whether email delivery succeeded.
-        res.json({ success: true, message: genericMessage });
+        res.json({ success: true, message: 'Reset code sent to your registered email. Valid for 5 minutes.' });
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
@@ -132,7 +133,8 @@ router.post('/reset-password', otpResetLimiter, async (req, res) => {
 
         const result = await query(
             `SELECT id, email FROM employees
-            WHERE (LOWER(employee_id) = LOWER($1) OR LOWER(email) = LOWER($1)) AND status = $2
+            WHERE (LOWER(employee_id) = LOWER($1) OR LOWER(email) = LOWER($1)
+                OR LOWER(personal_email) = LOWER($1)) AND status = $2
             LIMIT 1`,
             [identifier, 'active']
         );
