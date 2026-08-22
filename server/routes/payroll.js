@@ -1103,14 +1103,14 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
         if (!payrollValues) {
             return res.status(404).json({ success: false, message: 'Employee profile not found' });
         }
-        // Fully automatic mode: when attendance days are missing or all-zero,
-        // compute them from the attendance/leave/holiday tables.
-        const hasAtt = num(v.working_days) > 0 &&
-            (num(v.present_days) + num(v.leave_days) + num(v.lop_days)) > 0;
-        let attVals = { working_days: v.working_days, present_days: v.present_days, leave_days: v.leave_days, lop_days: v.lop_days };
-        if (!hasAtt) {
-            attVals = (await computeAttendanceSummary(employee_id, month, year)) || attVals;
-        }
+        // Always compute attendance server-side so the late-login grace,
+        // sandwich policy, monthly leave quota and LOP rules are applied
+        // consistently. Day values sent by the form are intentionally
+        // ignored - only salary components come from the request.
+        const attVals = (await computeAttendanceSummary(employee_id, month, year)) || {
+            working_days: v.working_days, present_days: v.present_days,
+            leave_days: v.leave_days, lop_days: v.lop_days
+        };
         const finalValues = { ...payrollValues, ...attVals };
         const totals = computeTotals(finalValues);
         if (!totals.attendanceValid) {
@@ -1223,13 +1223,12 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                     results.push({ employee_id, ok: false, reason: 'Employee profile not found' });
                     continue;
                 }
-                // Same auto-attendance fallback as single generation.
-                const hasAtt = num(v.working_days) > 0 &&
-                    (num(v.present_days) + num(v.leave_days) + num(v.lop_days)) > 0;
-                let attVals = { working_days: v.working_days, present_days: v.present_days, leave_days: v.leave_days, lop_days: v.lop_days };
-                if (!hasAtt) {
-                    attVals = (await computeAttendanceSummary(employee_id, month, year)) || attVals;
-                }
+                // Always recompute server-side (same as single generation) so
+                // every attendance policy is applied uniformly in bulk runs.
+                const attVals = (await computeAttendanceSummary(employee_id, month, year)) || {
+                    working_days: v.working_days, present_days: v.present_days,
+                    leave_days: v.leave_days, lop_days: v.lop_days
+                };
                 const finalValues = { ...payrollValues, ...attVals };
                 const totals = computeTotals(finalValues);
                 if (!totals.attendanceValid) {
