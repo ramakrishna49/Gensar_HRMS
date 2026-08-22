@@ -96,12 +96,15 @@
         if (!checkAuth()) throw new Error('Not authenticated');
 
         let directory = [];
+        let dirScope = 'company';
 
         document.addEventListener('DOMContentLoaded', async () => {
             const user = getCurrentUser();
             if (user && (user.role === 'manager' || user.role === 'team_lead')) {
                 const link = document.getElementById('myTeamLink');
-                if (link) link.style.display = 'block';
+                // Must match .nav-item's flex layout - using 'block' would
+                // collapse the icon/text gap defined by the stylesheet.
+                if (link) link.style.display = 'flex';
             }
             await loadDirectory();
         });
@@ -111,6 +114,7 @@
             const grid = document.getElementById('dirGrid');
             if (data && data.success) {
                 directory = data.directory || [];
+                dirScope = data.scope || 'company';
 
                 // Populate the department filter from the data itself.
                 const depts = [...new Set(directory.map(e => e.department_name).filter(Boolean))].sort();
@@ -175,7 +179,8 @@
                 '</div>';
             }).join('');
 
-            document.getElementById('dirCount').textContent = 'Showing ' + list.length + ' of ' + directory.length + ' employees';
+            const unit = dirScope === 'team' ? 'team members' : 'employees';
+            document.getElementById('dirCount').textContent = 'Showing ' + list.length + ' of ' + directory.length + ' ' + unit;
         }
     </script>
 </body>

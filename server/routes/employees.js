@@ -120,22 +120,92 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
 });
 
 // @route   GET /api/employees/directory
-// @desc    Company-wide staff directory (active employees, work contact fields only)
+// @desc    Staff directory. Admins see the whole company; everyone else sees
+//          only their own team - a manager/team_lead sees their direct reports,
+//          and a regular employee sees their teammates plus their reporting
+//          manager (the TL). Work contact fields only.
 // @access  Private (any authenticated employee)
 router.get('/directory', verifyToken, async (req, res) => {
     try {
-        const result = await query(
-            `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
-                    d.name AS department_name, g.name AS designation_name,
-                    rm.first_name || ' ' || rm.last_name AS reporting_manager
-            FROM employees e
-            LEFT JOIN departments d ON d.id = e.department_id
-            LEFT JOIN designations g ON g.id = e.designation_id
-            LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
-            WHERE e.status = 'active'
-            ORDER BY e.first_name, e.last_name`
+        const meRes = await query(
+            'SELECT role, reporting_manager_id FROM employees WHERE id = $1',
+            [req.user.id]
         );
-        res.json({ success: true, directory: result.rows });
+        const me = meRes.rows[0];
+
+        let rows;
+        let scope;
+
+        if (!me) {
+            rows = [];
+            scope = 'team';
+        } else if (me.role === 'admin') {
+            const result = await query(
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
+                        d.name AS department_name, g.name AS designation_name,
+                        rm.first_name || ' ' || rm.last_name AS reporting_manager
+                FROM employees e
+                LEFT JOIN departments d ON d.id = e.department_id
+                LEFT JOIN designations g ON g.id = e.designation_id
+                LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
+                WHERE e.status = 'active'
+                ORDER BY e.first_name, e.last_name`
+            );
+            rows = result.rows;
+            scope = 'company';
+        } else if (me.role === 'manager' || me.role === 'team_lead') {
+            // Direct reports + the lead themselves.
+            const result = await query(
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
+                        d.name AS department_name, g.name AS designation_name,
+                        rm.first_name || ' ' || rm.last_name AS reporting_manager
+                FROM employees e
+                LEFT JOIN departments d ON d.id = e.department_id
+                LEFT JOIN designations g ON g.id = e.designation_id
+                LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
+                WHERE e.status = 'active' AND (e.reporting_manager_id = $1 OR e.id = $1)
+                ORDER BY e.first_name, e.last_name`,
+                [req.user.id]
+            );
+            rows = result.rows;
+            scope = 'team';
+        } else {
+            // Team member: show teammates (same manager) + the manager + self.
+            // Without a reporting manager fall back to the company view.
+            const anchorId = me.reporting_manager_id || null;
+            if (!anchorId) {
+                const result = await query(
+                    `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
+                            d.name AS department_name, g.name AS designation_name,
+                            rm.first_name || ' ' || rm.last_name AS reporting_manager
+                    FROM employees e
+                    LEFT JOIN departments d ON d.id = e.department_id
+                    LEFT JOIN designations g ON g.id = e.designation_id
+                    LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
+                    WHERE e.status = 'active'
+                    ORDER BY e.first_name, e.last_name`
+                );
+                rows = result.rows;
+                scope = 'company';
+            } else {
+                const result = await query(
+                    `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone,
+                            d.name AS department_name, g.name AS designation_name,
+                            rm.first_name || ' ' || rm.last_name AS reporting_manager
+                    FROM employees e
+                    LEFT JOIN departments d ON d.id = e.department_id
+                    LEFT JOIN designations g ON g.id = e.designation_id
+                    LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
+                    WHERE e.status = 'active' AND (e.reporting_manager_id = $1 OR e.id = $1)
+                    ORDER BY e.first_name, e.last_name`,
+                    [anchorId]
+                );
+                rows = result.rows;
+                scope = 'team';
+            }
+        }
+
+        res.json({ success: true, scope, directory: rows });
     } catch (error) {
         console.error('Directory error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
