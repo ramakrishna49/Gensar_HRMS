@@ -206,6 +206,7 @@ async function computeAttendanceSummary(employeeId, month, year) {
     if (effStart > todayStr) {
         return {
             working_days: 0, present_days: 0, leave_days: 0, lop_days: 0,
+            total_days: 0, week_offs: 0, holidays: 0,
             breakdown: { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0, holiday: 0 },
             period_start: effStart, period_end: end, future_period: true
         };
@@ -230,7 +231,10 @@ async function computeAttendanceSummary(employeeId, month, year) {
     attRes.rows.forEach(r => { statusByDate[fmtD(r.date)] = r.status; });
     const holidaySet = new Set(holRes.rows.map(r => fmtD(r.date)));
 
-    let workingDays = 0, paidRaw = 0.0, leaveDays = 0;
+    // Calendar split of the effective window. Every day lands in exactly one
+    // bucket: holiday, week off, or working day - so
+    // total_days = working_days + week_offs + holidays always holds.
+    let totalDays = 0, weekOffs = 0, workingDays = 0, paidRaw = 0.0, leaveDays = 0;
     const tally = { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0 };
 
     const cursor = new Date(effStart + 'T00:00:00Z');
@@ -239,7 +243,10 @@ async function computeAttendanceSummary(employeeId, month, year) {
         const ds = cursor.toISOString().substring(0, 10);
         const dow = cursor.getUTCDay();
         cursor.setUTCDate(cursor.getUTCDate() + 1);
-        if (dow === 0 || dow === 6 || holidaySet.has(ds)) continue;
+
+        totalDays++;
+        if (holidaySet.has(ds)) continue;
+        if (dow === 0 || dow === 6) { weekOffs++; continue; }
 
         workingDays++;
         const st = statusByDate[ds];
@@ -266,6 +273,9 @@ async function computeAttendanceSummary(employeeId, month, year) {
         present_days: presentDays,
         leave_days: leaveDays,
         lop_days: lopDays,
+        total_days: totalDays,
+        week_offs: weekOffs,
+        holidays: holidaySet.size,
         breakdown: {
             present: tally.present,
             late: tally.late,

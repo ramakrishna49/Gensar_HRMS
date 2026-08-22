@@ -174,6 +174,7 @@
                     <div class="pp-form-grid" oninput="onFormInput()">
 
                         <div class="pp-section-head" style="display:flex;align-items:center;justify-content:space-between;grid-column:1/-1;"><span><i class="fas fa-calendar-day" style="margin-right:6px;"></i>Attendance</span><button type="button" id="autoAttBtn" onclick="autoFillAttendance()" style="background:#7c6ca8;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.75rem;font-weight:600;cursor:pointer;">⚡ Auto-fill</button></div>
+                        <div id="attDerivation" style="grid-column:1/-1;font-size:0.78rem;color:#5b4b8a;background:#f6f4fa;border:1px solid #e2dcf0;border-radius:8px;padding:8px 12px;display:none;"></div>
                         <div class="pp-field"><label>Working Days</label><input type="number" id="working_days" class="pp-input" value="30" min="0"></div>
                         <div class="pp-field"><label>Present Days</label><input type="number" id="present_days" class="pp-input" value="0" min="0"></div>
                         <div class="pp-field"><label>Leave Days</label><input type="number" id="leave_days" class="pp-input" value="0" min="0"></div>
@@ -354,6 +355,21 @@
                     const s = d.summary;
                     set('working_days', s.working_days); set('present_days', s.present_days);
                     set('leave_days', s.leave_days); set('lop_days', s.lop_days);
+                    // Show how the working days number was derived so the
+                    // split between week offs, holidays and work days is clear.
+                    const dv = document.getElementById('attDerivation');
+                    if (dv) {
+                        if (s.future_period) {
+                            dv.style.display = 'block';
+                            dv.textContent = 'This period has not started yet - attendance numbers appear once the month begins.';
+                        } else {
+                            const parts = [s.total_days + ' total days'];
+                            if (s.week_offs) parts.push(s.week_offs + ' week off' + (s.week_offs !== 1 ? 's' : ''));
+                            if (s.holidays) parts.push(s.holidays + ' holiday' + (s.holidays !== 1 ? 's' : ''));
+                            dv.style.display = 'block';
+                            dv.textContent = parts.join(' - ') + ' = ' + s.working_days + ' working days (period ' + s.period_start + ' to ' + s.period_end + ')';
+                        }
+                    }
                     updateSummary();
                     clearTimeout(previewTimer);
                     previewTimer = setTimeout(refreshPreview, 350);
