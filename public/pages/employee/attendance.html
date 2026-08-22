@@ -100,8 +100,14 @@
         .att-stats-grid .stat-info h3 { font-size: 1.05rem; }
         .cal-cell .cal-day { font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
         .cal-cell .cal-tag { font-size: 0.62rem; font-weight: 600; border-radius: 4px; padding: 1px 5px; align-self: flex-start; }
-        .cal-cell .cal-in { font-size: 0.62rem; color: var(--text-secondary); margin-top: 2px; }
-        .cal-cell .cal-out { font-size: 0.62rem; color: var(--text-secondary); margin-top: 1px; }
+        .cal-times { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 0.52rem; color: var(--text-secondary); margin-top: 2px; line-height: 1.3; }
+        .cal-times b { font-weight: 600; }
+        .cal-times .cs { display: none; }
+        @media (max-width: 768px) {
+            .cal-times { gap: 5px; }
+            .cal-times .cf { display: none; }
+            .cal-times .cs { display: inline; }
+        }
         .cal-cell.today { outline: 2px solid var(--primary); outline-offset: -1px; }
         .cal-cell.weekoff { background: var(--bg-light); }
         .cal-cell.future { background: transparent; color: var(--text-tertiary); }
@@ -349,8 +355,8 @@
                     else if (status === 'absent') { cls = 'cal-absent'; tag = 'Absent'; counts.absent++; }
                     else { cls = 'cal-weekoff'; tag = status; counts.weekoff++; }
                     const fmtT = (t) => { const m = String(t).match(/(\d{1,2}:\d{2})/); return m ? m[1] : t; };
-                    if (rec.check_in) checkIn = 'Check In ' + fmtT(rec.check_in);
-                    if (rec.check_out) checkOut = 'Check Out ' + fmtT(rec.check_out);
+                    if (rec.check_in) checkIn = fmtT(rec.check_in);
+                    if (rec.check_out) checkOut = fmtT(rec.check_out);
                 } else if (isFuture) {
                     cls = 'future';
                 } else if (holidayDates[dateStr]) {
@@ -370,9 +376,11 @@
                 html += '<div class="cal-day">' + d + (isToday ? ' <span style="font-size:0.55rem;font-weight:700;color:var(--primary);">TODAY</span>' : '') + '</div>';
                 if (tag) html += '<div class="cal-tag">' + escapeHtml(tag) + '</div>';
                 if (checkIn || checkOut) {
-                    html += '<div style="display:flex;gap:4px;justify-content:center;align-items:center;flex-wrap:wrap;font-size:0.52rem;color:var(--text-secondary);margin-top:2px;line-height:1.3;">';
-                    if (checkIn) html += '<span>' + escapeHtml(checkIn) + '</span>';
-                    if (checkOut) html += '<span>' + escapeHtml(checkOut) + '</span>';
+                    const tspan = (full, short, t) =>
+                        '<span style="white-space:nowrap;"><b class="cf">' + full + '</b><b class="cs">' + short + '</b> ' + escapeHtml(t) + '</span>';
+                    html += '<div class="cal-times">';
+                    if (checkIn) html += tspan('Check In', 'In', checkIn);
+                    if (checkOut) html += tspan('Check Out', 'Out', checkOut);
                     html += '</div>';
                 }
                 html += '</div>';
