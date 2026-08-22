@@ -154,6 +154,10 @@
             loadBalance();
             loadTypes();
             loadHistory();
+            // Declared holidays feed the sandwich-leave warning.
+            apiCall('/holidays').then(d => {
+                window.HOLIDAY_DATES = (d && d.success ? (d.holidays || []) : []).map(h => String(h.date).substring(0, 10));
+            }).catch(() => { window.HOLIDAY_DATES = []; });
         });
 
         let reportingManagerName = null;
@@ -265,14 +269,29 @@
                 current.setDate(current.getDate() + 1);
             }
 
+            // Sandwich leave detection: a weekend / declared holiday strictly
+            // INSIDE the selected date range gets deducted as leave too.
+            const isHol = (d) => (window.HOLIDAY_DATES || []).includes(d.toISOString().substring(0, 10));
+            let sandwichCount = 0;
+            const cur = new Date(start);
+            cur.setDate(cur.getDate() + 1);
+            while (cur < end) {
+                if (cur.getDay() === 0 || cur.getDay() === 6 || isHol(cur)) sandwichCount++;
+                cur.setDate(cur.getDate() + 1);
+            }
+
             const totalDays = Math.ceil((end - start) / (1000*60*60*24)) + 1;
             infoBox.style.display = 'flex';
             // Compose the weekend warning into the summary instead of setting it
             // first and overwriting it below (the warning was never visible).
-            infoText.textContent = (weekendStart ? 'Warning: Start date falls on a weekend. ' : '') +
+            let msg = (weekendStart ? 'Warning: Start date falls on a weekend. ' : '') +
                 totalDays + ' calendar day' + (totalDays > 1 ? 's' : '') + ' (' + businessDays + ' business day' + (businessDays > 1 ? 's' : '') + ', excluding weekends)';
-            infoBox.style.background = weekendStart ? 'var(--accent-light)' : 'var(--primary-50)';
-            infoBox.style.color = weekendStart ? 'var(--accent)' : 'var(--primary-dark)';
+            if (sandwichCount > 0) {
+                msg += ' | SANDWICH RULE: ' + sandwichCount + ' weekend/holiday day' + (sandwichCount > 1 ? 's' : '') + ' inside this range will also be deducted as leave.';
+            }
+            infoText.textContent = msg;
+            infoBox.style.background = (weekendStart || sandwichCount > 0) ? 'var(--accent-light)' : 'var(--primary-50)';
+            infoBox.style.color = (weekendStart || sandwichCount > 0) ? 'var(--accent)' : 'var(--primary-dark)';
         }
 
         function openModal() {

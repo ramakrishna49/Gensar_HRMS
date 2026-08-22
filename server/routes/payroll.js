@@ -231,6 +231,25 @@ async function computeAttendanceSummary(employeeId, month, year) {
     attRes.rows.forEach(r => { statusByDate[fmtD(r.date)] = r.status; });
     const holidaySet = new Set(holRes.rows.map(r => fmtD(r.date)));
 
+    // ---- Sandwich leave policy ----
+    // An approved leave application that SPANS a week off / declared holiday
+    // (non-working days strictly inside its date range) pays for them too:
+    // those days become LEAVE days instead of free paid days.
+    const sandwichDays = new Set();
+    for (const l of leaveRes.rows) {
+        const s = fmtD(l.start_date), e = fmtD(l.end_date);
+        if (!s || !e || s >= e) continue;
+        let c = new Date(s + 'T00:00:00Z');
+        c.setUTCDate(c.getUTCDate() + 1);          // day after start
+        const cEnd = new Date(e + 'T00:00:00Z');   // strictly before end
+        while (c < cEnd) {
+            const ds = c.toISOString().substring(0, 10);
+            if (holidaySet.has(ds)) sandwichDays.add('H' + ds);
+            else { const dw = c.getUTCDay(); if (dw === 0 || dw === 6) sandwichDays.add(ds); }
+            c.setUTCDate(c.getUTCDate() + 1);
+        }
+    }
+
     // Calendar split over the FULL month - working days are always quoted on
     // a full-month basis. Every day lands in exactly one calendar bucket:
     // holiday, week off, or working day.
@@ -248,12 +267,19 @@ async function computeAttendanceSummary(employeeId, month, year) {
         cursor.setUTCDate(cursor.getUTCDate() + 1);
 
         totalDays++;
-        if (ds <= todayStr) {
-            if (holidaySet.has(ds)) { pastHolidays++; }
-            else if (dow === 0 || dow === 6) { pastWeekOffs++; }
+        const isHol = holidaySet.has(ds);
+        const isWo = !isHol && (dow === 0 || dow === 6);
+        const isSandwich = isHol ? sandwichDays.has('H' + ds) : (isWo && sandwichDays.has(ds));
+        if (ds <= todayStr && isSandwich) {
+            // Sandwich rule: this non-working day falls inside a leave
+            // bracketed by non-working days - it is PAID LEAVE, not free.
+            leaveDays++;
+        } else if (ds <= todayStr) {
+            if (isHol) pastHolidays++;
+            else if (isWo) pastWeekOffs++;
         }
-        if (holidaySet.has(ds)) continue;
-        if (dow === 0 || dow === 6) { weekOffs++; continue; }
+        if (isHol) continue;
+        if (isWo) { weekOffs++; continue; }
 
         workingDays++;
 
