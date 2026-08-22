@@ -348,8 +348,9 @@
                     else if (status === 'half-day') { cls = 'cal-half-day'; tag = 'Half Day'; counts['half-day']++; }
                     else if (status === 'absent') { cls = 'cal-absent'; tag = 'Absent'; counts.absent++; }
                     else { cls = 'cal-weekoff'; tag = status; counts.weekoff++; }
-                    if (rec.check_in) checkIn = 'In ' + rec.check_in;
-                    if (rec.check_out) checkOut = 'Out ' + rec.check_out;
+                    const fmtT = (t) => { const m = String(t).match(/(\d{1,2}:\d{2})/); return m ? m[1] : t; };
+                    if (rec.check_in) checkIn = 'In ' + fmtT(rec.check_in);
+                    if (rec.check_out) checkOut = 'Out ' + fmtT(rec.check_out);
                 } else if (isFuture) {
                     cls = 'future';
                 } else if (holidayDates[dateStr]) {
@@ -368,8 +369,12 @@
                 html += '<div class="cal-cell ' + cls + (isToday ? ' today' : '') + '" title="' + (rec && rec.check_in ? 'Check In: ' + rec.check_in + (rec.check_out ? ' | Check Out: ' + rec.check_out : '') : (holidayDates[dateStr] || '')) + '">';
                 html += '<div class="cal-day">' + d + (isToday ? ' <span style="font-size:0.55rem;font-weight:700;color:var(--primary);">TODAY</span>' : '') + '</div>';
                 if (tag) html += '<div class="cal-tag">' + escapeHtml(tag) + '</div>';
-                if (checkIn) html += '<div class="cal-in">' + escapeHtml(checkIn) + '</div>';
-                if (checkOut) html += '<div class="cal-out">' + escapeHtml(checkOut) + '</div>';
+                if (checkIn || checkOut) {
+                    html += '<div style="display:flex;gap:5px;justify-content:center;align-items:center;font-size:0.6rem;color:var(--text-secondary);margin-top:2px;white-space:nowrap;">';
+                    if (checkIn) html += '<span>' + escapeHtml(checkIn) + '</span>';
+                    if (checkOut) html += '<span>' + escapeHtml(checkOut) + '</span>';
+                    html += '</div>';
+                }
                 html += '</div>';
             }
             html += '</div>';
