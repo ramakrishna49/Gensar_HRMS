@@ -1,6 +1,7 @@
 // Fire-and-forget audit logging. Never throws - a failed audit write must not
 // break the business operation it is recording.
 const { query } = require('../config/database');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
 
 // @param {Object} entry
 // @param {number|null} entry.actorId   Employee performing the action (null for anonymous, e.g. failed login)
@@ -20,10 +21,12 @@ function logAudit(entry) {
         detailsJson = '{}';
     }
 
-    query(
-        `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details, ip_address)
-        VALUES ($1, $2, $3, $4, $5::jsonb, $6)`,
-        [actorId, action, entityType, entityId === undefined ? null : String(entityId), detailsJson, ip]
+    runWithSchemaRepair(() =>
+        query(
+            `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details, ip_address)
+            VALUES ($1, $2, $3, $4, $5::jsonb, $6)`,
+            [actorId, action, entityType, entityId === undefined ? null : String(entityId), detailsJson, ip]
+        )
     ).catch((error) => {
         console.error('Audit log write failed:', error.message);
     });

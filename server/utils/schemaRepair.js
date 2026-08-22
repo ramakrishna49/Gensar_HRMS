@@ -36,6 +36,45 @@ const EMPLOYEE_ALTER_COLUMNS = {
     token_version: 'INTEGER NOT NULL DEFAULT 0'
 };
 
+// Tables added in later releases. A live database that predates them fails with
+// 42P01 ("relation does not exist"); the DDL below is fully idempotent and only
+// ever creates what is missing - existing rows are never touched.
+const ENSURE_TABLE_DDL = {
+    audit_logs: [
+        `CREATE TABLE IF NOT EXISTS audit_logs (
+            id SERIAL PRIMARY KEY,
+            actor_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+            action VARCHAR(100) NOT NULL,
+            entity_type VARCHAR(50),
+            entity_id TEXT,
+            details JSONB DEFAULT '{}',
+            ip_address VARCHAR(64),
+            created_at TIMESTAMP DEFAULT NOW()
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at DESC)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs (actor_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action)`
+    ],
+    attendance_regularizations: [
+        `CREATE TABLE IF NOT EXISTS attendance_regularizations (
+            id SERIAL PRIMARY KEY,
+            employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+            date DATE NOT NULL,
+            check_in TIME,
+            check_out TIME,
+            reason TEXT NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            reviewed_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+            review_note TEXT,
+            reviewed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE (employee_id, date)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_att_reg_employee ON attendance_regularizations (employee_id, created_at DESC)`,
+        `CREATE INDEX IF NOT EXISTS idx_att_reg_status ON attendance_regularizations (status)`
+    ]
+};
+
 function missingColumnInfo(error) {
     // Postgres reports 42703 either as `column "x" of relation "y" does not
     // exist` or simply `column "x" does not exist`. Accept both, and fall back
@@ -47,6 +86,13 @@ function missingColumnInfo(error) {
     return { column, table };
 }
 
+function missingTableInfo(error) {
+    if (!error || error.code !== '42P01') return null;
+    const msg = String((error && error.message) || '');
+    const m = /relation "([a-z0-9_]+)" does not exist/i.exec(msg);
+    return (m && m[1]) || (error && error.table) || null;
+}
+
 async function ensureEmployeeColumn(column) {
     const ddl = EMPLOYEE_ALTER_COLUMNS[column];
     if (!ddl) return false;
@@ -55,19 +101,35 @@ async function ensureEmployeeColumn(column) {
     return true;
 }
 
-// Runs fn, and if it fails with a missing-column error (42703) for the employees
-// table, adds the missing column and retries. Loops in case several columns are
-// missing (Postgres reports the first one at a time).
+async function ensureTable(table) {
+    const statements = ENSURE_TABLE_DDL[table];
+    if (!statements) return false;
+    for (const sql of statements) {
+        await query(sql);
+    }
+    return true;
+}
+
+// Runs fn, and if it fails with a missing-column (42703) or missing-table
+// (42P01) error, heals the schema and retries. Loops in case several things
+// are missing (Postgres reports one at a time).
 async function runWithSchemaRepair(fn) {
-    const maxAttempts = Object.keys(EMPLOYEE_ALTER_COLUMNS).length + 2;
+    const maxAttempts = Object.keys(EMPLOYEE_ALTER_COLUMNS).length + Object.keys(ENSURE_TABLE_DDL).length + 2;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
             return await fn();
         } catch (error) {
-            if (error && error.code === '42703' && attempt < maxAttempts - 1) {
-                const miss = missingColumnInfo(error);
-                if (miss.column && await ensureEmployeeColumn(miss.column)) {
-                    continue;
+            if (attempt < maxAttempts - 1) {
+                if (error && error.code === '42703') {
+                    const miss = missingColumnInfo(error);
+                    if (miss.column && await ensureEmployeeColumn(miss.column)) {
+                        continue;
+                    }
+                } else {
+                    const table = missingTableInfo(error);
+                    if (table && await ensureTable(table)) {
+                        continue;
+                    }
                 }
             }
             throw error;
@@ -102,4 +164,4 @@ function pgErrorResponse(error) {
     return { status: 500, message: 'Server error' };
 }
 
-module.exports = { runWithSchemaRepair, ensureEmployeeColumn, pgErrorResponse, missingColumnInfo };
+module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureTable, pgErrorResponse, missingColumnInfo };

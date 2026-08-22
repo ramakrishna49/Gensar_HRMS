@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isManager } = require('../middleware/auth');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
 
 // @route   GET /api/notifications/counts
 // @desc    Get pending-action counts for the notification bell
@@ -12,12 +13,13 @@ router.get('/counts', verifyToken, isManager, async (req, res) => {
         const scopeClause = isAdminRole ? '' : ' AND reporting_manager_id = $1';
         const scopeParams = isAdminRole ? [] : [req.user.id];
 
-        // A count failing (e.g. a brand-new table not yet migrated) must not
-        // break the whole bell - fall back to 0 for that source only.
+        // A count failing must not break the whole bell - fall back to 0 for
+        // that source only. Regularization counts also self-heal their table.
         const safe = (p) => p.catch((err) => {
             console.error('Notification count failed:', err.message);
             return { rows: [{ count: '0' }] };
         });
+        const q = (sql, params) => safe(runWithSchemaRepair(() => query(sql, params)));
 
         const [pendingLeaves, pendingWfh, pendingTickets, announcementsUnread, pendingProfileUpdates, pendingRegularizations] = await Promise.all([
             safe(query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'" + scopeClause, scopeParams)),
@@ -33,13 +35,13 @@ router.get('/counts', verifyToken, isManager, async (req, res) => {
                 ? safe(query("SELECT COUNT(*) as count FROM profile_update_requests WHERE status = 'pending'"))
                 : Promise.resolve({ rows: [{ count: '0' }] }),
             isAdminRole
-                ? safe(query("SELECT COUNT(*) as count FROM attendance_regularizations WHERE status = 'pending'"))
-                : safe(query(
+                ? q("SELECT COUNT(*) as count FROM attendance_regularizations WHERE status = 'pending'")
+                : q(
                     `SELECT COUNT(*) as count FROM attendance_regularizations r
                     JOIN employees e ON e.id = r.employee_id
                     WHERE r.status = 'pending' AND e.reporting_manager_id = $1`,
                     [req.user.id]
-                ))
+                )
         ]);
 
         const counts = {

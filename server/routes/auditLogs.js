@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
+
+// Self-heals the audit_logs table on a database that predates it.
+const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
 
 // @route   GET /api/audit-logs
 // @desc    Paginated audit trail with optional filters (admin only)
@@ -41,7 +45,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         params.push(offset);
         const offsetIdx = params.length;
 
-        const rows = await query(
+        const rows = await q(
             `SELECT a.id, a.action, a.entity_type, a.entity_id, a.details,
                     a.ip_address, a.created_at,
                     a.actor_id,
@@ -57,7 +61,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
 
         // Count with the same filters for pagination display.
         const countParams = params.slice(0, limitIdx - 1);
-        const countResult = await query(
+        const countResult = await q(
             `SELECT COUNT(*)::int AS total FROM audit_logs a ${whereClause}`,
             countParams
         );

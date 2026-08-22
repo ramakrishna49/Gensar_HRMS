@@ -3,6 +3,11 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { istDateString } = require('../utils/date');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
+
+// Every query below touches attendance_regularizations, which may not exist
+// yet on a live database that predates the feature - repair and retry.
+const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
 
 // @route   POST /api/regularization
 // @desc    Employee submits a regularization request for one date
@@ -30,7 +35,7 @@ router.post('/', verifyToken, async (req, res) => {
         }
 
         // One row per employee per date - pending or approved both block resubmission.
-        const dup = await query(
+        const dup = await q(
             `SELECT id, status FROM attendance_regularizations WHERE employee_id = $1 AND date = $2`,
             [req.user.id, date]
         );
@@ -43,7 +48,7 @@ router.post('/', verifyToken, async (req, res) => {
             });
         }
 
-        const result = await query(
+        const result = await q(
             `INSERT INTO attendance_regularizations (employee_id, date, check_in, check_out, reason)
             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
             [req.user.id, date, check_in ? String(check_in).slice(0, 5) : null, check_out ? String(check_out).slice(0, 5) : null, String(reason).trim()]
@@ -61,7 +66,7 @@ router.post('/', verifyToken, async (req, res) => {
 // @access  Private
 router.get('/mine', verifyToken, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `SELECT r.*, e.first_name || ' ' || e.last_name AS reviewed_by_name
             FROM attendance_regularizations r
             LEFT JOIN employees e ON e.id = r.reviewed_by
@@ -87,7 +92,7 @@ router.get('/pending', verifyToken, async (req, res) => {
 
         let rows;
         if (req.user.role === 'admin' || req.user.role === 'hr') {
-            rows = await query(
+            rows = await q(
                 `SELECT r.*, e.first_name, e.last_name, e.employee_id
                 FROM attendance_regularizations r
                 JOIN employees e ON e.id = r.employee_id
@@ -95,7 +100,7 @@ router.get('/pending', verifyToken, async (req, res) => {
                 ORDER BY r.created_at ASC LIMIT 100`
             );
         } else {
-            rows = await query(
+            rows = await q(
                 `WITH RECURSIVE subtree AS (
                     SELECT id FROM employees WHERE id = $1
                     UNION
@@ -130,7 +135,7 @@ router.post('/:id/review', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Status must be approved or rejected' });
         }
 
-        const rows = await query(
+        const rows = await q(
             `SELECT r.*, e.reporting_manager_id FROM attendance_regularizations r
             JOIN employees e ON e.id = r.employee_id
             WHERE r.id = $1`,
@@ -142,7 +147,7 @@ router.post('/:id/review', verifyToken, async (req, res) => {
         const isAdminUser = req.user.role === 'admin' || req.user.role === 'hr';
         if (!isAdminUser) {
             // Manager may only review requests from their own subtree.
-            const chain = await query(
+            const chain = await q(
                 `WITH RECURSIVE subtree AS (
                     SELECT id FROM employees WHERE id = $1
                     UNION
@@ -160,7 +165,7 @@ router.post('/:id/review', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'This request was already reviewed' });
         }
 
-        await query(
+        await q(
             `UPDATE attendance_regularizations
             SET status = $1, reviewed_by = $2, review_note = $3, reviewed_at = NOW()
             WHERE id = $4`,
@@ -169,12 +174,12 @@ router.post('/:id/review', verifyToken, async (req, res) => {
 
         if (status === 'approved') {
             // Write-back into attendance: update existing row or insert one.
-            const att = await query(
+            const att = await q(
                 'SELECT id FROM attendance WHERE employee_id = $1 AND date = $2',
                 [requestRow.employee_id, requestRow.date]
             );
             if (att.rows.length > 0) {
-                await query(
+                await q(
                     `UPDATE attendance SET
                         check_in = COALESCE($1, check_in),
                         check_out = COALESCE($2, check_out),
@@ -184,7 +189,7 @@ router.post('/:id/review', verifyToken, async (req, res) => {
                     [requestRow.check_in, requestRow.check_out, att.rows[0].id]
                 );
             } else {
-                await query(
+                await q(
                     `INSERT INTO attendance (employee_id, date, check_in, check_out, status, remarks)
                     VALUES ($1, $2, $3, $4, 'present', '[regularized]')`,
                     [requestRow.employee_id, requestRow.date, requestRow.check_in, requestRow.check_out]
