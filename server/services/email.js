@@ -75,10 +75,11 @@ function parsePayslipFilename(filename) {
 }
 
 // Human-friendly attachment name: Payslip_EMP003_August_2026.pdf
-function prettyPayslipFilename(filename) {
+// empCode wins over whatever id sits inside the internal filename.
+function prettyPayslipFilename(filename, empCode) {
     const p = parsePayslipFilename(filename);
     if (!p) return filename;
-    return `Payslip_${p.emp}_${MONTHS[p.month - 1]}_${p.year}.pdf`;
+    return `Payslip_${empCode || p.emp}_${MONTHS[p.month - 1]}_${p.year}.pdf`;
 }
 
 // Send a payslip PDF as an email attachment. Returns { success, reason } so
@@ -93,7 +94,7 @@ async function sendPayslipEmail(email, filename, pdfBuffer, meta) {
     const parsed = parsePayslipFilename(filename);
     const period = parsed ? `${MONTHS[parsed.month - 1]} ${parsed.year}` : 'this month';
     const empId = meta.empId || (parsed ? parsed.emp : '') || '';
-    const attachName = prettyPayslipFilename(filename);
+    const attachName = prettyPayslipFilename(filename, empId);
     const greetName = meta.name ? meta.name.split(' ')[0] : '';
     const subject = `Payslip - ${empId ? empId + ' - ' : ''}${period} | Gensar HRMS`;
     const html = baseEmail({

@@ -1186,7 +1186,7 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
                 if (row) pdfBuffer = await renderPayslipPdf(row, row.company);
             }
             if (pdfBuffer) {
-                const filename = `payslip_${payslip.employee_id}_${month}_${year}.pdf`;
+                const filename = `payslip_${payrollValues.emp_code || payslip.employee_id}_${month}_${year}.pdf`;
                 email_sent = await sendPayslipEmail(empEmail, filename, pdfBuffer, {
                     name: `${payrollValues.first_name || ''} ${payrollValues.last_name || ''}`.trim(),
                     empId: payrollValues.emp_code,
@@ -1298,7 +1298,7 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                         if (row) pdfBuffer = await renderPayslipPdf(row, row.company);
                     }
                     if (pdfBuffer) {
-                        const filename = `payslip_${employee_id}_${month}_${year}.pdf`;
+                        const filename = `payslip_${payrollValues.emp_code || employee_id}_${month}_${year}.pdf`;
                         const sent = await sendPayslipEmail(payrollValues.personal_email, filename, pdfBuffer, {
                             name: `${payrollValues.first_name || ''} ${payrollValues.last_name || ''}`.trim(),
                             empId: payrollValues.emp_code,
