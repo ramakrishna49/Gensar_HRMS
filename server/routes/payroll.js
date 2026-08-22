@@ -352,17 +352,33 @@ async function computeAttendanceSummary(employeeId, month, year) {
     const MONTHLY_LEAVE_QUOTA = 1;
     const quotaCovered = Math.min(leaveDays, MONTHLY_LEAVE_QUOTA);
     // Identity-based LOP on the FULL elapsed calendar:
-    //   LOP = elapsed total days - present days - free monthly quota
-    // Never showed up at all -> every day of the month is LOP (net pay zero).
-    // Normal case -> only the uncovered work-day gap becomes LOP, and the
-    // single monthly quota leave always stays protected.
-    let elapsedDays = 0;
-    {
-        let c = new Date(effStart + 'T00:00:00Z');
-        const cE = new Date([end, todayStr].sort()[0] + 'T00:00:00Z');
-        while (c <= cE) { elapsedDays++; c.setUTCDate(c.getUTCDate() + 1); }
+    //   Never showed up at all -> the WHOLE elapsed period is LOP (net pay
+    //   zero, week offs and holidays included by design).
+    //   Otherwise -> only unpaid WORK days are LOP: week offs and declared
+    //   holidays are never deducted from an employee who worked at all.
+    let lopDays;
+    if (paidRaw === 0) {
+        let elapsedAll = 0;
+        {
+            let c = new Date(effStart + 'T00:00:00Z');
+            const cE = new Date([end, todayStr].sort()[0] + 'T00:00:00Z');
+            while (c <= cE) { elapsedAll++; c.setUTCDate(c.getUTCDate() + 1); }
+        }
+        lopDays = Math.max(0, elapsedAll - quotaCovered);
+    } else {
+        let elapsedWorkDays = 0;
+        {
+            let c = new Date(effStart + 'T00:00:00Z');
+            const cE = new Date([end, todayStr].sort()[0] + 'T00:00:00Z');
+            while (c <= cE) {
+                const ds2 = c.toISOString().substring(0, 10);
+                const dw2 = c.getUTCDay();
+                if (!holidaySet.has(ds2) && dw2 !== 0 && dw2 !== 6) elapsedWorkDays++;
+                c.setUTCDate(c.getUTCDate() + 1);
+            }
+        }
+        lopDays = Math.max(0, elapsedWorkDays - Math.round(paidRaw) - quotaCovered);
     }
-    const lopDays = Math.max(0, elapsedDays - presentDays - quotaCovered);
 
     return {
         // "Working days" now carries the FULL calendar month (Total Days) -
