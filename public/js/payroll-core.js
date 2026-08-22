@@ -94,7 +94,9 @@ function ppCompute(v) {
     const leaveDays = ppNum(v.leave_days);
     const lopDays = ppNum(v.lop_days);
     const paidDays = presentDays + leaveDays;
-    const attendanceValid = Math.abs(workingDays - (presentDays + leaveDays + lopDays)) < 0.001;
+    // Mid-month previews legitimately leave a gap (upcoming days are neither
+ // present nor LOP), so paid buckets only need to fit WITHIN working days.
+ const attendanceValid = (presentDays + leaveDays + lopDays) <= workingDays + 0.001;
     const actualPayableGross = gross - totalDeductions + bonus;
     const totalDeductionsWithEmployer = totalDeductions + employerTotal;
     const netPayable = actualPayableGross - employerTotal;

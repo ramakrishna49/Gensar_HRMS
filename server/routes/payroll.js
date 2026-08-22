@@ -109,7 +109,9 @@ function computeTotals(v) {
     const leaveDays = num(v.leave_days);
     const lopDays = num(v.lop_days);
     const paidDays = presentDays + leaveDays;
-    const attendanceValid = Math.abs(workingDays - (presentDays + leaveDays + lopDays)) < 0.001;
+    // Mid-month previews legitimately leave a gap: upcoming days are neither
+    // present nor LOP, so the paid buckets only need to fit within working days.
+    const attendanceValid = (presentDays + leaveDays + lopDays) <= workingDays + 0.001;
     const actualPayableGross = gross - totalDeductions + bonus;
     const totalDeductionsWithEmployer = totalDeductions + employerTotal;
     const netPayable = actualPayableGross - employerTotal;
@@ -211,19 +213,17 @@ async function computeAttendanceSummary(employeeId, month, year) {
             period_start: effStart, period_end: end, future_period: true
         };
     }
-    let effEnd = end;
-    if (effEnd > todayStr) effEnd = todayStr;
 
     const [attRes, leaveRes, wfhRes, holRes] = await Promise.all([
         query(`SELECT date, status FROM attendance
-               WHERE employee_id = $1 AND date >= $2 AND date <= $3`, [employeeId, effStart, effEnd]),
+               WHERE employee_id = $1 AND date >= $2 AND date <= $3`, [employeeId, effStart, end]),
         query(`SELECT start_date, end_date FROM leave_applications
                WHERE employee_id = $1 AND status = 'approved'
-                 AND end_date >= $2 AND start_date <= $3`, [employeeId, effStart, effEnd]),
+                 AND end_date >= $2 AND start_date <= $3`, [employeeId, effStart, end]),
         query(`SELECT start_date, end_date FROM wfh_requests
                WHERE employee_id = $1 AND status = 'approved'
-                 AND end_date >= $2 AND start_date <= $3`, [employeeId, effStart, effEnd]),
-        query(`SELECT date FROM holidays WHERE is_active = 1 AND date >= $1 AND date <= $2`, [effStart, effEnd])
+                 AND end_date >= $2 AND start_date <= $3`, [employeeId, effStart, end]),
+        query(`SELECT date FROM holidays WHERE is_active = 1 AND date >= $1 AND date <= $2`, [effStart, end])
     ]);
 
     const fmtD = (v) => formatDateOnly(v);
@@ -231,14 +231,14 @@ async function computeAttendanceSummary(employeeId, month, year) {
     attRes.rows.forEach(r => { statusByDate[fmtD(r.date)] = r.status; });
     const holidaySet = new Set(holRes.rows.map(r => fmtD(r.date)));
 
-    // Calendar split of the effective window. Every day lands in exactly one
-    // bucket: holiday, week off, or working day - so
-    // total_days = working_days + week_offs + holidays always holds.
+    // Calendar split over the FULL month - working days are always quoted on
+    // a full-month basis. Every day lands in exactly one calendar bucket:
+    // holiday, week off, or working day.
     let totalDays = 0, weekOffs = 0, workingDays = 0, paidRaw = 0.0, leaveDays = 0;
     const tally = { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0 };
 
     const cursor = new Date(effStart + 'T00:00:00Z');
-    const endDate = new Date(effEnd + 'T00:00:00Z');
+    const endDate = new Date(end + 'T00:00:00Z');
     while (cursor <= endDate) {
         const ds = cursor.toISOString().substring(0, 10);
         const dow = cursor.getUTCDay();
@@ -249,14 +249,19 @@ async function computeAttendanceSummary(employeeId, month, year) {
         if (dow === 0 || dow === 6) { weekOffs++; continue; }
 
         workingDays++;
+
+        // Day classification only runs up to today: upcoming days are neither
+        // present nor LOP yet, so they stay unclassified.
+        if (ds > todayStr) continue;
+
         const st = statusByDate[ds];
         if (st === 'present') { paidRaw++; tally.present++; }
         else if (st === 'late') { paidRaw++; tally.late++; }
         else if (st === 'half-day') { paidRaw += 0.5; tally.half_day++; }
         else if (leaveRes.rows.some(l => ds >= fmtD(l.start_date) && ds <= fmtD(l.end_date))) {
-            // Approved leave day (with or without a back-filled row) is paid leave.
+            // Approved leave day (with or without a back-filled row) is paid
+            // leave - never LOP.
             leaveDays++;
-            if (st === 'absent') tally.absent++;
         }
         else if (wfhRes.rows.some(w => ds >= fmtD(w.start_date) && ds <= fmtD(w.end_date))) {
             // Approved WFH with no check-in record is still a paid day.
@@ -265,8 +270,10 @@ async function computeAttendanceSummary(employeeId, month, year) {
         else tally.absent++;
     }
 
+    // LOP counts only GENUINE absences (no check-in, no approved leave/WFH)
+    // that have already happened. Upcoming days never inflate it.
     const presentDays = Math.min(workingDays, Math.round(paidRaw));
-    const lopDays = Math.max(0, workingDays - presentDays - leaveDays);
+    const lopDays = tally.absent;
 
     return {
         working_days: workingDays,
@@ -285,7 +292,7 @@ async function computeAttendanceSummary(employeeId, month, year) {
             holiday: holidaySet.size
         },
         period_start: effStart,
-        period_end: effEnd
+        period_end: end
     };
 }
 
