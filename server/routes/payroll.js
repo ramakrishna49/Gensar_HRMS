@@ -235,6 +235,9 @@ async function computeAttendanceSummary(employeeId, month, year) {
     // a full-month basis. Every day lands in exactly one calendar bucket:
     // holiday, week off, or working day.
     let totalDays = 0, weekOffs = 0, workingDays = 0, paidRaw = 0.0, leaveDays = 0;
+    // Week offs / holidays that have ALREADY HAPPENED by today - upcoming
+    // ones must never inflate a mid-month preview's present days.
+    let pastWeekOffs = 0, pastHolidays = 0;
     const tally = { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0 };
 
     const cursor = new Date(effStart + 'T00:00:00Z');
@@ -245,6 +248,10 @@ async function computeAttendanceSummary(employeeId, month, year) {
         cursor.setUTCDate(cursor.getUTCDate() + 1);
 
         totalDays++;
+        if (ds <= todayStr) {
+            if (holidaySet.has(ds)) { pastHolidays++; }
+            else if (dow === 0 || dow === 6) { pastWeekOffs++; }
+        }
         if (holidaySet.has(ds)) continue;
         if (dow === 0 || dow === 6) { weekOffs++; continue; }
 
@@ -274,8 +281,8 @@ async function computeAttendanceSummary(employeeId, month, year) {
     // that have already happened. Upcoming days never inflate it.
     // Present days follow the employee-view convention: check-ins (incl.
     // late logins & half days), approved WFH, plus every week off and
-    // holiday of the month - all paid, none LOP.
-    const presentDays = Math.min(totalDays, Math.round(paidRaw) + weekOffs + holidaySet.size);
+    // holiday that has ALREADY OCCURRED - future ones are not counted yet.
+    const presentDays = Math.min(totalDays, Math.round(paidRaw) + pastWeekOffs + pastHolidays);
     const lopDays = tally.absent;
 
     return {
