@@ -107,6 +107,14 @@
                 <p style="color:var(--text-secondary);">Here's your daily overview.</p>
             </div>
 
+            <!-- Birthday banner sits at the very top so it is the first thing seen. -->
+            <div class="card slide-up stagger-2 mb-3" id="birthdayCard" style="display:none;">
+                <div class="card-header">
+                    <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-cake-candles" style="color:#D946EF;margin-right:8px;"></i>Birthdays</h3>
+                </div>
+                <div id="birthdayList"></div>
+            </div>
+
             <div class="grid grid-2 mb-3">
                 <div class="card slide-up stagger-1 checkin-widget">
                     <div class="clock-section">
@@ -222,13 +230,6 @@
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
                     </div>
                 </div>
-            </div>
-
-            <div class="card slide-up stagger-2 mb-3" id="birthdayCard" style="display:none;">
-                <div class="card-header">
-                    <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-cake-candles" style="color:#D946EF;margin-right:8px;"></i>Birthdays</h3>
-                </div>
-                <div id="birthdayList"></div>
             </div>
         </div>
     </main>

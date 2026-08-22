@@ -68,7 +68,14 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
         const isAdminRole = req.user.role === 'admin';
 
         let leaveUrl, wfhUrl, ticketUrl;
-        let leavesQuery, wfhQuery, ticketsQuery, profilesQuery = null;
+        let leavesQuery, wfhQuery, ticketsQuery, profilesQuery = null, regsQuery = null;
+
+        const REG_SELECT = `SELECT r.id, r.status, r.date, r.check_in, r.check_out, r.created_at,
+                e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
+                FROM attendance_regularizations r
+                JOIN employees e ON e.id = r.employee_id
+                WHERE r.status = 'pending'`;
+        const regUrl = '/pages/manager/my-team.html?tab=regularization';
 
         if (isAdminRole) {
             leaveUrl = '/pages/admin/leave.html?status=pending';
@@ -112,10 +119,18 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
                 ORDER BY r.created_at DESC LIMIT 8`,
                 values: []
             };
+            regsQuery = {
+                text: REG_SELECT + ' ORDER BY r.created_at DESC LIMIT 8',
+                values: []
+            };
         } else {
             leaveUrl = '/pages/manager/my-team.html';
             wfhUrl = '/pages/manager/my-team.html';
             ticketUrl = '/pages/manager/my-team.html';
+            regsQuery = {
+                text: REG_SELECT + ' AND e.reporting_manager_id = $1 ORDER BY r.created_at DESC LIMIT 8',
+                values: [req.user.id]
+            };
             leavesQuery = {
                 text: `SELECT la.id, la.status, la.start_date, la.end_date, la.total_days, la.created_at,
                 lt.name as leave_type_name,
@@ -147,11 +162,15 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
             };
         }
 
-        const [leaves, wfh, tickets, profiles] = await Promise.all([
+        const [leaves, wfh, tickets, profiles, regs] = await Promise.all([
             query(leavesQuery.text, leavesQuery.values),
             query(wfhQuery.text, wfhQuery.values),
             query(ticketsQuery.text, ticketsQuery.values),
-            profilesQuery ? query(profilesQuery.text, profilesQuery.values) : Promise.resolve({ rows: [] })
+            profilesQuery ? query(profilesQuery.text, profilesQuery.values) : Promise.resolve({ rows: [] }),
+            // Regularizations live in a table that may predate the feature -
+            // repair/retry and never let it break the bell.
+            regsQuery ? safe(runWithSchemaRepair(() => query(regsQuery.text, regsQuery.values)))
+                .catch(() => ({ rows: [] })) : Promise.resolve({ rows: [] })
         ]);
 
         const feed = [
@@ -190,6 +209,15 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
                 subtitle: `${r.emp_id} · ${r.field}`,
                 created_at: r.created_at,
                 url: '/pages/admin/employees.html'
+            })),
+            ...regs.rows.map(r => ({
+                type: 'regularization',
+                id: r.id,
+                status: r.status,
+                title: `${r.employee_name} requested attendance regularization`,
+                subtitle: `${r.emp_id} · ${String(r.date).substring(0, 10)}${r.check_in ? ' · ' + r.check_in : ''}${r.check_out ? '-' + r.check_out : ''}`,
+                created_at: r.created_at,
+                url: regUrl
             }))
         ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 12);
 

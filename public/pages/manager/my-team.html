@@ -174,7 +174,9 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (!checkAuth()) throw new Error('Not authenticated');
             const user = getCurrentUser();
-            if (user.role !== 'manager' && user.role !== 'team_lead') {
+            // Admin also uses this page to review team requests
+            // (regularizations have no other admin surface).
+            if (!['admin', 'manager', 'team_lead'].includes(user.role)) {
                 location.href = '/pages/employee/dashboard.html';
                 return;
             }
@@ -184,6 +186,11 @@
             loadWfh();
             loadTickets();
             loadRegularizations();
+            // Deep link support: notification bell URLs carry ?tab=...
+            const wanted = new URLSearchParams(window.location.search).get('tab');
+            if (wanted && ['leaves', 'wfh', 'tickets', 'regularization'].includes(wanted)) {
+                switchTab(wanted);
+            }
         });
 
         const TODAY_GROUPS = [
