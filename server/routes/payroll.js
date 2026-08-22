@@ -254,9 +254,6 @@ async function computeAttendanceSummary(employeeId, month, year) {
     // a full-month basis. Every day lands in exactly one calendar bucket:
     // holiday, week off, or working day.
     let totalDays = 0, weekOffs = 0, workingDays = 0, paidRaw = 0.0, leaveDays = 0;
-    // Week offs / holidays that have ALREADY HAPPENED by today - upcoming
-    // ones must never inflate a mid-month preview's present days.
-    let pastWeekOffs = 0, pastHolidays = 0;
     const tally = { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0 };
 
     const cursor = new Date(effStart + 'T00:00:00Z');
@@ -271,12 +268,9 @@ async function computeAttendanceSummary(employeeId, month, year) {
         const isWo = !isHol && (dow === 0 || dow === 6);
         const isSandwich = isHol ? sandwichDays.has('H' + ds) : (isWo && sandwichDays.has(ds));
         if (ds <= todayStr && isSandwich) {
-            // Sandwich rule: this non-working day falls inside a leave
-            // bracketed by non-working days - it is PAID LEAVE, not free.
+            // Sandwich rule: this non-working day falls inside a leave span -
+            // it is PAID LEAVE, not free.
             leaveDays++;
-        } else if (ds <= todayStr) {
-            if (isHol) pastHolidays++;
-            else if (isWo) pastWeekOffs++;
         }
         if (isHol) continue;
         if (isWo) { weekOffs++; continue; }
@@ -305,10 +299,39 @@ async function computeAttendanceSummary(employeeId, month, year) {
 
     // LOP counts only GENUINE absences (no check-in, no approved leave/WFH)
     // that have already happened. Upcoming days never inflate it.
+    // Week off / holiday credit only applies up to the employee's LAST
+    // ACTIVE day (attendance, approved WFH or approved leave). Someone who
+    // never showed up - or walked out mid-month - earns no free week offs
+    // for the rest of the period.
+    let lastActive = null;
+    for (const r of attRes.rows) {
+        const d = fmtD(r.date);
+        if (d >= effStart && d <= end && d <= todayStr && (!lastActive || d > lastActive)) lastActive = d;
+    }
+    const markActivityEnd = (s, e) => {
+        const cs = fmtD(s), ceRaw = fmtD(e);
+        if (!cs || !ceRaw) return;
+        const ce = [ceRaw, end, todayStr].sort()[0];
+        if (ce >= effStart && (!lastActive || ce > lastActive)) lastActive = ce;
+    };
+    wfhRes.rows.forEach(w => markActivityEnd(w.start_date, w.end_date));
+    leaveRes.rows.forEach(l => markActivityEnd(l.start_date, l.end_date));
+
+    let creditedWOs = 0, creditedHols = 0;
+    if (lastActive) {
+        let c = new Date(effStart + 'T00:00:00Z');
+        const cEnd = new Date(lastActive + 'T00:00:00Z');
+        while (c <= cEnd) {
+            const ds = c.toISOString().substring(0, 10);
+            if (holidaySet.has(ds)) creditedHols++;
+            else { const dw = c.getUTCDay(); if (dw === 0 || dw === 6) creditedWOs++; }
+            c.setUTCDate(c.getUTCDate() + 1);
+        }
+    }
     // Present days follow the employee-view convention: check-ins (incl.
-    // late logins & half days), approved WFH, plus every week off and
-    // holiday that has ALREADY OCCURRED - future ones are not counted yet.
-    const presentDays = Math.min(totalDays, Math.round(paidRaw) + pastWeekOffs + pastHolidays);
+    // late logins & half days), approved WFH, plus week offs and holidays
+    // up to the employee's last active day.
+    const presentDays = Math.min(totalDays, Math.round(paidRaw) + creditedWOs + creditedHols);
     const lopDays = tally.absent;
 
     return {
