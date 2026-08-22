@@ -7,9 +7,7 @@
             #ticketBtn {
                 position: fixed;
                 right: 24px;
-                /* Stacked above the Ask Gensar bubble (bottom:20px, 56px tall)
-                   so the two floating buttons never overlap. */
-                bottom: 88px;
+                bottom: calc(20px + env(safe-area-inset-bottom));
                 width: 56px;
                 height: 56px;
                 border-radius: 50%;
