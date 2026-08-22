@@ -52,7 +52,6 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/manager', require('./routes/manager'));
 app.use('/api/push', require('./routes/push'));
-app.use('/api/assistant', require('./routes/assistant'));
 app.use('/api/cron', require('./routes/cron'));
 
 // Serve pages
