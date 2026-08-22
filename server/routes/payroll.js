@@ -272,11 +272,16 @@ async function computeAttendanceSummary(employeeId, month, year) {
 
     // LOP counts only GENUINE absences (no check-in, no approved leave/WFH)
     // that have already happened. Upcoming days never inflate it.
-    const presentDays = Math.min(workingDays, Math.round(paidRaw));
+    // Present days follow the employee-view convention: check-ins (incl.
+    // late logins & half days), approved WFH, plus every week off and
+    // holiday of the month - all paid, none LOP.
+    const presentDays = Math.min(totalDays, Math.round(paidRaw) + weekOffs + holidaySet.size);
     const lopDays = tally.absent;
 
     return {
-        working_days: workingDays,
+        // "Working days" now carries the FULL calendar month (Total Days) -
+        // per-day salary divides by every day of the month, not just work days.
+        working_days: totalDays,
         present_days: presentDays,
         leave_days: leaveDays,
         lop_days: lopDays,
@@ -569,7 +574,7 @@ async function renderPayslipPdf(p, company) {
                 ['Employee ID', p.emp_id || '-'],
                 ['Pay Period', `${PP_MONTHS[p.month] || ''} ${p.year}`],
                 ['Employee Name', `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-'],
-                ['Working Days', p.working_days || 0],
+                ['Total Days', p.working_days || 0],
                 ['Designation', p.designation_name || '-'],
                 ['Present Days', p.present_days || 0],
                 ['Department', p.department_name || '-'],
@@ -702,7 +707,7 @@ async function renderPayslipPdf(p, company) {
             sectionBar('ATTENDANCE SUMMARY', attX, attBarY, attW, { noBottom: true });
 
             const attColW = attW / 4;
-            const attHeads = ['Working Days', 'Present Days', 'Leave Days', 'LOP Days'];
+            const attHeads = ['Total Days', 'Present Days', 'Leave Days', 'LOP Days'];
             const attVals = [p.working_days || 0, p.present_days || 0, p.leave_days || 0, p.lop_days || 0];
             let ay = attBarY + SEC_H;
             // Header row (30px, #e5e0f5, bold dark, centered)

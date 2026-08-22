@@ -175,8 +175,8 @@
 
                         <div class="pp-section-head" style="display:flex;align-items:center;justify-content:space-between;grid-column:1/-1;"><span><i class="fas fa-calendar-day" style="margin-right:6px;"></i>Attendance</span><button type="button" id="autoAttBtn" onclick="autoFillAttendance()" style="background:#7c6ca8;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.75rem;font-weight:600;cursor:pointer;">⚡ Auto-fill</button></div>
                         <div id="attDerivation" style="grid-column:1/-1;font-size:0.78rem;color:#5b4b8a;background:#f6f4fa;border:1px solid #e2dcf0;border-radius:8px;padding:8px 12px;display:none;"></div>
-                        <div class="pp-field"><label>Working Days</label><input type="number" id="working_days" class="pp-input" value="30" min="0"></div>
-                        <div class="pp-field"><label>Present Days</label><input type="number" id="present_days" class="pp-input" value="0" min="0"></div>
+                        <div class="pp-field"><label>Total Days</label><input type="number" id="working_days" class="pp-input" value="30" min="0"></div>
+                        <div class="pp-field"><label>Present Days <span style="font-weight:400;color:#8b7ba8;">(incl. late logins, half days, week offs &amp; holidays)</span></label><input type="number" id="present_days" class="pp-input" value="0" min="0"></div>
                         <div class="pp-field"><label>Leave Days</label><input type="number" id="leave_days" class="pp-input" value="0" min="0"></div>
                         <div class="pp-field"><label>LOP Days</label><input type="number" id="lop_days" class="pp-input" value="0" min="0"></div>
 
@@ -363,11 +363,12 @@
                             dv.style.display = 'block';
                             dv.textContent = 'This period has not started yet - attendance numbers appear once the month begins.';
                         } else {
-                            const parts = [s.total_days + ' total days'];
+                            const workDays = (s.total_days || 0) - (s.week_offs || 0) - (s.holidays || 0);
+                            const parts = [workDays + ' work days'];
                             if (s.week_offs) parts.push(s.week_offs + ' week off' + (s.week_offs !== 1 ? 's' : ''));
                             if (s.holidays) parts.push(s.holidays + ' holiday' + (s.holidays !== 1 ? 's' : ''));
                             dv.style.display = 'block';
-                            dv.textContent = parts.join(' - ') + ' = ' + s.working_days + ' working days (period ' + s.period_start + ' to ' + s.period_end + ')';
+                            dv.textContent = parts.join(' + ') + ' = ' + s.working_days + ' total days | Present ' + s.present_days + ' includes check-ins, WFH, week offs & holidays (period ' + s.period_start + ' to ' + s.period_end + ')';
                         }
                     }
                     updateSummary();
