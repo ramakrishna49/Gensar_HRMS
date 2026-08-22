@@ -148,7 +148,8 @@ async function getProfileSalaryValues(employeeId, values) {
     const result = await query(
         `SELECT salary, basic_salary, hra, conveyance, special_allowance, other_allowance,
                 pf, esi, professional_tax, income_tax, other_deduction,
-                employer_pf, employer_esi, employer_contribution, personal_email
+                employer_pf, employer_esi, employer_contribution, personal_email,
+                first_name, last_name, employee_id as emp_code
          FROM employees WHERE id = $1`,
         [employeeId]
     );
@@ -180,7 +181,9 @@ async function getProfileSalaryValues(employeeId, values) {
     };
     merged.monthly_gross = merged.basic_salary + merged.hra + merged.conveyance
         + merged.special_allowance + merged.other_allowance;
-    return { ...values, ...merged, personal_email: profile.personal_email || null };
+    return { ...values, ...merged, personal_email: profile.personal_email || null,
+        first_name: profile.first_name || '', last_name: profile.last_name || '',
+        emp_code: profile.emp_code || '' };
 }
 
 // Auto-calculate payroll attendance numbers straight from the attendance,
@@ -1184,7 +1187,11 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
             }
             if (pdfBuffer) {
                 const filename = `payslip_${payslip.employee_id}_${month}_${year}.pdf`;
-                email_sent = await sendPayslipEmail(empEmail, filename, pdfBuffer);
+                email_sent = await sendPayslipEmail(empEmail, filename, pdfBuffer, {
+                    name: `${payrollValues.first_name || ''} ${payrollValues.last_name || ''}`.trim(),
+                    empId: payrollValues.emp_code,
+                    net
+                });
             }
         }
 
@@ -1292,7 +1299,11 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                     }
                     if (pdfBuffer) {
                         const filename = `payslip_${employee_id}_${month}_${year}.pdf`;
-                        const sent = await sendPayslipEmail(payrollValues.personal_email, filename, pdfBuffer);
+                        const sent = await sendPayslipEmail(payrollValues.personal_email, filename, pdfBuffer, {
+                            name: `${payrollValues.first_name || ''} ${payrollValues.last_name || ''}`.trim(),
+                            empId: payrollValues.emp_code,
+                            net
+                        });
                         if (sent.success) { emailed++; email_sent = true; }
                     }
                 }
