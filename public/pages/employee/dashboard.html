@@ -708,23 +708,23 @@
             card.style.display = 'block';
             const todayList = data.birthdays.filter(b => b.is_today);
             const upcoming = data.birthdays.filter(b => !b.is_today).slice(0, 6);
-            let html = '';
-            todayList.forEach(b => {
-                html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 4px;border-radius:10px;background:linear-gradient(90deg,rgba(217,70,239,0.10),transparent);margin-bottom:4px;">' +
-                    '<span style="font-size:1.3rem;">🎉</span>' +
-                    '<div><div style="font-weight:700;font-size:0.92rem;">Today — ' + escapeHtml((b.first_name || '') + ' ' + (b.last_name || '')) +
-                    ' <span class="badge badge-secondary" style="font-size:0.65rem;">' + escapeHtml(b.employee_id || '') + '</span></div>' +
-                    '<div style="font-size:0.78rem;color:var(--text-secondary);">Wish them a happy birthday!</div></div></div>';
-            });
-            upcoming.forEach(b => {
-                const when = b.days_away === 1 ? 'Tomorrow' : 'In ' + b.days_away + ' days · ' + b.birthday;
-                html += '<div style="display:flex;align-items:center;gap:12px;padding:8px 4px;">' +
-                    '<span class="badge" style="background:var(--bg-light,#F3F4F6);color:var(--text-secondary);font-size:0.68rem;min-width:86px;text-align:center;">' + escapeHtml(when) + '</span>' +
-                    '<span style="font-weight:600;font-size:0.88rem;">' + escapeHtml((b.first_name || '') + ' ' + (b.last_name || '')) + '</span>' +
-                    '<span class="badge badge-secondary" style="font-size:0.62rem;">' + escapeHtml(b.employee_id || '') + '</span>' +
-                '</div>';
-            });
-            container.innerHTML = html;
+            let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;">';
+                        todayList.forEach(b => {
+                            html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:linear-gradient(90deg,rgba(217,70,239,0.12),transparent);border:1px solid rgba(217,70,239,0.25);min-width:0;">' +
+                                '\uD83C\uDF82' +
+                                '<div style="min-width:0;"><div style="font-weight:700;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Today - ' + escapeHtml((b.first_name || '') + ' ' + (b.last_name || '')) +
+                                '</div><div style="font-size:0.7rem;color:var(--text-secondary);">' + escapeHtml(b.employee_id || '') + ' - Wish them!</div></div></div>';
+                        });
+                        upcoming.forEach(b => {
+                            const when = b.days_away === 1 ? 'Tomorrow' : 'In ' + b.days_away + ' days';
+                            html += '<div style="display:flex;flex-direction:column;gap:3px;padding:8px 10px;border-radius:10px;background:var(--bg-light,#F3F4F6);min-width:0;">' +
+                                '<span style="font-weight:600;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml((b.first_name || '') + ' ' + (b.last_name || '')) +
+                                ' <span class="badge badge-secondary" style="font-size:0.6rem;">' + escapeHtml(b.employee_id || '') + '</span></span>' +
+                                '<span class="badge" style="background:var(--primary);color:#fff;font-size:0.62rem;align-self:flex-start;">' + escapeHtml(when) + '</span>' +
+                                '</div>';
+                        });
+                        html += '</div>';
+                        container.innerHTML = html;
         }
 
         async function loadLatestAnnouncements() {
