@@ -45,15 +45,20 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         params.push(offset);
         const offsetIdx = params.length;
 
+        // The admin's own trail is hidden from the log view; every other
+        // actor (employees, managers, and unattributed/system entries whose
+        // actor row is missing) stays visible.
+        const fromJoin = 'FROM audit_logs a LEFT JOIN employees e ON e.id = a.actor_id';
+        const visibilityClause = "e.role IS DISTINCT FROM 'admin'";
+
         const rows = await q(
             `SELECT a.id, a.action, a.entity_type, a.entity_id, a.details,
                     a.ip_address, a.created_at,
                     a.actor_id,
                     e.first_name || ' ' || e.last_name AS actor_name,
                     e.employee_id AS actor_employee_id
-            FROM audit_logs a
-            LEFT JOIN employees e ON e.id = a.actor_id
-            ${whereClause}
+            ${fromJoin}
+            WHERE ${visibilityClause}${conditions.length ? ' AND ' + conditions.join(' AND ') : ''}
             ORDER BY a.created_at DESC
             LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
             params
@@ -62,7 +67,8 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         // Count with the same filters for pagination display.
         const countParams = params.slice(0, limitIdx - 1);
         const countResult = await q(
-            `SELECT COUNT(*)::int AS total FROM audit_logs a ${whereClause}`,
+            `SELECT COUNT(*)::int AS total ${fromJoin}
+            WHERE ${visibilityClause}${conditions.length ? ' AND ' + conditions.join(' AND ') : ''}`,
             countParams
         );
 
