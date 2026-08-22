@@ -672,6 +672,10 @@ function adminStampTableLabels() {
             Array.from(row.children).forEach((td, i) => {
                 const want = headers[i] || '';
                 if (td.getAttribute('data-label') !== want) td.setAttribute('data-label', want);
+                // Mobile card layout hints: first column acts as the card title,
+                // action columns render as an inline button row without a label.
+                td.classList.toggle('cell-title', i === 0 && row.children.length > 1 && !td.hasAttribute('colspan'));
+                td.classList.toggle('cell-actions', /^action/i.test(want));
             });
         });
     });
