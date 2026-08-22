@@ -343,22 +343,18 @@ async function computeAttendanceSummary(employeeId, month, year) {
     // cut. Identity: Total - Present = Leave(quota) + LOP.
     const MONTHLY_LEAVE_QUOTA = 1;
     const quotaCovered = Math.min(leaveDays, MONTHLY_LEAVE_QUOTA);
-    // LOP counts only ELAPSED WORK DAYS that ended up unpaid:
-    //   LOP = elapsed work days - paid work credits - free monthly quota
-    // Week offs and holidays are NEVER LOP (even if the employee has zero
-    // presence all month) - only actual working days can lose pay.
-    let elapsedWorkDays = 0;
+    // Identity-based LOP on the FULL elapsed calendar:
+    //   LOP = elapsed total days - present days - free monthly quota
+    // Never showed up at all -> every day of the month is LOP (net pay zero).
+    // Normal case -> only the uncovered work-day gap becomes LOP, and the
+    // single monthly quota leave always stays protected.
+    let elapsedDays = 0;
     {
         let c = new Date(effStart + 'T00:00:00Z');
         const cE = new Date([end, todayStr].sort()[0] + 'T00:00:00Z');
-        while (c <= cE) {
-            const ds = c.toISOString().substring(0, 10);
-            const dw = c.getUTCDay();
-            if (!holidaySet.has(ds) && dw !== 0 && dw !== 6) elapsedWorkDays++;
-            c.setUTCDate(c.getUTCDate() + 1);
-        }
+        while (c <= cE) { elapsedDays++; c.setUTCDate(c.getUTCDate() + 1); }
     }
-    const lopDays = Math.max(0, elapsedWorkDays - Math.round(paidRaw) - quotaCovered);
+    const lopDays = Math.max(0, elapsedDays - presentDays - quotaCovered);
 
     return {
         // "Working days" now carries the FULL calendar month (Total Days) -
