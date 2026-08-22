@@ -81,9 +81,23 @@
         </div>
     `;
 
+    function wire() {
+        // Must run AFTER the panel is appended to the document, otherwise
+        // #gaInput/#gaSend lookups return null and typing never sends.
+        bubble.addEventListener('click', () => toggle());
+        panel.querySelector('.ga-close').addEventListener('click', () => toggle(false));
+        const input = panel.querySelector('#gaInput');
+        const send = panel.querySelector('#gaSend');
+        send.addEventListener('click', () => ask(input.value));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') ask(input.value);
+        });
+    }
+
     function mount() {
         document.body.appendChild(bubble);
         document.body.appendChild(panel);
+        wire();
     }
 
     if (document.readyState === 'loading') {
@@ -144,13 +158,17 @@
         const q = String(question || '').trim();
         if (!q || busy) return;
 
+        // Clear the input as soon as the message is accepted.
+        const input = panel.querySelector('#gaInput');
+        if (input) input.value = '';
+
         addMsg(q, 'user');
         renderChips([]);
         busy = true;
 
         const typing = document.createElement('div');
         typing.className = 'ga-typing';
-        typing.textContent = 'Gensar alochistunnadu...';
+        typing.textContent = 'Thinking...';
         msgs().appendChild(typing);
         scrollBottom();
 
@@ -164,10 +182,10 @@
             renderActions(data.actions);
             renderChips(data.chips);
         } else {
-            addMsg((data && data.message) || 'Konchem problem ayyindi. Malli try cheyyandi.', 'bot');
+            addMsg((data && data.message) || 'Something went wrong. Please try again.', 'bot');
         }
 
-        document.getElementById('gaInput').focus();
+        if (input) input.focus();
     }
 
     function toggle(open) {
@@ -182,15 +200,4 @@
         }
     }
 
-    bubble.addEventListener('click', () => toggle());
-    panel.querySelector('.ga-close').addEventListener('click', () => toggle(false));
-    document.getElementById('gaSend').addEventListener('click', () => ask(document.getElementById('gaInput').value));
-
-    document.getElementById('gaInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const val = document.getElementById('gaInput').value;
-            document.getElementById('gaInput').value = '';
-            ask(val);
-        }
-    });
 })();
