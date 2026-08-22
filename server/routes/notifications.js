@@ -12,27 +12,34 @@ router.get('/counts', verifyToken, isManager, async (req, res) => {
         const scopeClause = isAdminRole ? '' : ' AND reporting_manager_id = $1';
         const scopeParams = isAdminRole ? [] : [req.user.id];
 
+        // A count failing (e.g. a brand-new table not yet migrated) must not
+        // break the whole bell - fall back to 0 for that source only.
+        const safe = (p) => p.catch((err) => {
+            console.error('Notification count failed:', err.message);
+            return { rows: [{ count: '0' }] };
+        });
+
         const [pendingLeaves, pendingWfh, pendingTickets, announcementsUnread, pendingProfileUpdates, pendingRegularizations] = await Promise.all([
-            query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'" + scopeClause, scopeParams),
-            query("SELECT COUNT(*) as count FROM wfh_requests WHERE status = 'pending'" + scopeClause, scopeParams),
-            query("SELECT COUNT(*) as count FROM support_tickets WHERE status IN ('open', 'in_progress')" + scopeClause, scopeParams),
-            query(
+            safe(query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'" + scopeClause, scopeParams)),
+            safe(query("SELECT COUNT(*) as count FROM wfh_requests WHERE status = 'pending'" + scopeClause, scopeParams)),
+            safe(query("SELECT COUNT(*) as count FROM support_tickets WHERE status IN ('open', 'in_progress')" + scopeClause, scopeParams)),
+            safe(query(
                 `SELECT COUNT(*) as count FROM announcements a
                 WHERE a.is_active = 1
                 AND a.id NOT IN (SELECT announcement_id FROM announcement_reads WHERE employee_id = $1)`,
                 [req.user.id]
-            ),
+            )),
             isAdminRole
-                ? query("SELECT COUNT(*) as count FROM profile_update_requests WHERE status = 'pending'")
+                ? safe(query("SELECT COUNT(*) as count FROM profile_update_requests WHERE status = 'pending'"))
                 : Promise.resolve({ rows: [{ count: '0' }] }),
             isAdminRole
-                ? query("SELECT COUNT(*) as count FROM attendance_regularizations WHERE status = 'pending'")
-                : query(
+                ? safe(query("SELECT COUNT(*) as count FROM attendance_regularizations WHERE status = 'pending'"))
+                : safe(query(
                     `SELECT COUNT(*) as count FROM attendance_regularizations r
                     JOIN employees e ON e.id = r.employee_id
                     WHERE r.status = 'pending' AND e.reporting_manager_id = $1`,
                     [req.user.id]
-                )
+                ))
         ]);
 
         const counts = {

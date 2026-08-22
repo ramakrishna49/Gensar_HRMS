@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { query } = require('../config/database');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
 
 // Verify JWT Token and check the user is still active in the database
 const verifyToken = async (req, res, next) => {
@@ -25,7 +26,12 @@ const verifyToken = async (req, res, next) => {
         // bumped whenever the password changes or an admin resets it, which
         // instantly revokes every token issued before that moment.
         try {
-            const result = await query('SELECT id, role, status, token_version FROM employees WHERE id = $1', [decoded.id]);
+            // Wrapped in schema repair so a freshly-deployed release that needs
+            // a new column (e.g. token_version) self-heals on the first request
+            // instead of failing every authenticated call with a 500.
+            const result = await runWithSchemaRepair(
+                () => query('SELECT id, role, status, token_version FROM employees WHERE id = $1', [decoded.id])
+            );
             if (result.rows.length === 0) {
                 return res.status(401).json({
                     success: false,

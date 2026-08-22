@@ -29,7 +29,11 @@ const EMPLOYEE_ALTER_COLUMNS = {
     uan_number: 'TEXT',
     pf_number: 'TEXT',
     esi_number: 'TEXT',
-    reporting_manager_id: 'INT REFERENCES employees(id) ON DELETE SET NULL'
+    reporting_manager_id: 'INT REFERENCES employees(id) ON DELETE SET NULL',
+    // Added by the session-revocation release; verifyToken selects it on every
+    // request, so a missing column must be healed before anything else works.
+    must_change_password: 'INTEGER DEFAULT 0',
+    token_version: 'INTEGER NOT NULL DEFAULT 0'
 };
 
 function missingColumnInfo(error) {
