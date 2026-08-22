@@ -25,7 +25,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
 
 // Shared branded shell so every outgoing mail looks consistent and
 // professional across Gmail / Outlook / Apple Mail.
-function baseEmail({ preheader, headerTitle, bodyHtml }) {
+function baseEmail({ preheader, headerTitle, bodyHtml, headerSubline }) {
     return `
 <!DOCTYPE html>
 <html>
@@ -39,8 +39,9 @@ function baseEmail({ preheader, headerTitle, bodyHtml }) {
                     <td style="background:linear-gradient(135deg,#4F46E5 0%,#9333EA 100%);padding:26px 32px;">
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
                             <td style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">Gensar<span style="font-weight:400;">&nbsp;HRMS</span></td>
-                            <td align="right" style="font-size:11px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.18);padding:4px 12px;border-radius:20px;">${headerTitle}</td>
-                        </tr></table>
+                            <td align="right" style="font-size:11px;font-weight:700;color:#ffffff;background:rgba(255,255,255,0.18);padding:5px 14px;border-radius:20px;white-space:nowrap;">${headerTitle}</td>
+                        </tr>${headerSubline ? `
+                        <tr><td colspan="2" style="padding-top:9px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.88);letter-spacing:1.5px;text-transform:uppercase;">${headerSubline}</td></tr>` : ''}</table>
                     </td>
                 </tr>
                 <tr><td style="padding:30px 32px 26px;font-size:14px;line-height:1.7;color:#374151;">${bodyHtml}</td></tr>
@@ -79,10 +80,18 @@ async function sendPayslipEmail(email, filename, pdfBuffer) {
         return { success: false, reason: 'Email service not configured. Set SMTP_USER / SMTP_PASS in .env' };
     }
     const period = periodFromFilename(filename) || 'this month';
-    const subject = `Payslip for ${period} - Gensar HRMS`;
+    // Pull the employee id out of names like payslip_EMP003_8_2026.pdf so
+    // the mail header can show "EMP003 • August 2026".
+    let empId = '';
+    try {
+        const parts = filename.replace(/^payslip_/, '').replace(/\.pdf$/i, '').split('_');
+        if (parts[0] && !/^\d+$/.test(parts[0])) empId = parts[0];
+    } catch (e) { /* cosmetic only */ }
+    const subject = `Payslip - ${empId ? empId + ' - ' : ''}${period} | Gensar HRMS`;
     const html = baseEmail({
         preheader: `Your salary payslip for ${period} is attached.`,
         headerTitle: 'PAYSLIP',
+        headerSubline: `${empId ? empId + ' &bull; ' : ''}${period}`,
         bodyHtml: `
             <p style="margin:0 0 14px;">Hello,</p>
             <p style="margin:0 0 18px;">Your salary payslip for <strong>${period}</strong> is ready and attached to this email as a PDF document.</p>
