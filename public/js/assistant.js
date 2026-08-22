@@ -76,7 +76,7 @@
         <div id="gaMsgs"></div>
         <div class="ga-chips" id="gaChips"></div>
         <div class="ga-inputrow">
-            <input id="gaInput" type="text" placeholder="Adugandi... e.g. leave balance entha?" autocomplete="off">
+            <input id="gaInput" type="text" placeholder="Ask me anything... e.g. my leave balance?" autocomplete="off">
             <button id="gaSend" type="button"><i class="fas fa-paper-plane"></i></button>
         </div>
     `;
@@ -174,7 +174,9 @@
         const willOpen = open !== undefined ? open : !panel.classList.contains('open');
         panel.classList.toggle('open', willOpen);
         if (willOpen && msgs().children.length === 0) {
-            addMsg('Hi! Nenu Gensar HR assistant \ud83e\udd16 Leave balance, attendance, holidays, payslips - emaina adagandi!', 'bot');
+            // Opening line is always in English; after this, replies follow
+            // whichever language the employee asks in.
+            addMsg("Hi! I'm Gensar HR Assistant 🤖 I can help with leave balances, attendance, holidays, payslips and more. What would you like to know?", 'bot');
             renderChips(['Leave balance', 'My attendance', 'Next holidays', 'Request status']);
             document.getElementById('gaInput').focus();
         }
