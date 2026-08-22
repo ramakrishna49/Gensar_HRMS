@@ -242,7 +242,6 @@
         }
         function closePickers() {
             document.querySelectorAll('.picker-popup.open').forEach(p => p.classList.remove('open'));
-            stopLive('in'); stopLive('out');
         }
         document.addEventListener('click', e => { if (!e.target.closest('.picker-wrap')) closePickers(); });
 
