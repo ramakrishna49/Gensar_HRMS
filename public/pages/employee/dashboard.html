@@ -740,8 +740,16 @@
                         });
                         upcoming.forEach(b => {
                             let when = b.days_away === 1 ? 'Tomorrow' : 'In ' + b.days_away + ' days';
-                            const bParts = String(b.birthday || '').substring(0, 10).split('-');
-                            if (bParts.length >= 3) when += ' \u00B7 ' + bParts[1] + '/' + bParts[2];
+                            const bParts = String(b.birthday || '').split('T')[0].split('-');
+                            if (bParts.length >= 3) when += ' \u00B7 ' + bParts[2] + '/' + bParts[1];
+                            else if (bParts.length === 2) when += ' \u00B7 ' + bParts[1] + '/' + bParts[0];
+                            if (bParts.length >= 2) {
+                                const mm = parseInt(bParts[bParts.length - 2], 10);
+                                const ddd = parseInt(bParts[bParts.length - 1], 10);
+                                if (mm >= 1 && mm <= 12 && ddd >= 1 && ddd <= 31) {
+                                    when += ' (' + ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(new Date().getFullYear(), mm - 1, ddd).getDay()] + ')';
+                                }
+                            }
                             html += '<div style="display:flex;flex-direction:column;gap:3px;padding:8px 10px;border-radius:10px;background:var(--bg-light,#F3F4F6);min-width:170px;flex:0 0 auto;">' +
                                 '<span style="font-weight:600;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml((b.first_name || '') + ' ' + (b.last_name || '')) +
                                 ' <span class="badge badge-secondary" style="font-size:0.6rem;">' + escapeHtml(b.employee_id || '') + '</span></span>' +

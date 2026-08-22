@@ -93,8 +93,9 @@
         .cal-cell { border: 1px solid var(--border-light); border-radius: var(--radius); min-height: 74px; padding: 6px; position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
         .cal-day, .cal-tag, .cal-in { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Month summary cards - compact grid above the calendar */
-        .att-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+        /* Month summary cards - one line on desktop, 3x2 on phone */
+        .att-stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 14px; }
+        @media (max-width: 768px) { .att-stats-grid { grid-template-columns: repeat(3, 1fr); } }
         .att-stats-grid .stat-card { padding: 10px 12px; margin: 0; }
         .att-stats-grid .stat-info h3 { font-size: 1.05rem; }
         .cal-cell .cal-day { font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }

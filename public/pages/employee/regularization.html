@@ -87,15 +87,21 @@
                     <div class="reg-fields">
                         <div class="form-group" style="margin-bottom:0;">
                             <label>Date *</label>
-                            <input type="date" class="form-control" id="regDate" required>
+                            <select id="regDate" class="form-control" required>
+                                <option value="">Select date...</option>
+                            </select>
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
                             <label>Check-in Time</label>
-                            <input type="time" class="form-control" id="regIn">
+                            <select id="regIn" class="form-control">
+                                <option value="">Select time...</option>
+                            </select>
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
                             <label>Check-out Time</label>
-                            <input type="time" class="form-control" id="regOut">
+                            <select id="regOut" class="form-control">
+                                <option value="">Select time...</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group" style="margin-top:12px;">
@@ -121,9 +127,32 @@
         if (!checkAuth()) throw new Error('Not authenticated');
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Only past dates (IST) can be regularized.
-            const maxDate = getTodayIST();
-            document.getElementById('regDate').max = maxDate;
+            // Select dropdowns look identical on every device (laptop & PWA).
+            const MONTHS_S = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const dateSel = document.getElementById('regDate');
+            for (let i = 1; i <= 60; i++) {
+                const d = new Date(Date.now() - i * 86400000);
+                // IST calendar date key the backend expects.
+                const ist = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                const y = ist.getFullYear();
+                const m = String(ist.getMonth() + 1).padStart(2, '0');
+                const dd = String(ist.getDate()).padStart(2, '0');
+                dateSel.innerHTML += `<option value="${y}-${m}-${dd}">${dd} ${MONTHS_S[ist.getMonth()]} ${y}</option>`;
+            }
+            const fmtTime = (h, mm) => {
+                const ampm = h < 12 ? 'AM' : 'PM';
+                const hh = h % 12 === 0 ? 12 : h % 12;
+                return `${hh}:${String(mm).padStart(2, '0')} ${ampm}`;
+            };
+            ['regIn', 'regOut'].forEach(id => {
+                const sel = document.getElementById(id);
+                for (let h = 0; h < 24; h++) {
+                    [0, 30].forEach(mm => {
+                        const v = String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+                        sel.innerHTML += `<option value="${v}">${fmtTime(h, mm)}</option>`;
+                    });
+                }
+            });
             loadMyRequests();
         });
 
