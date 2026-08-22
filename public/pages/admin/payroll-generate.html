@@ -299,7 +299,7 @@
             employees = d.employees;
             const sel = document.getElementById('ppEmployee');
             sel.innerHTML = '<option value="">Select Employee...</option>' + employees
-                .filter(e => e.status === 'active')
+                .filter(e => e.status === 'active' && e.role !== 'admin')
                 .map(e => '<option value="' + e.id + '" data-salary="' + (e.salary || 0) + '">' + ppEsc(e.first_name + ' ' + e.last_name) + ' (' + ppEsc(e.employee_id) + ')</option>')
                 .join('');
         }
