@@ -210,13 +210,39 @@ self.addEventListener('push', (event) => {
         }
     } catch (e) { /* keep defaults */ }
 
-    event.waitUntil(self.registration.showNotification(data.title, {
-        body: data.body,
-        icon: '/assets/images/icon-192.png',
-        badge: '/assets/images/fav-icon.png',
-        data: { url: data.url || '/' },
-        tag: data.tag || (data.url ? 'gensar-hrms:' + data.url : 'gensar-hrms')
-    }));
+    // Rich notification options make pushes feel like native app
+    // notifications: app icon, status-bar badge, vibration pattern and
+    // per-type tags so same-type alerts replace each other instead of piling up.
+    // NOTE: on desktop Chrome/Edge the OS labels every web push with the
+    // browser name - that part is controlled by the OS and cannot be removed
+    // by any website. On Android, once the PWA is installed, notifications
+    // appear under the "Gensar HRMS" app identity automatically.
+    event.waitUntil((async () => {
+        let payload;
+        try {
+            payload = {
+                body: data.body,
+                icon: '/assets/images/icon-192.png',
+                badge: '/assets/images/fav-icon.png',
+                vibrate: [90, 50, 90],
+                tag: data.tag || (data.url ? 'gensar-hrms:' + data.url : 'gensar-hrms'),
+                renotify: true,
+                requireInteraction: false,
+                data: { url: data.url || '/' },
+                timestamp: Date.now(),
+                dir: 'ltr',
+                lang: 'en'
+            };
+            await self.registration.showNotification(data.title || 'Gensar HRMS', payload);
+        } catch (e) {
+            // Some engines reject advanced options - retry minimal.
+            await self.registration.showNotification(data.title || 'Gensar HRMS', {
+                body: data.body,
+                icon: '/assets/images/icon-192.png',
+                data: { url: data.url || '/' }
+            });
+        }
+    })());
 });
 
 self.addEventListener('notificationclick', (event) => {
