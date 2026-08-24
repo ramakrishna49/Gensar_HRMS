@@ -437,6 +437,13 @@ UPDATE leave_types SET days_per_year = 0 WHERE name = 'Paternity Leave';
 -- Earned Leave removed from new requests (soft-disable) - history is preserved.
 UPDATE leave_types SET is_active = 0 WHERE name = 'Earned Leave';
 
+-- Policy change: Sick Leave is the only leave type offered now. All other
+-- types are soft-disabled so historical applications keep their type names,
+-- but they no longer appear in the apply dropdown or balance cards.
+UPDATE leave_types SET is_active = 1 WHERE name = 'Sick Leave';
+UPDATE leave_types SET is_active = 0
+WHERE name IN ('Casual Leave', 'Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Earned Leave');
+
 -- Add team_lead role (idempotent: drop + recreate the role check constraint).
 ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_role_check;
 ALTER TABLE employees ADD CONSTRAINT employees_role_check CHECK (role IN ('admin', 'hr', 'manager', 'team_lead', 'employee'));
