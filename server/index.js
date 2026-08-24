@@ -35,35 +35,6 @@ app.use(cors({
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// TEMPORARY diagnostic (removed next commit): approved leaves vs attendance rows.
-let __leaveDiagDone = false;
-app.use((req, res, next) => {
-    if (!__leaveDiagDone) {
-        __leaveDiagDone = true;
-        (async () => {
-            try {
-                const r = await query(
-                    `SELECT la.employee_id, e.first_name || ' ' || e.last_name AS name,
-                        to_char(la.start_date, 'YYYY-MM-DD') AS start_date,
-                        to_char(la.end_date, 'YYYY-MM-DD') AS end_date,
-                        (SELECT string_agg(to_char(a.date,'YYYY-MM-DD') || ':' || a.status || ':' || COALESCE(a.remarks,''), ' | ')
-                         FROM attendance a WHERE a.employee_id = la.employee_id
-                           AND a.date BETWEEN la.start_date AND la.end_date) AS att_rows
-                    FROM leave_applications la
-                    JOIN employees e ON e.id = la.employee_id
-                    WHERE la.status = 'approved'
-                      AND la.start_date >= '2026-07-01'
-                    ORDER BY la.start_date`
-                );
-                console.log('[LeaveDiag]', JSON.stringify(r.rows));
-            } catch (e) {
-                console.error('[LeaveDiag] failed:', e.message);
-            }
-        })();
-    }
-    next();
-});
-
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/employees', require('./routes/employees'));

@@ -175,11 +175,6 @@
             return out;
         }
 
-        function isLeaveDay(key, rec) {
-            if (lastLeaveDays.has(key)) return true;
-            return !!(rec && rec.remarks && String(rec.remarks).indexOf('On leave') === 0);
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             if (!checkAuth()) throw new Error('Not authenticated');
             const select = document.getElementById('filterMonth');
@@ -249,21 +244,22 @@
             const container = document.getElementById('tableContainer');
             const summaryEl = document.getElementById('summaryBar');
 
-            // Month counters shared by the list and monthly views. Week offs +
-            // holidays + approved leaves count toward Total Present Days
-            // (elapsed days only, and a day actually worked always wins).
+            // Month counters - SINGLE PASS over calendar days (no double count).
+            // Policy (matches payroll): first approved leave day each month is
+            // PAID; anything beyond that is LOP and lands under Absent.
             const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0, leave: 0 };
-            records.forEach(a => {
-                if (a.status === 'present') counts.present++;
-                else if (a.status === 'late') counts.late++;
-                else if (a.status === 'half-day') counts['half-day']++;
-                else if (a.status === 'absent' && !isLeaveDay((a.date || '').split('T')[0], a)) counts.absent++;
-                else if (a.status === 'absent') counts.leave++;   // approved leave back-filled row
-            });
             const holidayMap = {};
             (lastHolidays || []).forEach(h => { const k = (h.date || '').split('T')[0]; if (k) holidayMap[k] = h.name; });
             const statusByDate = {};
             records.forEach(a => { statusByDate[(a.date || '').split('T')[0]] = a; });
+
+            // Classify every approved leave day of this month: 'paid' or 'lop'.
+            const leaveClass = {};
+            Array.from(lastLeaveDays).sort().forEach(k => {
+                leaveClass[k] = counts.leave < 1 ? 'paid' : 'lop';
+                if (leaveClass[k] === 'paid') counts.leave++;
+            });
+
             const daysInMonth = new Date(year, month, 0).getDate();
             const nowD = new Date();
             const isCurrentMonth = parseInt(month, 10) === nowD.getMonth() + 1 && parseInt(year, 10) === nowD.getFullYear();
@@ -273,19 +269,25 @@
                 const key = year + '-' + String(month).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
                 const rec = statusByDate[key];
                 const st = rec ? rec.status : null;
-                if (st === 'present' || st === 'late' || st === 'half-day') continue;
+                if (st === 'present') { counts.present++; continue; }
+                if (st === 'late') { counts.late++; continue; }
+                if (st === 'half-day') { counts['half-day']++; continue; }
                 if (holidayMap[key]) { counts.holiday++; continue; }
                 const dow = new Date(year, month - 1, dd).getDay();
                 if (dow === 0 || dow === 6) { counts.weekoff++; continue; }
-                if (lastLeaveDays.has(key)) { counts.leave++; continue; }   // approved leave
-                if (st === 'absent' && isLeaveDay(key, rec)) { counts.leave++; continue; }
+                if (leaveClass[key]) {
+                    // Approved leave: paid for the monthly quota, LOP beyond it.
+                    if (leaveClass[key] === 'paid') { /* counts.leave already tallied */ }
+                    else counts.absent++;
+                    continue;
+                }
                 if (key < todayKey) counts.absent++;
             }
             lastMonthCounts = counts;
 
             const totalPresent = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday + counts.leave;
             document.getElementById('attStatsBar').innerHTML = buildStatsCardsHtml(counts);
-            summaryEl.innerHTML = '<span style="font-weight:500;">Total Present Days (incl. late logins, half days, approved leaves, week offs &amp; holidays): <strong>' + totalPresent + '</strong> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
+            summaryEl.innerHTML = '<span style="font-weight:500;">Total Present Days (incl. late logins, half days, paid leaves, week offs &amp; holidays): <strong>' + totalPresent + '</strong> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
 
             if (records.length === 0) {
                 showEmptyState(container, 'fa-clock', 'No Records', 'No attendance records for this period');
@@ -337,8 +339,10 @@
                         html += '<td>' + escapeHtml(a.check_out || '-') + '</td>';
                         html += '<td style="text-align:center;">' + locHtml + '</td>';
                         html += '<td>' + hoursWorked + '</td>';
-                        const isLeaveRow = a.status === 'absent' && isLeaveDay(adate, a);
-                        html += '<td><span class="badge badge-' + (isLeaveRow ? 'info' : getStatusBadge(a.status)) + '">' + escapeHtml(isLeaveRow ? 'On Leave (Paid)' : getStatusText(a.status)) + '</span></td>';
+                        const lvCls = leaveClass[adate];
+                        const isLeaveRow = a.status === 'absent' && !!lvCls;
+                        const leaveLabel = lvCls === 'lop' ? 'Absent (LOP)' : 'On Leave (Paid)';
+                        html += '<td><span class="badge badge-' + (isLeaveRow ? (lvCls === 'lop' ? 'danger' : 'info') : getStatusBadge(a.status)) + '">' + escapeHtml(isLeaveRow ? leaveLabel : getStatusText(a.status)) + '</span></td>';
                         html += '<td>' + formatHours(a.overtime_hours) + '</td>';
                         html += '</tr>';
                     });
@@ -390,7 +394,11 @@
                     if (status === 'present') { cls = 'cal-present'; tag = 'Present'; counts.present++; }
                     else if (status === 'late') { cls = 'cal-late'; tag = 'Late'; counts.late++; }
                     else if (status === 'half-day') { cls = 'cal-half-day'; tag = 'Half Day'; counts['half-day']++; }
-                    else if (status === 'absent' && isLeaveDay(dateStr, rec)) { cls = 'cal-leave'; tag = 'On Leave (Paid)'; counts.leave++; }
+                    else if (status === 'absent' && leaveClass[dateStr]) {
+                        // Approved leave: paid within monthly quota, LOP beyond.
+                        if (leaveClass[dateStr] === 'paid') { cls = 'cal-leave'; tag = 'On Leave (Paid)'; counts.leave++; }
+                        else { cls = 'cal-absent'; tag = 'Absent (LOP)'; counts.absent++; }
+                    }
                     else if (status === 'absent') { cls = 'cal-absent'; tag = 'Absent'; counts.absent++; }
                     else { cls = 'cal-weekoff'; tag = status; counts.weekoff++; }
                     const fmtT = (t) => { const m = String(t).match(/(\d{1,2}:\d{2})/); return m ? m[1] : t; };
@@ -404,9 +412,10 @@
                     cls = 'cal-holiday'; tag = holidayDates[dateStr]; counts.holiday++;
                 } else if (dayOfWeek === 0 || dayOfWeek === 6) {
                     cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++;
-                } else if (lastLeaveDays.has(dateStr)) {
+                } else if (leaveClass[dateStr]) {
                     // Approved leave with no attendance row yet - never absent.
-                    cls = 'cal-leave'; tag = 'On Leave (Paid)'; counts.leave++;
+                    if (leaveClass[dateStr] === 'paid') { cls = 'cal-leave'; tag = 'On Leave (Paid)'; counts.leave++; }
+                    else { cls = 'cal-absent'; tag = 'Absent (LOP)'; counts.absent++; }
                 } else if (dateStr === todayStr) {
                     // Today before check-in is not an absence yet.
                     cls = 'cal-cell';
