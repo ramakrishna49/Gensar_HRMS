@@ -5,7 +5,7 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
 const { runWithSchemaRepair } = require('../utils/schemaRepair');
 const { logAudit } = require('../utils/audit');
 const { sendToUser, sendToUsers } = require('../services/push');
-const { startOnboarding } = require('../services/onboarding');
+const { startOnboarding, ensureTemplatesSeeded } = require('../services/onboarding');
 
 // Every onboarding query runs through the self-healing wrapper so a live
 // database that predates the onboarding tables creates them transparently
@@ -352,6 +352,9 @@ router.post('/start/:employeeId', verifyToken, isAdmin, async (req, res) => {
 // @access  Private (Admin)
 router.get('/templates', verifyToken, isAdmin, async (req, res) => {
     try {
+        // Seed the defaults on first view so a fresh deployment shows the
+        // standard checklist instead of an empty table.
+        await ensureTemplatesSeeded();
         const result = await q(
             `SELECT * FROM hr_task_templates ORDER BY sequence ASC, id ASC`
         );
