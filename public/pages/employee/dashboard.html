@@ -549,7 +549,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking in...';
             const data = await apiCall('/attendance/check-in', 'POST', { location: location || '', photo });
             if (data && data.success) {
-                showToast('Checked in successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
+                showToast('Checked in successfully!' + (data.has_photo ? ' Selfie verified.' : ''), 'success');
                 todayAttendance = null;
                 await loadAttendanceStatus();
             } else {
@@ -570,7 +570,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking out...';
             const data = await apiCall('/attendance/check-out', 'POST', { location: location || '', photo });
             if (data && data.success) {
-                showToast('Checked out successfully!' + (data.has_photo ? ' Photo saved for one-time admin view.' : ' (No photo — camera not available)'), 'success');
+                showToast('Checked out successfully!' + (data.has_photo ? ' Selfie verified.' : ''), 'success');
                 todayAttendance = null;
                 await loadAttendanceStatus();
             } else {
