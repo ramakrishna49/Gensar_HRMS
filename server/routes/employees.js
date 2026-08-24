@@ -10,6 +10,7 @@ const { runWithSchemaRepair, pgErrorResponse } = require('../utils/schemaRepair'
 const { logAudit } = require('../utils/audit');
 const { startOnboarding } = require('../services/onboarding');
 const { sendWelcomeEmail } = require('../services/email');
+const { buildReportWorkbook, sendWorkbook } = require('../utils/excel');
 
 const MAIN_ADMIN_ID = 1;
 
@@ -243,6 +244,162 @@ router.get('/birthdays', verifyToken, async (req, res) => {
         res.json({ success: true, birthdays: list });
     } catch (error) {
         console.error('Birthdays error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/employees/export
+// @desc    Branded Excel export of the full employee master (incl. statutory,
+//          bank and salary component columns - admin-only download).
+// @access  Private (Admin)
+// NOTE: registered before GET /:id so "export" is never captured as an id.
+router.get('/export', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT e.*, d.name AS department_name, des.name AS designation_name,
+                rm.first_name || ' ' || rm.last_name AS reporting_manager_name
+            FROM employees e
+            LEFT JOIN departments d ON d.id = e.department_id
+            LEFT JOIN designations des ON des.id = e.designation_id
+            LEFT JOIN employees rm ON rm.id = e.reporting_manager_id
+            WHERE e.id <> $1
+            ORDER BY e.employee_id`,
+            [MAIN_ADMIN_ID]
+        );
+
+        const M = (header, key, opts = {}) => ({ header, key, type: 'money', ...opts });
+        const rows = result.rows.map(e => ({
+            emp_code: e.employee_id,
+            first_name: e.first_name,
+            last_name: e.last_name,
+            email: e.email,
+            personal_email: e.personal_email,
+            phone: e.phone,
+            department: e.department_name,
+            designation: e.designation_name,
+            role: e.role,
+            reporting_manager: e.reporting_manager_name,
+            joining_date: e.joining_date,
+            status: e.status,
+            gender: e.gender,
+            date_of_birth: e.date_of_birth,
+            blood_group: e.blood_group,
+            marital_status: e.marital_status,
+            qualification: e.qualification,
+            specialization: e.specialization,
+            languages_spoken: e.languages_spoken,
+            emergency_contact_name: e.emergency_contact_name,
+            emergency_contact: e.emergency_contact,
+            address: e.address,
+            permanent_address: e.permanent_address,
+            salary: e.salary,
+            basic_salary: e.basic_salary,
+            hra: e.hra,
+            conveyance: e.conveyance,
+            medical: e.medical,
+            special_allowance: e.special_allowance,
+            other_allowance: e.other_allowance,
+            pf: e.pf,
+            esi: e.esi,
+            professional_tax: e.professional_tax,
+            income_tax: e.income_tax,
+            loan_deduction: e.loan_deduction,
+            advance_salary: e.advance_salary,
+            other_deduction: e.other_deduction,
+            incentive: e.incentive,
+            bonus: e.bonus,
+            extra_work: e.extra_work,
+            employer_pf: e.employer_pf,
+            employer_esi: e.employer_esi,
+            employer_contribution: e.employer_contribution,
+            uan_number: e.uan_number,
+            pf_number: e.pf_number,
+            esi_number: e.esi_number,
+            pan_number: e.pan_number,
+            aadhaar_number: e.aadhaar_number,
+            passport_number: e.passport_number,
+            bank_name: e.bank_name,
+            bank_branch: e.bank_branch,
+            bank_account: e.bank_account,
+            bank_ifsc: e.bank_ifsc
+        }));
+
+        const columns = [
+            { header: 'Emp ID', key: 'emp_code', width: 12 },
+            { header: 'First Name', key: 'first_name' },
+            { header: 'Last Name', key: 'last_name' },
+            { header: 'Official Email', key: 'email', width: 26 },
+            { header: 'Personal Email', key: 'personal_email', width: 26 },
+            { header: 'Phone', key: 'phone', width: 14 },
+            { header: 'Department', key: 'department' },
+            { header: 'Designation', key: 'designation' },
+            { header: 'Role', key: 'role', type: 'status' },
+            { header: 'Reporting Manager', key: 'reporting_manager', width: 20 },
+            { header: 'Joining Date', key: 'joining_date', type: 'date', width: 13 },
+            { header: 'Status', key: 'status', type: 'status' },
+            { header: 'Gender', key: 'gender' },
+            { header: 'Date of Birth', key: 'date_of_birth', type: 'date', width: 13 },
+            { header: 'Blood Group', key: 'blood_group', width: 11 },
+            { header: 'Marital Status', key: 'marital_status', width: 13 },
+            { header: 'Qualification', key: 'qualification' },
+            { header: 'Specialization', key: 'specialization' },
+            { header: 'Languages Spoken', key: 'languages_spoken', width: 20 },
+            { header: 'Emergency Contact Name', key: 'emergency_contact_name', width: 20 },
+            { header: 'Emergency Contact', key: 'emergency_contact', width: 16 },
+            { header: 'Current Address', key: 'address', width: 30 },
+            { header: 'Permanent Address', key: 'permanent_address', width: 30 },
+            M('Total Compensation', 'salary'),
+            M('Basic Salary', 'basic_salary'),
+            M('HRA', 'hra'),
+            M('Conveyance', 'conveyance'),
+            M('Medical Allowance', 'medical'),
+            M('Special Allowance', 'special_allowance'),
+            M('Other Allowance', 'other_allowance'),
+            M('Employee PF', 'pf'),
+            M('Employee ESI', 'esi'),
+            M('Professional Tax', 'professional_tax'),
+            M('Income Tax', 'income_tax'),
+            M('Loan Deduction', 'loan_deduction'),
+            M('Advance Salary', 'advance_salary'),
+            M('Other Deduction', 'other_deduction'),
+            M('Incentive', 'incentive'),
+            M('Bonus', 'bonus'),
+            M('Extra Work', 'extra_work'),
+            M('Employer PF', 'employer_pf'),
+            M('Employer ESI', 'employer_esi'),
+            M('Employer Contribution', 'employer_contribution'),
+            { header: 'UAN Number', key: 'uan_number', width: 14 },
+            { header: 'PF Number', key: 'pf_number', width: 14 },
+            { header: 'ESI Number', key: 'esi_number', width: 14 },
+            { header: 'PAN Number', key: 'pan_number', width: 14 },
+            { header: 'Aadhaar Number', key: 'aadhaar_number', width: 15 },
+            { header: 'Passport Number', key: 'passport_number', width: 15 },
+            { header: 'Bank Name', key: 'bank_name', width: 18 },
+            { header: 'Bank Branch', key: 'bank_branch', width: 18 },
+            { header: 'Bank Account No', key: 'bank_account', width: 18 },
+            { header: 'IFSC Code', key: 'bank_ifsc', width: 14 }
+        ];
+
+        const wb = await buildReportWorkbook({
+            reportName: 'Employee Master Report',
+            subtitleExtra: 'All statuses • Confidential - admin only',
+            columns,
+            rows,
+            footerNote: req.user.name || 'Admin'
+        });
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'data.export',
+            entityType: 'report',
+            entityId: null,
+            details: { report: 'employees_master', records: rows.length },
+            ip: req.ip
+        });
+
+        await sendWorkbook(res, wb, 'Employees_' + new Date().toISOString().split('T')[0] + '.xlsx');
+    } catch (error) {
+        console.error('Employee export error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

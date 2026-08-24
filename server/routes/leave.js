@@ -5,6 +5,8 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
 const { validateLeave } = require('../middleware/validation');
 const { istDateString, istYear } = require('../utils/date');
 const { sendToUser } = require('../services/push');
+const { buildReportWorkbook, sendWorkbook } = require('../utils/excel');
+const { logAudit } = require('../utils/audit');
 
 function isWeekend(dateStr) {
     const d = new Date(dateStr);
@@ -373,6 +375,87 @@ router.get('/balance', verifyToken, async (req, res) => {
         
         res.json({ success: true, balances });
     } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/leave/export
+// @desc    Branded Excel leave register for a year (optional status filter)
+// @access  Private (Admin)
+router.get('/export', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const year = parseInt(req.query.year) || istYear();
+        const status = req.query.status && req.query.status !== 'all' ? String(req.query.status) : null;
+
+        let sql = `SELECT la.*, lt.name AS leave_type_name,
+                e.first_name || ' ' || e.last_name AS employee_name, e.employee_id AS emp_code,
+                d.name AS department_name,
+                ap.first_name || ' ' || ap.last_name AS approved_by_name
+            FROM leave_applications la
+            LEFT JOIN leave_types lt ON la.leave_type_id = lt.id
+            JOIN employees e ON la.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN employees ap ON la.approved_by = ap.id
+            WHERE to_char(la.start_date, 'YYYY') = $1`;
+        const params = [String(year)];
+        if (status) {
+            sql += ` AND la.status = $2`;
+            params.push(status);
+        }
+        sql += ` ORDER BY la.start_date ASC, e.employee_id ASC`;
+
+        const result = await query(sql, params);
+
+        const rows = result.rows.map(l => ({
+            emp_code: l.emp_code,
+            name: l.employee_name,
+            department: l.department_name,
+            type: l.leave_type_name || 'Leave',
+            start_date: l.start_date,
+            end_date: l.end_date,
+            total_days: Number(l.total_days) || 0,
+            reason: l.reason,
+            status: l.status,
+            approved_by: l.approved_by_name,
+            approval_remarks: l.approval_remarks,
+            applied_on: l.created_at
+        }));
+
+        const columns = [
+            { header: 'Emp ID', key: 'emp_code', width: 12 },
+            { header: 'Employee Name', key: 'name', width: 22 },
+            { header: 'Department', key: 'department' },
+            { header: 'Leave Type', key: 'type', width: 16 },
+            { header: 'From', key: 'start_date', type: 'date', width: 13 },
+            { header: 'To', key: 'end_date', type: 'date', width: 13 },
+            { header: 'Days', key: 'total_days', type: 'number', width: 9 },
+            { header: 'Reason', key: 'reason', width: 32 },
+            { header: 'Status', key: 'status', type: 'status' },
+            { header: 'Approved By', key: 'approved_by', width: 18 },
+            { header: 'Remarks', key: 'approval_remarks', width: 28 },
+            { header: 'Applied On', key: 'applied_on', type: 'datetime', width: 17 }
+        ];
+
+        const wb = await buildReportWorkbook({
+            reportName: 'Leave Register',
+            subtitleExtra: `Year ${year}${status ? ' • Status: ' + status : ' • All statuses'}`,
+            columns,
+            rows,
+            footerNote: req.user.name || 'Admin'
+        });
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'data.export',
+            entityType: 'report',
+            entityId: null,
+            details: { report: 'leave_register', year, status: status || 'all', records: rows.length },
+            ip: req.ip
+        });
+
+        await sendWorkbook(res, wb, `Leave_Register_${year}.xlsx`);
+    } catch (error) {
+        console.error('Leave export error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

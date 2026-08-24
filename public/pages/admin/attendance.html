@@ -13,8 +13,7 @@
     <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
     <link rel="stylesheet" href="../../css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <style>
+        <style>
         .matrix-container { overflow-x: auto; }
         .matrix-table { border-collapse: collapse; font-size: 0.75rem; min-width: 100%; }
         .matrix-table th, .matrix-table td { padding: 4px 6px; text-align: center; border: 1px solid var(--border-light); white-space: nowrap; }
@@ -550,76 +549,12 @@
             document.getElementById('photoModal').classList.remove('active');
         }
 
+        // Branded Excel summary is generated server-side (ExcelJS).
         function downloadExcel() {
-            if (!matrixData) { showToast('Load attendance data first', 'warning'); return; }
-            const { employees, days, matrix } = matrixData;
-            const month = parseInt(matrixData.month);
-            const year = parseInt(matrixData.year);
-            const monthLabel = monthNames[month - 1] + ' ' + year;
-
-            const weekdayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-            const dayStatus = { present: 'P', late: 'L', 'half-day': 'HD', absent: 'A', weekoff: 'WO', upcoming: '' };
-
-            const totalCols = 3 + days + 2;
-            const statusCounts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, upcoming: 0 };
-
-            const rows = [];
-            const titleRow = new Array(totalCols).fill('');
-            titleRow[0] = 'Attendance Report - ' + monthLabel;
-            rows.push(titleRow);
-
-            const dayHeader = ['Employee', 'Employee ID', 'Department'];
-            for (let d = 1; d <= days; d++) dayHeader.push(String(d));
-            dayHeader.push('P / L / HD / A / WO');
-            dayHeader.push('Total Days');
-            rows.push(dayHeader);
-
-            const weekdayHeader = ['', '', ''];
-            for (let d = 1; d <= days; d++) {
-                const date = new Date(year, month - 1, d);
-                weekdayHeader.push(weekdayNames[date.getDay()]);
-            }
-            weekdayHeader.push('');
-            weekdayHeader.push('');
-            rows.push(weekdayHeader);
-
-            employees.forEach(emp => {
-                const row = [emp.first_name + ' ' + (emp.last_name || ''), emp.employee_id || '', emp.department_name || ''];
-                let p = 0, l = 0, h = 0, a = 0, w = 0, u = 0;
-                for (let d = 1; d <= days; d++) {
-                    const cell = matrix[emp.id] && matrix[emp.id][d] ? matrix[emp.id][d] : { status: 'absent', check_in: null, check_out: null };
-                    const st = cell.status;
-                    if (st === 'present') p++;
-                    else if (st === 'late') l++;
-                    else if (st === 'half-day') h++;
-                    else if (st === 'absent') a++;
-                    else if (st === 'weekoff') w++;
-                    else if (st === 'upcoming') u++;
-                    let label = dayStatus[st] || '';
-                    if (cell.check_in) label = (dayStatus[st] || '') + ' ' + cell.check_in;
-                    if (cell.check_out) label += ' - ' + cell.check_out;
-                    row.push(label);
-                }
-                statusCounts.present += p; statusCounts.late += l; statusCounts['half-day'] += h;
-                statusCounts.absent += a; statusCounts.weekoff += w; statusCounts.upcoming += u;
-                row.push((p + l) + ' / ' + l + ' / ' + h + ' / ' + a + ' / ' + w);
-                row.push(formatHalfDays(p + l + (h * 0.5)));
-                rows.push(row);
-            });
-
-            const totalRow = ['TOTAL', '', ''];
-            for (let d = 1; d <= days; d++) totalRow.push('');
-            totalRow.push(statusCounts.present + ' / ' + statusCounts.late + ' / ' + statusCounts['half-day'] + ' / ' + statusCounts.absent + ' / ' + statusCounts.weekoff);
-            totalRow.push(formatHalfDays(statusCounts.present + statusCounts.late + (statusCounts['half-day'] * 0.5)));
-            rows.push(totalRow);
-
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(rows);
-            ws['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 16 }].concat(Array(days).fill({ wch: 9 })).concat([{ wch: 18 }, { wch: 10 }]);
-            ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } }];
-            XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
-            XLSX.writeFile(wb, 'Attendance_' + monthNames[month-1] + '_' + year + '.xlsx');
-            showToast('Excel downloaded!', 'success');
+            const month = document.getElementById('filterMonth').value || new Date().getMonth() + 1;
+            const year = document.getElementById('filterYear').value || new Date().getFullYear();
+            showToast('Generating Excel...', 'info');
+            downloadWithAuth('/attendance/export?month=' + month + '&year=' + year, 'Attendance_' + monthNames[month - 1] + '_' + year + '.xlsx');
         }
 
         async function loadAllEmployees() {

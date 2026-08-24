@@ -11,6 +11,7 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
 const { istDateString } = require('../utils/date');
 const { sendPayslipEmail } = require('../services/email');
 const { logAudit } = require('../utils/audit');
+const { buildReportWorkbook, sendWorkbook } = require('../utils/excel');
 
 const PP_MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -1052,6 +1053,123 @@ router.post('/render-pdf', verifyToken, pdfRateLimit, async (req, res) => {
     } catch (error) {
         console.error('Render PDF error:', error);
         res.status(500).json({ success: false, message: 'PDF generation failed' });
+    }
+});
+
+// @route   GET /api/payroll/export
+// @desc    Branded Excel salary register for a month (earnings, deductions,
+//          employer contributions and net pay per employee).
+// @access  Private (Admin)
+// NOTE: registered before GET /:id so "export" is never captured as an id.
+router.get('/export', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+        const year = parseInt(req.query.year) || new Date().getFullYear();
+
+        const result = await query(
+            `SELECT p.*, e.first_name || ' ' || e.last_name AS employee_name,
+                e.employee_id AS emp_code, d.name AS department_name
+            FROM payroll p
+            JOIN employees e ON e.id = p.employee_id
+            LEFT JOIN departments d ON d.id = e.department_id
+            WHERE p.month = $1 AND p.year = $2
+            ORDER BY e.employee_id ASC`,
+            [month, year]
+        );
+
+        const rows = result.rows.map(p => ({
+            emp_code: p.emp_code,
+            name: p.employee_name,
+            department: p.department_name,
+            working_days: Number(p.working_days) || 0,
+            present_days: Number(p.present_days) || 0,
+            leave_days: Number(p.leave_days) || 0,
+            lop_days: Number(p.lop_days) || 0,
+            basic_salary: p.basic_salary,
+            hra: p.hra,
+            conveyance: p.conveyance,
+            medical: p.medical,
+            special_allowance: p.special_allowance,
+            bonus: p.bonus,
+            incentive: p.incentive,
+            extra_work: p.extra_work,
+            other_allowance: p.other_allowance,
+            gross_salary: p.gross_salary,
+            pf: p.pf,
+            esi: p.esi,
+            professional_tax: p.professional_tax,
+            income_tax: p.income_tax,
+            loan_deduction: p.loan_deduction,
+            advance_salary: p.advance_salary,
+            other_deduction: p.other_deduction,
+            total_deductions: p.total_deductions,
+            employer_pf: p.employer_pf,
+            employer_esi: p.employer_esi,
+            employer_contribution: p.employer_contribution,
+            net_salary: p.net_salary,
+            status: p.status,
+            payment_date: p.payment_date
+        }));
+
+        const M = (header, key, opts = {}) => ({ header, key, type: 'money', ...opts });
+        const columns = [
+            { header: 'Emp ID', key: 'emp_code', width: 12 },
+            { header: 'Employee Name', key: 'name', width: 22 },
+            { header: 'Department', key: 'department' },
+            { header: 'Working Days', key: 'working_days', type: 'number' },
+            { header: 'Present Days', key: 'present_days', type: 'number' },
+            { header: 'Leave Days', key: 'leave_days', type: 'number' },
+            { header: 'LOP Days', key: 'lop_days', type: 'number' },
+            M('Basic Salary', 'basic_salary'),
+            M('HRA', 'hra'),
+            M('Conveyance', 'conveyance'),
+            M('Medical Allowance', 'medical'),
+            M('Special Allowance', 'special_allowance'),
+            M('Bonus', 'bonus'),
+            M('Incentive', 'incentive'),
+            M('Extra Work', 'extra_work'),
+            M('Other Allowance', 'other_allowance'),
+            M('Gross Salary', 'gross_salary'),
+            M('Employee PF', 'pf'),
+            M('Employee ESI', 'esi'),
+            M('Professional Tax', 'professional_tax'),
+            M('Income Tax', 'income_tax'),
+            M('Loan Deduction', 'loan_deduction'),
+            M('Advance Salary', 'advance_salary'),
+            M('Other Deduction', 'other_deduction'),
+            M('Total Deductions', 'total_deductions'),
+            M('Employer PF', 'employer_pf'),
+            M('Employer ESI', 'employer_esi'),
+            M('Employer Contribution', 'employer_contribution'),
+            M('NET SALARY', 'net_salary'),
+            { header: 'Status', key: 'status', type: 'status' },
+            { header: 'Payment Date', key: 'payment_date', type: 'date', width: 13 }
+        ];
+        // Totals on every money column - instant month cost roll-up.
+        columns.filter(c => c.type === 'money').forEach(c => { c.total = true; });
+
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const wb = await buildReportWorkbook({
+            reportName: 'Salary Register',
+            subtitleExtra: monthNames[month - 1] + ' ' + year + ' • Confidential',
+            columns,
+            rows,
+            footerNote: req.user.name || 'Admin'
+        });
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'data.export',
+            entityType: 'report',
+            entityId: null,
+            details: { report: 'salary_register', month, year, records: rows.length },
+            ip: req.ip
+        });
+
+        await sendWorkbook(res, wb, `Salary_Register_${monthNames[month - 1]}_${year}.xlsx`);
+    } catch (error) {
+        console.error('Payroll export error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 

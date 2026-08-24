@@ -6,6 +6,7 @@ const { runWithSchemaRepair } = require('../utils/schemaRepair');
 const { logAudit } = require('../utils/audit');
 const { sendToUser, sendToUsers } = require('../services/push');
 const { startOnboarding, ensureTemplatesSeeded } = require('../services/onboarding');
+const { buildReportWorkbook, sendWorkbook } = require('../utils/excel');
 
 // Every onboarding query runs through the self-healing wrapper so a live
 // database that predates the onboarding tables creates them transparently
@@ -459,6 +460,80 @@ router.delete('/templates/:id', verifyToken, isAdmin, async (req, res) => {
         res.json({ success: true, message: 'Template disabled' });
     } catch (error) {
         console.error('Disable onboarding template error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/onboarding/export
+// @desc    Branded Excel onboarding progress tracker for all employees
+// @access  Private (Admin)
+router.get('/export', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT p.id, p.status AS process_status, p.started_at, p.completed_at,
+                e.first_name, e.last_name, e.employee_id AS emp_code, e.joining_date,
+                d.name AS department_name,
+                COUNT(t.id)::int AS total_tasks,
+                COUNT(t.id) FILTER (WHERE t.status = 'done')::int AS done_tasks,
+                COALESCE(string_agg(t.title, ', ' ORDER BY t.sequence, t.id)
+                    FILTER (WHERE t.status <> 'done'), 'All tasks completed') AS pending_tasks
+            FROM employee_processes p
+            JOIN employees e ON e.id = p.employee_id
+            LEFT JOIN departments d ON d.id = e.department_id
+            LEFT JOIN process_tasks t ON t.process_id = p.id
+            WHERE p.type = 'onboarding'
+            GROUP BY p.id, e.id, d.name
+            ORDER BY p.status ASC, p.started_at DESC`
+        );
+
+        const rows = result.rows.map(r => ({
+            emp_code: r.emp_code,
+            name: r.first_name + ' ' + r.last_name,
+            department: r.department_name,
+            joining_date: r.joining_date,
+            status: r.process_status,
+            done_tasks: r.done_tasks,
+            total_tasks: r.total_tasks,
+            progress_percent: r.total_tasks > 0 ? Math.round((r.done_tasks / r.total_tasks) * 1000) / 10 : 0,
+            pending_tasks: r.pending_tasks,
+            started_at: r.started_at,
+            completed_at: r.completed_at
+        }));
+
+        const columns = [
+            { header: 'Emp ID', key: 'emp_code', width: 12 },
+            { header: 'Employee Name', key: 'name', width: 22 },
+            { header: 'Department', key: 'department' },
+            { header: 'Joining Date', key: 'joining_date', type: 'date', width: 13 },
+            { header: 'Status', key: 'status', type: 'status' },
+            { header: 'Tasks Done', key: 'done_tasks', type: 'number', width: 11 },
+            { header: 'Total Tasks', key: 'total_tasks', type: 'number', width: 11 },
+            { header: 'Progress %', key: 'progress_percent', type: 'percent', width: 12 },
+            { header: 'Pending Tasks', key: 'pending_tasks', width: 48 },
+            { header: 'Started On', key: 'started_at', type: 'datetime', width: 17 },
+            { header: 'Completed On', key: 'completed_at', type: 'datetime', width: 17 }
+        ];
+
+        const wb = await buildReportWorkbook({
+            reportName: 'Onboarding Tracker',
+            subtitleExtra: 'All employees',
+            columns,
+            rows,
+            footerNote: req.user.name || 'Admin'
+        });
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'data.export',
+            entityType: 'report',
+            entityId: null,
+            details: { report: 'onboarding_tracker', records: rows.length },
+            ip: req.ip
+        });
+
+        await sendWorkbook(res, wb, 'Onboarding_Tracker_' + new Date().toISOString().split('T')[0] + '.xlsx');
+    } catch (error) {
+        console.error('Onboarding export error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

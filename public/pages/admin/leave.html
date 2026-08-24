@@ -91,11 +91,13 @@
             </div>
 
             <div class="card" style="margin-bottom:24px;">
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <button class="btn btn-primary" onclick="filterLeaves('all')" id="filterAll"><i class="fas fa-list"></i> All</button>
                     <button class="btn btn-secondary" onclick="filterLeaves('pending')" id="filterPending"><i class="fas fa-clock"></i> Pending</button>
                     <button class="btn btn-secondary" onclick="filterLeaves('approved')" id="filterApproved"><i class="fas fa-check"></i> Approved</button>
                     <button class="btn btn-secondary" onclick="filterLeaves('rejected')" id="filterRejected"><i class="fas fa-times"></i> Rejected</button>
+                    <span style="flex:1;"></span>
+                    <button class="btn btn-success" onclick="exportLeaveRegister()"><i class="fas fa-file-excel"></i> Export Excel</button>
                 </div>
             </div>
 
@@ -150,6 +152,16 @@
                 const btn = document.getElementById('filter' + f);
                 if (btn) btn.className = (f.toLowerCase() === filter) ? 'btn btn-primary' : 'btn btn-secondary';
             });
+        }
+
+        // Branded leave register generated server-side (ExcelJS) for the
+        // current year; respects the active status filter.
+        function exportLeaveRegister() {
+            const year = new Date().getFullYear();
+            const activeBtn = document.querySelector('#filterAll.btn-primary, #filterPending.btn-primary, #filterApproved.btn-primary, #filterRejected.btn-primary');
+            const status = activeBtn ? activeBtn.id.replace('filter', '').toLowerCase() : 'all';
+            showToast('Generating Excel...', 'info');
+            downloadWithAuth('/leave/export?year=' + year + '&status=' + status, 'Leave_Register_' + year + '.xlsx');
         }
 
         async function filterLeaves(filter) {

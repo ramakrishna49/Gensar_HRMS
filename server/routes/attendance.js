@@ -4,6 +4,8 @@ const crypto = require('crypto');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { istDateString, istTimeString, istMonth, istYear } = require('../utils/date');
+const { buildReportWorkbook, sendWorkbook } = require('../utils/excel');
+const { logAudit } = require('../utils/audit');
 
 router.post('/check-in', verifyToken, async (req, res) => {
     try {
@@ -522,6 +524,141 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
             matrix
         });
     } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/attendance/export
+// @desc    Branded Excel month summary per employee (present/late/half/absent/WFH/leave)
+// @access  Private (Admin)
+router.get('/export', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const month = parseInt(req.query.month) || istMonth();
+        const year = parseInt(req.query.year) || istYear();
+        const lastDay = new Date(year, month, 0).getDate();
+        const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+        const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+        const employeesRes = await query(
+            `SELECT e.id, e.employee_id, e.first_name, e.last_name, d.name AS department_name
+            FROM employees e
+            LEFT JOIN departments d ON e.department_id = d.id
+            WHERE e.status = 'active' AND e.role != 'admin'
+            ORDER BY e.first_name`
+        );
+
+        const [attRes, leaveRes, wfhRes] = await Promise.all([
+            query(
+                `SELECT employee_id, date, status FROM attendance
+                WHERE to_char(date, 'MM') = $1 AND to_char(date, 'YYYY') = $2`,
+                [String(month).padStart(2, '0'), String(year)]
+            ),
+            query(
+                `SELECT employee_id, start_date, end_date FROM leave_applications
+                WHERE status = 'approved' AND end_date >= $1 AND start_date <= $2`,
+                [monthStart, monthEnd]
+            ),
+            query(
+                `SELECT employee_id, start_date, end_date FROM wfh_requests
+                WHERE status = 'approved' AND end_date >= $1 AND start_date <= $2`,
+                [monthStart, monthEnd]
+            )
+        ]);
+
+        // Status per calendar day per employee (same rules as the monthly matrix).
+        const attByEmp = {};
+        attRes.rows.forEach(a => {
+            const key = a.employee_id;
+            const day = new Date(a.date).getDate();
+            (attByEmp[key] = attByEmp[key] || {})[day] = a.status;
+        });
+        const inRange = (l, d) => {
+            const ds = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            return String(l.start_date).substring(0, 10) <= ds && String(l.end_date).substring(0, 10) >= ds;
+        };
+        const leavesByEmp = {};
+        leaveRes.rows.forEach(l => { (leavesByEmp[l.employee_id] = leavesByEmp[l.employee_id] || []).push(l); });
+        const wfhByEmp = {};
+        wfhRes.rows.forEach(w => { (wfhByEmp[w.employee_id] = wfhByEmp[w.employee_id] || []).push(w); });
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const rows = employeesRes.rows.map(emp => {
+            const tally = { present: 0, late: 0, half_day: 0, absent: 0, weekoff: 0, holidayish_weekoff_sat_worked: 0, leave: 0, wfh: 0 };
+            let counted = 0;
+            for (let d = 1; d <= lastDay; d++) {
+                const date = new Date(year, month - 1, d);
+                if (date > today) continue;
+                counted++;
+                const dow = date.getDay();
+                const st = (attByEmp[emp.id] || {})[d];
+                if (st === 'present') { tally.present++; continue; }
+                if (st === 'late') { tally.late++; continue; }
+                if (st === 'half-day') { tally.half_day++; continue; }
+                if (dow === 0) { tally.weekoff++; continue; }
+                if (dow === 6 && !st) { tally.weekoff++; continue; }
+                if ((leavesByEmp[emp.id] || []).some(l => inRange(l, d))) { tally.leave++; continue; }
+                if ((wfhByEmp[emp.id] || []).some(w => inRange(w, d))) { tally.wfh++; continue; }
+                if (!st) { tally.absent++; continue; }
+                // Any other recorded status on a working day counts as present-like.
+                tally.present++;
+            }
+            const workDays = Math.max(1, counted - tally.weekoff);
+            const paidLike = tally.present + tally.late + tally.wfh + tally.leave + Math.round(tally.half_day * 0.5);
+            return {
+                emp_code: emp.employee_id,
+                name: emp.first_name + ' ' + emp.last_name,
+                department: emp.department_name,
+                working_days: workDays,
+                present_days: tally.present,
+                late_days: tally.late,
+                half_days: tally.half_day,
+                absent_days: tally.absent,
+                wfh_days: tally.wfh,
+                leave_days: tally.leave,
+                week_offs: tally.weekoff,
+                attendance_percent: Math.round((paidLike / workDays) * 1000) / 10
+            };
+        });
+
+        const columns = [
+            { header: 'Emp ID', key: 'emp_code', width: 12 },
+            { header: 'Employee Name', key: 'name', width: 22 },
+            { header: 'Department', key: 'department' },
+            { header: 'Working Days', key: 'working_days', type: 'number' },
+            { header: 'Present', key: 'present_days', type: 'number' },
+            { header: 'Late', key: 'late_days', type: 'number' },
+            { header: 'Half Days', key: 'half_days', type: 'number' },
+            { header: 'WFH Days', key: 'wfh_days', type: 'number' },
+            { header: 'Leave Days', key: 'leave_days', type: 'number' },
+            { header: 'Absent (LOP)', key: 'absent_days', type: 'number' },
+            { header: 'Week Offs', key: 'week_offs', type: 'number' },
+            { header: 'Attendance %', key: 'attendance_percent', type: 'percent', width: 13 }
+        ];
+        columns.filter(c => c.type === 'number').forEach(c => { c.total = true; });
+
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const wb = await buildReportWorkbook({
+            reportName: 'Attendance Report',
+            subtitleExtra: monthNames[month - 1] + ' ' + year,
+            columns,
+            rows,
+            footerNote: req.user.name || 'Admin'
+        });
+
+        logAudit({
+            actorId: req.user.id,
+            action: 'data.export',
+            entityType: 'report',
+            entityId: null,
+            details: { report: 'attendance_monthly', month, year, records: rows.length },
+            ip: req.ip
+        });
+
+        await sendWorkbook(res, wb, `Attendance_${monthNames[month - 1]}_${year}.xlsx`);
+    } catch (error) {
+        console.error('Attendance export error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

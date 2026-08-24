@@ -72,6 +72,18 @@
         </header>
 
         <div class="page-body">
+            <div class="card mb-3 slide-up stagger-1">
+                <h3 style="font-weight:600;margin-bottom:14px;"><i class="fas fa-file-excel" style="color:#059669;margin-right:8px;"></i>Excel Downloads</h3>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-success btn-sm" onclick="downloadWithAuth('/employees/export', 'Employees_' + new Date().toISOString().split('T')[0] + '.xlsx')"><i class="fas fa-users"></i> Employee Master</button>
+                    <button class="btn btn-success btn-sm" onclick="exportReportAttendance()"><i class="fas fa-clock"></i> Attendance Report</button>
+                    <button class="btn btn-success btn-sm" onclick="downloadWithAuth('/leave/export?year=' + new Date().getFullYear() + '&status=all', 'Leave_Register_' + new Date().getFullYear() + '.xlsx')"><i class="fas fa-calendar-times"></i> Leave Register</button>
+                    <button class="btn btn-success btn-sm" onclick="exportReportSalary()"><i class="fas fa-indian-rupee-sign"></i> Salary Register</button>
+                    <button class="btn btn-success btn-sm" onclick="downloadWithAuth('/onboarding/export', 'Onboarding_Tracker_' + new Date().toISOString().split('T')[0] + '.xlsx')"><i class="fas fa-user-plus"></i> Onboarding Tracker</button>
+                </div>
+                <p style="font-size:.78rem;color:var(--text-secondary);margin-top:10px;">All reports use the month &amp; year selected in the Attendance Overview card. Every export is logged for compliance.</p>
+            </div>
+
             <div class="grid grid-2" style="margin-bottom:24px;">
                 <div class="card">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -140,6 +152,23 @@
                 text: isDark ? '#9CA3AF' : '#6B7280',
                 grid: isDark ? '#374151' : '#E5E7EB'
             };
+        }
+
+        const REPORT_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+        // Branded Excel exports generated server-side (ExcelJS).
+        function exportReportAttendance() {
+            const month = document.getElementById('attMonth').value || new Date().getMonth() + 1;
+            const year = document.getElementById('attYear').value || new Date().getFullYear();
+            showToast('Generating Excel...', 'info');
+            downloadWithAuth('/attendance/export?month=' + month + '&year=' + year, 'Attendance_' + REPORT_MONTHS[month - 1] + '_' + year + '.xlsx');
+        }
+
+        function exportReportSalary() {
+            const month = new Date().getMonth() + 1;
+            const year = document.getElementById('attYear').value || new Date().getFullYear();
+            showToast('Generating Excel...', 'info');
+            downloadWithAuth('/payroll/export?month=' + month + '&year=' + year, 'Salary_Register_' + REPORT_MONTHS[month - 1] + '_' + year + '.xlsx');
         }
 
         async function loadDeptReport() {

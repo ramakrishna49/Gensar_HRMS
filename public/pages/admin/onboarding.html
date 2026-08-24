@@ -80,7 +80,10 @@
 
         <div class="page-body">
             <div class="card mb-3 slide-up stagger-1">
-                <h3 style="font-weight:600;"><i class="fas fa-user-plus" style="color:var(--secondary);margin-right:8px;"></i>New Joiner Onboarding</h3>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                    <h3 style="font-weight:600;"><i class="fas fa-user-plus" style="color:var(--secondary);margin-right:8px;"></i>New Joiner Onboarding</h3>
+                    <button class="btn btn-success btn-sm" onclick="exportOnboardingTracker()"><i class="fas fa-file-excel"></i> Export Tracker</button>
+                </div>
                 <p style="font-size:.85rem;color:var(--text-secondary);margin-top:6px;">A checklist starts automatically for every new employee profile you create. Use "Start for existing employee" below to begin onboarding for anyone created earlier.</p>
             </div>
 
@@ -210,6 +213,12 @@
         });
 
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // Branded onboarding tracker generated server-side (ExcelJS).
+        function exportOnboardingTracker() {
+            showToast('Generating Excel...', 'info');
+            downloadWithAuth('/onboarding/export', 'Onboarding_Tracker_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        }
 
         function progressBar(p) {
             const pct = p.percent || 0;

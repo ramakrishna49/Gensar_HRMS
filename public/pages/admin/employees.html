@@ -13,7 +13,6 @@
     <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
     <link rel="stylesheet" href="../../css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="admin-app">
     <aside class="sidebar" id="sidebar">
@@ -559,26 +558,12 @@
             }).join('');
         }
 
+        // Branded Excel export is generated server-side (ExcelJS) so every
+        // report ships with the company header, frozen styled columns and
+        // proper money/date formats.
         function downloadEmployeesExcel() {
-            if (!allEmployees || allEmployees.length === 0) { showToast('No employee data to export', 'warning'); return; }
-            const rows = [['Employee ID', 'First Name', 'Last Name', 'Official Email', 'Personal Email', 'Phone', 'Department', 'Designation', 'Role', 'Status', 'Joining Date', 'Salary', 'Gender', 'Date of Birth', 'Blood Group', 'Marital Status', 'Languages Spoken', 'Current Address', 'Permanent Address', 'Emergency Contact Name', 'Emergency Contact', 'Qualification', 'Specialization', 'PAN Number', 'Aadhaar Number', 'Passport Number', 'Bank Name', 'Bank Branch', 'Account Number', 'IFSC Code']];
-            allEmployees.forEach(e => {
-                rows.push([
-                    e.employee_id || '', e.first_name || '', e.last_name || '', e.email || '', e.personal_email || '',
-                    e.phone || '', e.department_name || '', e.designation_name || '', e.role || '', e.status || '',
-                    e.joining_date || '', e.salary != null ? e.salary : '', e.gender || '', e.date_of_birth || '',
-                    e.blood_group || '', e.marital_status || '', e.languages_spoken || '', e.address || '',
-                    e.permanent_address || '', e.emergency_contact_name || '', e.emergency_contact || '',
-                    e.qualification || '', e.specialization || '', e.pan_number || '', e.aadhaar_number || '',
-                    e.passport_number || '', e.bank_name || '', e.bank_branch || '', e.bank_account || '', e.bank_ifsc || ''
-                ]);
-            });
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(rows);
-            ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 12 }];
-            XLSX.utils.book_append_sheet(wb, ws, 'Employees');
-            XLSX.writeFile(wb, 'Employees_' + new Date().toISOString().split('T')[0] + '.xlsx');
-            showToast('Excel downloaded!', 'success');
+            showToast('Generating Excel...', 'info');
+            downloadWithAuth('/employees/export', 'Employees_' + new Date().toISOString().split('T')[0] + '.xlsx');
         }
 
         function filterEmployees() {
