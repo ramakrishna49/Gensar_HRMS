@@ -158,6 +158,7 @@
         let lastRecords = [];
         let lastHolidays = [];
         let lastLeaveDays = new Set();   // approved-leave YYYY-MM-DD keys
+        let leaveClass = {};             // key -> 'paid' | 'lop' (module scope: shared by list + monthly views)
         let lastMonthCounts = null;
 
         // Expand an approved leave range into per-day keys.
@@ -254,7 +255,7 @@
             records.forEach(a => { statusByDate[(a.date || '').split('T')[0]] = a; });
 
             // Classify every approved leave day of this month: 'paid' or 'lop'.
-            const leaveClass = {};
+            leaveClass = {};
             Array.from(lastLeaveDays).sort().forEach(k => {
                 leaveClass[k] = counts.leave < 1 ? 'paid' : 'lop';
                 if (leaveClass[k] === 'paid') counts.leave++;
