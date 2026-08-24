@@ -201,8 +201,9 @@ function logout() {
     window.location.href = loginUrl;
 }
 
-// Download a file (e.g. PDF) with the auth token attached
-async function downloadWithAuth(endpoint, filename) {
+// Download a file (PDF/Excel) with the auth token attached.
+// successMsg (optional) overrides the default completion toast.
+async function downloadWithAuth(endpoint, filename, successMsg) {
     const token = localStorage.getItem('token');
     if (!token) { window.location.href = getLoginUrl(getCurrentUser()); return; }
     try {
@@ -218,18 +219,24 @@ async function downloadWithAuth(endpoint, filename) {
             return;
         }
         if (!response.ok) {
-            showToast('Failed to download file', 'error');
+            let msg = 'Failed to download';
+            try {
+                const j = await response.json();
+                if (j && j.message) msg = j.message;
+            } catch (e) { /* non-JSON error body */ }
+            showToast(msg, 'error');
             return;
         }
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename || 'download.pdf';
+        a.download = filename || 'download';
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+        showToast(successMsg || ('Downloaded: ' + (filename || 'file')), 'success');
     } catch (error) {
         showToast('Network error while downloading', 'error');
     }
