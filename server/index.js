@@ -58,6 +58,7 @@ app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/manager', require('./routes/manager'));
 app.use('/api/push', require('./routes/push'));
+app.use('/api/display', require('./routes/display'));
 app.use('/api/cron', require('./routes/cron'));
 
 // Serve pages
@@ -85,6 +86,10 @@ function servePortalPage(section) {
 }
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/pages/login.html'));
+});
+// Public office-TV display page (no login; privacy-safe data only).
+app.get('/display', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/pages/display.html'));
 });
 app.get('/manager/my-team', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/pages/manager/my-team.html'));
