@@ -35,29 +35,21 @@ app.use(cors({
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// TEMPORARY one-time backfill: every active pre-existing employee gets the
-// onboarding checklist that new joiners already receive. Runs exactly once
-// on the first request, logs results, removed in the next commit.
-let __onboardingBackfilled = false;
+// TEMPORARY verification (removed next commit): confirm onboarding coverage.
+let __onboardVerifyDone = false;
 app.use((req, res, next) => {
-    if (!__onboardingBackfilled) {
-        __onboardingBackfilled = true;
+    if (!__onboardVerifyDone) {
+        __onboardVerifyDone = true;
         (async () => {
             try {
-                const missing = await query(
-                    `SELECT id FROM employees
-                    WHERE status = 'active' AND role <> 'admin'
-                      AND id NOT IN (SELECT employee_id FROM employee_processes WHERE type = 'onboarding')`
+                const r = await query(
+                    `SELECT
+                        (SELECT COUNT(*)::int FROM employees WHERE status = 'active' AND role <> 'admin') AS active_employees,
+                        (SELECT COUNT(DISTINCT employee_id)::int FROM employee_processes WHERE type = 'onboarding') AS with_onboarding`
                 );
-                const { startOnboarding } = require('./services/onboarding');
-                let started = 0;
-                for (const emp of missing.rows) {
-                    const r = await startOnboarding(emp.id, null);
-                    if (r.ok && !r.already) started++;
-                }
-                console.log('[OnboardingBackfill] employees without checklist:', missing.rows.length, '| started:', started);
+                console.log('[OnboardingVerify]', JSON.stringify(r.rows[0]));
             } catch (e) {
-                console.error('[OnboardingBackfill] failed:', e.message);
+                console.error('[OnboardingVerify] failed:', e.message);
             }
         })();
     }
