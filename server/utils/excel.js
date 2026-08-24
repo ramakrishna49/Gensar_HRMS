@@ -14,10 +14,12 @@ const ExcelJS = require('exceljs');
 // Column descriptor: { header, key, width?, type?, total? }
 //   type: 'money' | 'date' | 'datetime' | 'number' | 'percent' | 'status' | 'text'
 
-const BRAND_FILL = 'FF4F46E5';
-const BAND_FILL = 'FFF9FAFB';
-const BORDER_COLOR = 'FFE5E7EB';
-const SUBTITLE_FILL = 'FFF3F4F6';
+const BANNER_FILL = 'FF312E81';      // deep indigo - top banner
+const BRAND_FILL = 'FF4F46E5';       // brand indigo - column headers
+const SUBTITLE_FILL = 'FFEEF2FF';    // indigo-50 tint - subtitle bar
+const BAND_FILL = 'FFF8FAFC';        // slate-50 - alternating rows
+const BORDER_COLOR = 'FFCBD5E1';     // slate-300 - cell borders
+const TOTAL_FILL = 'FFE0E7FF';       // indigo-100 - totals row
 
 const STATUS_FONT_COLORS = {
     // green - positive states
@@ -52,24 +54,25 @@ async function buildReportWorkbook({ company = 'GENSAR IT SOLUTIONS PVT. LTD.', 
     const lastCol = columns.length;
 
     // Row 1 - company banner
+    // Row 1 - company banner (left aligned, deep indigo premium fill)
     ws.mergeCells(1, 1, 1, lastCol);
     const banner = ws.getCell(1, 1);
     banner.value = company;
-    banner.font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
-    banner.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_FILL } };
-    banner.alignment = { horizontal: 'center', vertical: 'middle' };
-    ws.getRow(1).height = 30;
+    banner.font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
+    banner.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BANNER_FILL } };
+    banner.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    ws.getRow(1).height = 32;
 
-    // Row 2 - subtitle bar
+    // Row 2 - subtitle bar (light indigo tint, left aligned)
     ws.mergeCells(2, 1, 2, lastCol);
-    let sub = `${reportName} • Generated ${fmtTimestamp(new Date())}`;
-    if (subtitleExtra) sub += ` • ${subtitleExtra}`;
+    let sub = `${reportName}  •  Generated ${fmtTimestamp(new Date())}`;
+    if (subtitleExtra) sub += `  •  ${subtitleExtra}`;
     const subCell = ws.getCell(2, 1);
     subCell.value = sub;
-    subCell.font = { size: 10.5, color: { argb: 'FF374151' }, italic: true };
+    subCell.font = { size: 11, color: { argb: 'FF4338CA' }, bold: true, italic: true };
     subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: SUBTITLE_FILL } };
-    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    ws.getRow(2).height = 18;
+    subCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    ws.getRow(2).height = 20;
     ws.getRow(3).height = 6;
 
     // Row 4 - headers
@@ -141,10 +144,12 @@ async function buildReportWorkbook({ company = 'GENSAR IT SOLUTIONS PVT. LTD.', 
             const tRow = ws.getRow(startRow + rows.length);
             columns.forEach((c, i) => {
                 const cell = tRow.getCell(i + 1);
-                cell.border = { top: { style: 'double', color: { argb: 'FF9CA3AF' } }, bottom: { style: 'thin', color: { argb: BORDER_COLOR } }, left: { style: 'thin', color: { argb: BORDER_COLOR } }, right: { style: 'thin', color: { argb: BORDER_COLOR } } };
-                cell.font = { bold: true };
+                cell.border = { top: { style: 'double', color: { argb: BRAND_FILL } }, bottom: { style: 'thin', color: { argb: BORDER_COLOR } }, left: { style: 'thin', color: { argb: BORDER_COLOR } }, right: { style: 'thin', color: { argb: BORDER_COLOR } } };
+                cell.font = { bold: true, color: { argb: 'FF312E81' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOTAL_FILL } };
                 if (i === 0) {
                     cell.value = 'TOTAL';
+                    cell.alignment = { horizontal: 'left', indent: 1 };
                 } else if (c.total && (c.type === 'money' || c.type === 'number')) {
                     const colLetter = columnLetter(i + 1);
                     cell.value = { formula: `SUM(${colLetter}${startRow}:${colLetter}${startRow + rows.length - 1})` };
