@@ -82,8 +82,8 @@
                     </div>
                     <div class="pp-actions">
                         <button class="pp-btn pp-btn-blue" onclick="downloadMonthZip()"><i class="fas fa-file-archive"></i> Download Month ZIP</button>
-                        <button class="pp-btn pp-btn-green" onclick="window.location.href='payroll-generate.html?bulk=1'"><i class="fas fa-users-cog"></i> Bulk Generate</button>
-                        <button class="pp-btn" onclick="window.location.href='payroll-generate.html'"><i class="fas fa-plus"></i> Generate Payslip</button>
+                        <button class="pp-btn pp-btn-green" onclick="window.location.href='/admin/payroll-generate?bulk=1'"><i class="fas fa-users-cog"></i> Bulk Generate</button>
+                        <button class="pp-btn" onclick="window.location.href='/admin/payroll-generate'"><i class="fas fa-plus"></i> Generate Payslip</button>
                         <button class="pp-btn pp-btn-green" onclick="exportSalaryRegister()"><i class="fas fa-file-excel"></i> Export Salary Register</button>
                     </div>
                 </div>
@@ -302,7 +302,7 @@
         function editPayslip(id) {
             const p = payrollData.find(x => x.id === id);
             if (!p) { showToast('Payslip not found. Please refresh and try again.', 'error'); return; }
-            window.location.href = 'payroll-generate.html?id=' + id + '&emp=' + p.employee_id;
+            window.location.href = '/admin/payroll-generate?id=' + id + '&emp=' + p.employee_id;
         }
 
         async function deletePayslip(id) {

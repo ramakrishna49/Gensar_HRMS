@@ -76,7 +76,10 @@ app.get(['/admin', '/admin/'], (req, res) => {
 // working via express.static, so old bookmarks and push links never break.
 function servePortalPage(section) {
     return (req, res, next) => {
-        const page = req.params.page;
+        let page = req.params.page;
+        // Tolerate legacy "/admin/x.html" style links: strip the extension so
+        // any missed relative reference still resolves to the clean page.
+        if (page && page.toLowerCase().endsWith('.html')) page = page.slice(0, -5);
         if (!/^[a-z0-9-]+$/.test(page)) return next();
         const file = path.join(__dirname, '..', 'public', 'pages', section, page + '.html');
         if (!fs.existsSync(file)) return next();

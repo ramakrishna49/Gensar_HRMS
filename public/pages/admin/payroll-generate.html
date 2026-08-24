@@ -76,7 +76,7 @@
 
                 <div class="pp-topbar">
                     <div>
-                        <a href="payroll.html" style="font-size:0.8rem;color:var(--primary);text-decoration:none;font-weight:600;"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
+                        <a href="/admin/payroll" style="font-size:0.8rem;color:var(--primary);text-decoration:none;font-weight:600;"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
                         <h1 id="headingTitle" style="margin-top:6px;">Generate Payslip</h1>
                         <div class="pp-sub" id="headingSub">Auto-fetches employee profile &amp; company details. Totals calculate live. Emails the PDF automatically.</div>
                     </div>
@@ -523,7 +523,7 @@
                 const r = await apiCall('/payroll/generate', 'POST', { ...v });
                 if (r && r.success) {
                     showToast('Payslip generated successfully', 'success');
-                    setTimeout(() => { window.location.href = 'payroll.html'; }, 1800);
+                    setTimeout(() => { window.location.href = '/admin/payroll'; }, 1800);
                 } else {
                     showToast(r && r.message ? r.message : 'Error generating payslip', 'error');
                 }
@@ -576,7 +576,7 @@
             const d = await apiCall('/payroll/' + id);
             if (!d || !d.success) {
                 showToast('Payslip not found', 'error');
-                setTimeout(() => { window.location.href = 'payroll.html'; }, 1200);
+                setTimeout(() => { window.location.href = '/admin/payroll'; }, 1200);
                 return;
             }
             editingPayslip = d.payslip;
@@ -862,7 +862,7 @@
                     if (okItems.length) {
                         html += '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
                             '<button class="pp-btn pp-btn-sm pp-btn-blue" onclick="bulkZip()"><i class="fas fa-file-archive"></i> Download ZIP</button>' +
-                            '<a class="pp-btn pp-btn-sm pp-btn-light" style="text-decoration:none;" href="payroll.html"><i class="fas fa-receipt"></i> View Records</a></div>';
+                            '<a class="pp-btn pp-btn-sm pp-btn-light" style="text-decoration:none;" href="/admin/payroll"><i class="fas fa-receipt"></i> View Records</a></div>';
                     }
                     document.getElementById('bulkResult').innerHTML = html;
                     document.getElementById('bulkResult').style.display = 'block';
