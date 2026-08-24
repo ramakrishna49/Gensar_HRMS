@@ -13,7 +13,16 @@ router.post('/check-in', verifyToken, async (req, res) => {
         const today = istDateString();
         const now = istTimeString();
         const location = req.body.location || '';
-        
+
+        // Selfie + location are mandatory: a check-in missing either is rejected
+        // so every attendance record stays verifiable.
+        if (!(req.body.photo || '').startsWith('data:image/') || !location.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Selfie and location are mandatory to check in. Allow camera and location access, then try again.'
+            });
+        }
+
         const existing = await query(
             'SELECT id, check_in FROM attendance WHERE employee_id = $1 AND date = $2',
             [req.user.id, today]
@@ -122,7 +131,15 @@ router.post('/check-out', verifyToken, async (req, res) => {
         const today = istDateString();
         const now = istTimeString();
         const location = req.body.location || '';
-        
+
+        // Selfie + location are mandatory on check-out as well.
+        if (!(req.body.photo || '').startsWith('data:image/') || !location.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Selfie and location are mandatory to check out. Allow camera and location access, then try again.'
+            });
+        }
+
         const checkIn = await query(
             'SELECT check_in, status FROM attendance WHERE employee_id = $1 AND date = $2 AND check_out IS NULL',
             [req.user.id, today]

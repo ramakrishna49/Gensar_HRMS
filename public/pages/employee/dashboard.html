@@ -419,8 +419,8 @@
             const isCheckOut = cameraMode === 'check-out';
             document.getElementById('cameraModalTitle').innerHTML = '<i class="fas fa-camera" style="color:var(--primary);margin-right:8px;"></i>' + (isCheckOut ? 'Check-Out Photo' : 'Check-In Photo');
             document.getElementById('cameraModalHint').textContent = isCheckOut
-                ? 'Take a selfie to verify your check-out.'
-                : 'Take a selfie to verify your check-in.';
+                ? 'A selfie with your face visible is required to check out.'
+                : 'A selfie with your face visible is required to check in.';
             document.getElementById('confirmBtn').innerHTML = '<i class="fas fa-check"></i> Confirm &amp; ' + (isCheckOut ? 'Check Out' : 'Check In');
             document.getElementById('capturedPreview').style.display = 'none';
             document.getElementById('cameraPreview').style.display = 'block';
@@ -438,12 +438,12 @@
                         document.getElementById('cameraPreview').srcObject = stream;
                     })
                     .catch(err => {
-                        document.getElementById('cameraError').textContent = 'Camera unavailable: ' + (err.name === 'NotAllowedError' ? 'permission denied' : err.message);
+                        document.getElementById('cameraError').textContent = 'Camera access is mandatory. ' + (err.name === 'NotAllowedError' ? 'Allow camera permission for this site (browser address bar), then tap Retake.' : err.message);
                         document.getElementById('cameraError').style.display = 'block';
                         document.getElementById('captureBtn').disabled = true;
                     });
             } else {
-                document.getElementById('cameraError').textContent = 'Camera not supported in this browser';
+                document.getElementById('cameraError').textContent = 'Camera not supported in this browser - attendance selfie is mandatory.';
                 document.getElementById('cameraError').style.display = 'block';
                 document.getElementById('captureBtn').disabled = true;
             }
@@ -499,7 +499,7 @@
                         cameraStream = stream;
                         document.getElementById('cameraPreview').srcObject = stream;
                     }).catch(err => {
-                        document.getElementById('cameraError').textContent = 'Camera unavailable: ' + err.message;
+                        document.getElementById('cameraError').textContent = 'Camera access is mandatory. Allow camera permission for this site and try again.';
                         document.getElementById('cameraError').style.display = 'block';
                     });
             }
@@ -544,7 +544,10 @@
             btn.disabled = true;
             const location = await getLocation();
             if (!location) {
-                showToast('Location not captured. Please allow location access so your check-in can be verified.', 'warning');
+                showToast('Location access is mandatory to check in. Enable location permission for this site and try again.', 'error');
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check In';
+                btn.disabled = false;
+                return;
             }
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking in...';
             const data = await apiCall('/attendance/check-in', 'POST', { location: location || '', photo });
@@ -565,7 +568,10 @@
             btn.disabled = true;
             const location = await getLocation();
             if (!location) {
-                showToast('Location not captured. Please allow location access so your check-out can be verified.', 'warning');
+                showToast('Location access is mandatory to check out. Enable location permission for this site and try again.', 'error');
+                btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Check Out';
+                btn.disabled = false;
+                return;
             }
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking out...';
             const data = await apiCall('/attendance/check-out', 'POST', { location: location || '', photo });
