@@ -141,7 +141,7 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
                 await sendToUser(reporting_manager_id, {
                     title: 'New Leave Request',
                     body: `${name} applied for leave (${totalDays} day${totalDays > 1 ? 's' : ''})`,
-                    url: '/pages/manager/my-team.html'
+                    url: '/manager/my-team'
                 });
             } catch (e) { console.error('Push notify error:', e.message); }
         }
@@ -297,7 +297,7 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
             await sendToUser(app.employee_id, {
                 title: status === 'approved' ? 'Leave Approved' : 'Leave Rejected',
                 body: `Your ${typeName} request was ${status}`,
-                url: '/pages/employee/leave.html'
+                url: '/employee/leave'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {

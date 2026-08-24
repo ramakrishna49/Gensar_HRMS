@@ -98,7 +98,7 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
             const sent = await sendToAudience(target_audience || 'all', {
                 title: priority === 'urgent' ? 'Urgent Announcement' : 'New Announcement',
                 body: title,
-                url: '/pages/employee/announcements.html'
+                url: '/employee/announcements'
             });
             if (sent.sent > 0) console.log(`[Push] Announcement "${title}" sent to ${sent.sent} device(s)`);
         } catch (e) { console.error('Push notify error:', e.message); }

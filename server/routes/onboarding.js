@@ -133,14 +133,14 @@ router.post('/tasks/:id/complete', verifyToken, async (req, res) => {
                 sendToUser(task.process_employee_id, {
                     title: 'Onboarding Task Completed',
                     body: `"${task.title}" was marked as done by HR.`,
-                    url: '/pages/employee/onboarding.html'
+                    url: '/employee/onboarding'
                 }).catch(() => {});
             }
         } else {
             notifyAdmins({
                 title: 'Onboarding Task Completed',
                 body: `${req.user.name || 'An employee'} completed "${task.title}".`,
-                url: '/pages/admin/onboarding.html'
+                url: '/admin/onboarding'
             }).catch(() => {});
         }
 

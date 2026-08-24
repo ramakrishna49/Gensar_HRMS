@@ -75,12 +75,12 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
                 FROM attendance_regularizations r
                 JOIN employees e ON e.id = r.employee_id
                 WHERE r.status = 'pending'`;
-        const regUrl = '/pages/manager/my-team.html?tab=regularization';
+        const regUrl = '/manager/my-team?tab=regularization';
 
         if (isAdminRole) {
-            leaveUrl = '/pages/admin/leave.html?status=pending';
-            wfhUrl = '/pages/admin/wfh.html?status=pending';
-            ticketUrl = '/pages/admin/tickets.html?status=open';
+            leaveUrl = '/admin/leave?status=pending';
+            wfhUrl = '/admin/wfh?status=pending';
+            ticketUrl = '/admin/tickets?status=open';
             leavesQuery = {
                 text: `SELECT la.id, la.status, la.start_date, la.end_date, la.total_days, la.created_at,
                 lt.name as leave_type_name,
@@ -124,9 +124,9 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
                 values: []
             };
         } else {
-            leaveUrl = '/pages/manager/my-team.html';
-            wfhUrl = '/pages/manager/my-team.html';
-            ticketUrl = '/pages/manager/my-team.html';
+            leaveUrl = '/manager/my-team';
+            wfhUrl = '/manager/my-team';
+            ticketUrl = '/manager/my-team';
             regsQuery = {
                 text: REG_SELECT + ' AND e.reporting_manager_id = $1 ORDER BY r.created_at DESC LIMIT 8',
                 values: [req.user.id]
@@ -208,7 +208,7 @@ router.get('/requests', verifyToken, isManager, async (req, res) => {
                 title: `${r.employee_name} requested profile update`,
                 subtitle: `${r.emp_id} · ${r.field}`,
                 created_at: r.created_at,
-                url: '/pages/admin/employees.html'
+                url: '/admin/employees'
             })),
             ...regs.rows.map(r => ({
                 type: 'regularization',

@@ -68,7 +68,7 @@ router.post('/apply', verifyToken, async (req, res) => {
                 await sendToUser(reporting_manager_id, {
                     title: 'New WFH Request',
                     body: `${name} requested work from home (${totalDays} day${totalDays > 1 ? 's' : ''})`,
-                    url: '/pages/manager/my-team.html'
+                    url: '/manager/my-team'
                 });
             } catch (e) { console.error('Push notify error:', e.message); }
         }
@@ -250,7 +250,7 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
             await sendToUser(wfhApp.rows[0].employee_id, {
                 title: status === 'approved' ? 'WFH Approved' : 'WFH Rejected',
                 body: `Your work-from-home request was ${status}`,
-                url: '/pages/employee/wfh.html'
+                url: '/employee/wfh'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {

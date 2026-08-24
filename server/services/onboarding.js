@@ -82,7 +82,7 @@ async function startOnboarding(employeeId, actorId) {
             await sendToUser(employeeId, {
                 title: 'Welcome to Gensar HRMS!',
                 body: 'Your onboarding checklist is ready. Log in and complete your pending tasks.',
-                url: '/pages/employee/onboarding.html'
+                url: '/employee/onboarding'
             });
         } catch (e) {
             console.error('Onboarding push error:', e.message);

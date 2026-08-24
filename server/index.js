@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -67,6 +68,29 @@ app.get('/', (req, res) => {
 app.get(['/admin', '/admin/'], (req, res) => {
     res.sendFile(path.join(__dirname, '../public/pages/admin-login.html'));
 });
+
+// Clean professional URLs: /admin/employees serves pages/admin/employees.html,
+// /employee/leave serves pages/employee/leave.html, and so on. The slug is
+// strictly validated ([a-z0-9-]) so path traversal is impossible; unknown
+// slugs fall through to the 404 handler. The original /pages/*.html paths keep
+// working via express.static, so old bookmarks and push links never break.
+function servePortalPage(section) {
+    return (req, res, next) => {
+        const page = req.params.page;
+        if (!/^[a-z0-9-]+$/.test(page)) return next();
+        const file = path.join(__dirname, '..', 'public', 'pages', section, page + '.html');
+        if (!fs.existsSync(file)) return next();
+        res.sendFile(file);
+    };
+}
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/pages/login.html'));
+});
+app.get('/manager/my-team', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/pages/manager/my-team.html'));
+});
+app.get('/employee/:page', servePortalPage('employee'));
+app.get('/admin/:page', servePortalPage('admin'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

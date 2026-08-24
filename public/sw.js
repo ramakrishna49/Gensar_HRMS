@@ -4,17 +4,18 @@
    - Push notification handlers for installed PWA
    Bump CACHE_VERSION on every deploy that changes cached assets so clients
    pick up the new build instead of serving a stale app-shell forever. */
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const APP_SHELL_CACHE = 'gensar-app-shell-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'gensar-runtime-' + CACHE_VERSION;
 const RUNTIME_CACHE_MAX_ENTRIES = 100;
 
+// Clean URLs (served by the Express portal routes); the legacy /pages/*.html
+// paths keep working but are no longer what users navigate to.
 const APP_SHELL_URLS = [
     '/',
     '/admin/',
     '/manifest.json',
-    '/pages/login.html',
-    '/pages/admin-login.html',
+    '/login',
     '/css/main.css',
     '/css/payroll.css',
     '/js/auth.js',
@@ -27,32 +28,36 @@ const APP_SHELL_URLS = [
     '/assets/images/icon-512.png',
     '/assets/images/icon-maskable-512.png',
     '/assets/images/apple-touch-icon.png',
-    '/pages/admin/announcements.html',
-    '/pages/admin/attendance.html',
-    '/pages/admin/dashboard.html',
-    '/pages/admin/departments.html',
-    '/pages/admin/designations.html',
-    '/pages/admin/documents.html',
-    '/pages/admin/employees.html',
-    '/pages/admin/holidays.html',
-    '/pages/admin/leave.html',
-    '/pages/admin/payroll.html',
-    '/pages/admin/payroll-generate.html',
-    '/pages/admin/reports.html',
-    '/pages/admin/settings.html',
-    '/pages/admin/tickets.html',
-    '/pages/admin/wfh.html',
-    '/pages/employee/announcements.html',
-    '/pages/employee/attendance.html',
-    '/pages/employee/dashboard.html',
-    '/pages/employee/documents.html',
-    '/pages/employee/holidays.html',
-    '/pages/employee/leave.html',
-    '/pages/employee/payslips.html',
-    '/pages/employee/profile.html',
-    '/pages/employee/tickets.html',
-    '/pages/employee/wfh.html',
-    '/pages/manager/my-team.html'
+    '/admin/announcements',
+    '/admin/attendance',
+    '/admin/dashboard',
+    '/admin/departments',
+    '/admin/designations',
+    '/admin/documents',
+    '/admin/employees',
+    '/admin/holidays',
+    '/admin/leave',
+    '/admin/onboarding',
+    '/admin/payroll',
+    '/admin/payroll-generate',
+    '/admin/reports',
+    '/admin/settings',
+    '/admin/tickets',
+    '/admin/wfh',
+    '/employee/announcements',
+    '/employee/attendance',
+    '/employee/dashboard',
+    '/employee/directory',
+    '/employee/documents',
+    '/employee/holidays',
+    '/employee/leave',
+    '/employee/onboarding',
+    '/employee/payslips',
+    '/employee/profile',
+    '/employee/regularization',
+    '/employee/tickets',
+    '/employee/wfh',
+    '/manager/my-team'
 ];
 
 const CROSS_ORIGIN_URLS = [

@@ -210,7 +210,7 @@ router.put('/leaves/:id', verifyToken, isManager, async (req, res) => {
             await sendToUser(leaveApp.employee_id, {
                 title: status === 'approved' ? 'Leave Approved' : 'Leave Rejected',
                 body: `Your ${typeName} request was ${status}`,
-                url: '/pages/employee/leave.html'
+                url: '/employee/leave'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
@@ -251,7 +251,7 @@ router.put('/wfh/:id', verifyToken, isManager, async (req, res) => {
             await sendToUser(wfhApp.employee_id, {
                 title: status === 'approved' ? 'WFH Approved' : 'WFH Rejected',
                 body: `Your work-from-home request was ${status}`,
-                url: '/pages/employee/wfh.html'
+                url: '/employee/wfh'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
@@ -294,7 +294,7 @@ router.put('/tickets/:id', verifyToken, isManager, async (req, res) => {
             await sendToUser(ticket.employee_id, {
                 title: 'Ticket Response',
                 body: `Your query "${ticket.subject}" was ${newStatus}`,
-                url: '/pages/employee/tickets.html'
+                url: '/employee/tickets'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {

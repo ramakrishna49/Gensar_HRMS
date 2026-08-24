@@ -40,7 +40,7 @@ router.post('/', verifyToken, async (req, res) => {
                 await sendToUser(reporting_manager_id, {
                     title: 'New Support Query',
                     body: `${name} raised: ${subject.trim()}`,
-                    url: '/pages/manager/my-team.html'
+                    url: '/manager/my-team'
                 });
             } catch (e) { console.error('Push notify error:', e.message); }
         }
@@ -153,7 +153,7 @@ router.put('/respond/:id', verifyToken, isAdmin, async (req, res) => {
             await sendToUser(tk.employee_id, {
                 title: 'Ticket Response',
                 body: `Your query "${tk.subject}" was ${status}`,
-                url: '/pages/employee/tickets.html'
+                url: '/employee/tickets'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {

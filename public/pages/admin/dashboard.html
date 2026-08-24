@@ -21,28 +21,28 @@
         </div>
         <nav class="sidebar-nav">
             <div class="nav-section-title">Main</div>
-            <a href="/pages/admin/dashboard.html" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/admin/dashboard" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
             <div class="nav-section-title">Employee Management</div>
-            <a href="/pages/admin/employees.html" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
-            <a href="/pages/admin/departments.html" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
-            <a href="/pages/admin/designations.html" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
-            <a href="/pages/admin/onboarding.html" class="nav-item"><i class="fas fa-user-plus"></i><span class="nav-text">Onboarding</span></a>
+            <a href="/admin/employees" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
+            <a href="/admin/departments" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
+            <a href="/admin/designations" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
+            <a href="/admin/onboarding" class="nav-item"><i class="fas fa-user-plus"></i><span class="nav-text">Onboarding</span></a>
             <div class="nav-section-title">Time & Leave</div>
-            <a href="/pages/admin/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
-            <a href="/pages/admin/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
-            <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
-            <a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <a href="/admin/attendance" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/admin/leave" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/admin/wfh" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/admin/holidays" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
             <div class="nav-section-title">Finance</div>
-            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
+            <a href="/admin/payroll" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
             <div class="nav-section-title">Support</div>
-            <a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
+            <a href="/admin/tickets" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
             <div class="nav-section-title">Communication</div>
-            <a href="/pages/admin/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
-            <a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <a href="/admin/announcements" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/admin/documents" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
             <div class="nav-section-title">Analytics</div>
-            <a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
-            <a href="/pages/admin/audit-logs.html" class="nav-item"><i class="fas fa-clipboard-list"></i><span class="nav-text">Audit Logs</span></a>
-            <a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
+            <a href="/admin/reports" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/admin/audit-logs" class="nav-item"><i class="fas fa-clipboard-list"></i><span class="nav-text">Audit Logs</span></a>
+            <a href="/admin/settings" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
         </nav>
     </aside>
 
@@ -62,7 +62,7 @@
                         <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
                     </button>
                     <div class="profile-menu" id="profileMenu" style="display:none;">
-                        <a href="/pages/admin/settings.html" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
+                        <a href="/admin/settings" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
                         <div class="profile-menu-divider"></div>
                         <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
                     </div>
@@ -77,30 +77,30 @@
             </div>
 
             <div class="grid grid-4" style="margin-bottom:30px;" id="statsGrid">
-                <a href="/pages/admin/employees.html" class="stat-card slide-up stagger-1" style="text-decoration:none;cursor:pointer;">
+                <a href="/admin/employees" class="stat-card slide-up stagger-1" style="text-decoration:none;cursor:pointer;">
                     <div class="stat-icon blue"><i class="fas fa-users"></i></div>
                     <div class="stat-info"><h3 id="totalEmployees">--</h3><p>Total Employees</p></div>
                 </a>
-                <a href="/pages/admin/attendance.html" class="stat-card slide-up stagger-2" style="text-decoration:none;cursor:pointer;">
+                <a href="/admin/attendance" class="stat-card slide-up stagger-2" style="text-decoration:none;cursor:pointer;">
                     <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
                     <div class="stat-info"><h3 id="presentToday">--</h3><p>Present Today</p></div>
                 </a>
-                <a href="/pages/admin/attendance.html" class="stat-card slide-up stagger-3" style="text-decoration:none;cursor:pointer;">
+                <a href="/admin/attendance" class="stat-card slide-up stagger-3" style="text-decoration:none;cursor:pointer;">
                     <div class="stat-icon red"><i class="fas fa-user-times"></i></div>
                     <div class="stat-info"><h3 id="absentToday">--</h3><p>Absent Today</p></div>
                 </a>
-                <a href="/pages/admin/leave.html" class="stat-card slide-up stagger-4" style="text-decoration:none;cursor:pointer;">
+                <a href="/admin/leave" class="stat-card slide-up stagger-4" style="text-decoration:none;cursor:pointer;">
                     <div class="stat-icon yellow"><i class="fas fa-calendar-times"></i></div>
                     <div class="stat-info"><h3 id="pendingLeaves">--</h3><p>Pending Leaves</p></div>
                 </a>
             </div>
 
             <div class="grid grid-4" style="margin-bottom:30px;">
-                <a href="/pages/admin/departments.html" class="stat-card slide-up stagger-1" style="text-decoration:none;cursor:pointer;">
+                <a href="/admin/departments" class="stat-card slide-up stagger-1" style="text-decoration:none;cursor:pointer;">
                     <div class="stat-icon purple"><i class="fas fa-building"></i></div>
                     <div class="stat-info"><h3 id="totalDepartments">--</h3><p>Departments</p></div>
                 </a>
-                <a href="/pages/admin/employees.html" class="stat-card slide-up stagger-2" style="text-decoration:none;cursor:pointer;">
+                <a href="/admin/employees" class="stat-card slide-up stagger-2" style="text-decoration:none;cursor:pointer;">
                     <div class="stat-icon warning"><i class="fas fa-user-edit"></i></div>
                     <div class="stat-info"><h3 id="pendingProfileStats">--</h3><p>Employee Requests</p></div>
                 </a>
@@ -112,27 +112,27 @@
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-bolt" style="color:var(--accent);"></i> Quick Actions</h2>
                     </div>
                     <div class="quick-actions-grid">
-                        <a href="/pages/admin/employees.html" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
+                        <a href="/admin/employees" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
                             <i class="fas fa-user-plus" style="font-size:1.25rem;"></i>
                             <span style="font-size:0.8rem;">Add Employee</span>
                         </a>
-                        <a href="/pages/admin/attendance.html" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
+                        <a href="/admin/attendance" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
                             <i class="fas fa-clock" style="font-size:1.25rem;"></i>
                             <span style="font-size:0.8rem;">Attendance</span>
                         </a>
-                        <a href="/pages/admin/leave.html" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
+                        <a href="/admin/leave" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
                             <i class="fas fa-calendar-check" style="font-size:1.25rem;"></i>
                             <span style="font-size:0.8rem;">Manage Leave</span>
                         </a>
-                        <a href="/pages/admin/payroll.html" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
+                        <a href="/admin/payroll" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
                             <i class="fas fa-indian-rupee-sign" style="font-size:1.25rem;"></i>
                             <span style="font-size:0.8rem;">Payroll</span>
                         </a>
-                        <a href="/pages/admin/announcements.html" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
+                        <a href="/admin/announcements" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
                             <i class="fas fa-bullhorn" style="font-size:1.25rem;"></i>
                             <span style="font-size:0.8rem;">Announcements</span>
                         </a>
-                        <a href="/pages/admin/settings.html" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
+                        <a href="/admin/settings" class="btn btn-secondary" style="justify-content:center;flex-direction:column;padding:16px;gap:8px;">
                             <i class="fas fa-cog" style="font-size:1.25rem;"></i>
                             <span style="font-size:0.8rem;">Settings</span>
                         </a>
@@ -142,7 +142,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-user-edit" style="color:var(--warning);"></i> Employee Data Requests <span id="pendingProfileBadge" style="display:none;margin-left:6px;background:var(--danger);color:#fff;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:600;"></span></h2>
-                        <a href="/pages/admin/employees.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Review</a>
+                        <a href="/admin/employees" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Review</a>
                     </div>
                     <div id="pendingProfileInfo">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
@@ -152,7 +152,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-calendar-check" style="color:var(--secondary);"></i> Upcoming Holidays</h2>
-                        <a href="/pages/admin/holidays.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
+                        <a href="/admin/holidays" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
                     <div id="holidaysList">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
@@ -164,7 +164,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-chart-pie" style="color:var(--primary);"></i> Department Distribution</h2>
-                        <a href="/pages/admin/reports.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Full Report</a>
+                        <a href="/admin/reports" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Full Report</a>
                     </div>
                     <div id="deptDistribution">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
@@ -174,7 +174,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-clock" style="color:var(--warning);"></i> Pending Leave Requests</h2>
-                        <a href="/pages/admin/leave.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Manage</a>
+                        <a href="/admin/leave" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Manage</a>
                     </div>
                     <div id="pendingLeaveInfo">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
@@ -186,7 +186,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-user-check" style="color:var(--success);"></i> Today's Attendance</h2>
-                        <a href="/pages/admin/attendance.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Full Report</a>
+                        <a href="/admin/attendance" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Full Report</a>
                     </div>
                     <div id="todayAttendanceList">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
@@ -196,7 +196,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-bullhorn" style="color:var(--primary);"></i> Recent Activity</h2>
-                        <a href="/pages/admin/announcements.html" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
+                        <a href="/admin/announcements" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
                     <div id="activityFeed">
                         <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
@@ -278,7 +278,7 @@
                 container.innerHTML = `
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
                         <span class="badge badge-warning">${pending.length} pending update${pending.length !== 1 ? 's' : ''}</span>
-                        <a href="/pages/admin/employees.html" style="font-size:0.82rem;color:var(--primary);text-decoration:none;font-weight:500;">Review all <i class="fas fa-arrow-right"></i></a>
+                        <a href="/admin/employees" style="font-size:0.82rem;color:var(--primary);text-decoration:none;font-weight:500;">Review all <i class="fas fa-arrow-right"></i></a>
                     </div>
                     <div class="table-container">
                         <table>
@@ -286,7 +286,7 @@
                             <tbody>
                                 ${pending.slice(0, 2).map(r => `
                                     <tr>
-                                        <td><a href="/pages/admin/employees.html?emp=${r.employee_id}&tab=requests" style="color:var(--primary);font-weight:600;text-decoration:none;">${escapeHtml(r.employee_name || '')} <i class="fas fa-external-link-alt" style="font-size:0.7rem;margin-left:2px;"></i></a></td>
+                                        <td><a href="/admin/employees?emp=${r.employee_id}&tab=requests" style="color:var(--primary);font-weight:600;text-decoration:none;">${escapeHtml(r.employee_name || '')} <i class="fas fa-external-link-alt" style="font-size:0.7rem;margin-left:2px;"></i></a></td>
                                         <td>${escapeHtml(r.field_label || r.field)}</td>
                                         <td style="font-size:0.78rem;">${escapeHtml(r.old_value || '-')} <i class="fas fa-arrow-right" style="color:var(--text-tertiary);margin:0 4px;"></i> <strong>${escapeHtml(r.new_value || '-')}</strong></td>
                                         <td>
@@ -300,7 +300,7 @@
                             </tbody>
                         </table>
                     </div>
-                    ${pending.length > 2 ? `<p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">+${pending.length - 2} more. <a href="/pages/admin/employees.html" style="color:var(--primary);">View all</a></p>` : ''}
+                    ${pending.length > 2 ? `<p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">+${pending.length - 2} more. <a href="/admin/employees" style="color:var(--primary);">View all</a></p>` : ''}
                 `;
             } else {
                 showEmptyState(container, 'fa-user-edit', 'Error', 'Could not load profile updates');
@@ -429,7 +429,7 @@
                         <div style="font-size:3rem;font-weight:700;color:${count > 0 ? 'var(--warning)' : 'var(--success)'};">${count}</div>
                         <p style="color:var(--text-secondary);margin-bottom:16px;">Pending Leave Request${count !== 1 ? 's' : ''}</p>
                         ${count > 0
-                            ? `<a href="/pages/admin/leave.html" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Review Now</a>`
+                            ? `<a href="/admin/leave" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Review Now</a>`
                             : `<p style="color:var(--success);font-size:0.9rem;"><i class="fas fa-check-circle"></i> All caught up!</p>`
                         }
                     </div>

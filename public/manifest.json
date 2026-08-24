@@ -35,14 +35,14 @@
       "name": "Employee Dashboard",
       "short_name": "My Dashboard",
       "description": "Open Employee Dashboard",
-      "url": "/pages/employee/dashboard.html",
+      "url": "/employee/dashboard",
       "icons": [{ "src": "/assets/images/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Admin Dashboard",
       "short_name": "Admin",
       "description": "Open Admin Dashboard",
-      "url": "/pages/admin/dashboard.html",
+      "url": "/admin/dashboard",
       "icons": [{ "src": "/assets/images/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

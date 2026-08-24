@@ -88,7 +88,7 @@ function toggleNotificationPanel() {
             <div class="notification-panel-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div>
         </div>
         <div class="notification-panel-footer">
-            <a href="/pages/employee/announcements.html">View all announcements</a>
+            <a href="/employee/announcements">View all announcements</a>
         </div>
     `;
 
@@ -145,7 +145,7 @@ async function loadNotificationList() {
                     await apiCall('/announcements/' + id + '/read', 'POST');
                     loadNotifBadge();
                 }
-                window.location.href = '/pages/employee/announcements.html';
+                window.location.href = '/employee/announcements';
             });
         });
     } catch (e) {
@@ -250,8 +250,8 @@ async function toggleAdminRequestsPanel(bell, mode) {
     const existing = document.getElementById('adminNotifPanel');
     if (existing) { existing.remove(); return; }
 
-    const requestsUrl = isManagerMode ? '/pages/manager/my-team.html' : '/pages/admin/leave.html?status=pending';
-    const announcementsUrl = isManagerMode ? '/pages/employee/announcements.html' : '/pages/admin/announcements.html';
+    const requestsUrl = isManagerMode ? '/manager/my-team' : '/admin/leave?status=pending';
+    const announcementsUrl = isManagerMode ? '/employee/announcements' : '/admin/announcements';
 
     const announcementsSection = isManagerMode ?
         '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px 2px;border-top:1px solid var(--border-light);">' +
@@ -311,7 +311,7 @@ async function loadRequestsSection(listEl, mode, limit) {
 }
 
 async function loadAnnouncementsSection(listEl, announcementsUrl) {
-    announcementsUrl = announcementsUrl || '/pages/employee/announcements.html';
+    announcementsUrl = announcementsUrl || '/employee/announcements';
     if (!listEl) return;
     try {
         const data = await apiCall('/announcements');
@@ -355,15 +355,15 @@ function loadManagerNav() {
     if (user.role !== 'manager' && user.role !== 'team_lead') return;
     const nav = document.querySelector('.sidebar-nav');
     if (!nav || nav.querySelector('[data-manager-nav]')) return;
-    if (nav.querySelector('a.nav-item[href="/pages/manager/my-team.html"]')) return;
+    if (nav.querySelector('a.nav-item[href="/manager/my-team"]')) return;
     const link = document.createElement('a');
-    link.href = '/pages/manager/my-team.html';
+    link.href = '/manager/my-team';
     link.className = 'nav-item';
     link.setAttribute('data-manager-nav', 'true');
     link.innerHTML = '<i class="fas fa-users"></i><span class="nav-text">My Team</span>';
     const dashboardLink = nav.querySelector('a.nav-item[href*="dashboard.html"]');
     if (dashboardLink) {
-        if (window.location.pathname.indexOf('/pages/manager/my-team.html') !== -1) {
+        if (window.location.pathname.indexOf('/manager/my-team') !== -1) {
             link.classList.add('active');
             dashboardLink.classList.remove('active');
         }
@@ -415,12 +415,12 @@ async function loadNotifBadge() {
 function loadSidebarCounts(counts, mode) {
     if (!counts) return;
     const map = mode === 'manager'
-        ? { '/pages/manager/my-team.html': counts.pendingLeaves + counts.pendingWfh + counts.pendingTickets }
+        ? { '/manager/my-team': counts.pendingLeaves + counts.pendingWfh + counts.pendingTickets }
         : {
-            '/pages/admin/leave.html': counts.pendingLeaves,
-            '/pages/admin/wfh.html': counts.pendingWfh,
-            '/pages/admin/tickets.html': counts.pendingTickets,
-            '/pages/admin/employees.html': counts.pendingProfileUpdates
+            '/admin/leave': counts.pendingLeaves,
+            '/admin/wfh': counts.pendingWfh,
+            '/admin/tickets': counts.pendingTickets,
+            '/admin/employees': counts.pendingProfileUpdates
         };
     Object.keys(map).forEach(href => {
         const item = document.querySelector('.sidebar-nav a.nav-item[href="' + href + '"]');

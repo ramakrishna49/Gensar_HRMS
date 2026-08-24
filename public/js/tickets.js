@@ -97,7 +97,7 @@
                         </div>
                     </form>
                     <div style="text-align:center;margin-top:14px;">
-                        <a href="/pages/employee/tickets.html" style="color:var(--primary);font-size:0.9rem;text-decoration:none;"><i class="fas fa-history"></i> View My Queries</a>
+                        <a href="/employee/tickets" style="color:var(--primary);font-size:0.9rem;text-decoration:none;"><i class="fas fa-history"></i> View My Queries</a>
                     </div>
                 </div>
             </div>`;

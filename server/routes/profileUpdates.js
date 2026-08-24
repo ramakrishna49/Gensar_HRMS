@@ -140,7 +140,7 @@ router.post('/:id/approve', verifyToken, isAdmin, async (req, res) => {
             await sendToUser(request.employee_id, {
                 title: 'Profile Update Approved',
                 body: `Your ${fieldLabel} change was approved`,
-                url: '/pages/employee/profile.html'
+                url: '/employee/profile'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {
@@ -184,7 +184,7 @@ router.post('/:id/reject', verifyToken, isAdmin, async (req, res) => {
             await sendToUser(request.employee_id, {
                 title: 'Profile Update Rejected',
                 body: `Your ${fieldLabel} change was rejected`,
-                url: '/pages/employee/profile.html'
+                url: '/employee/profile'
             });
         } catch (e) { console.error('Push notify error:', e.message); }
     } catch (error) {

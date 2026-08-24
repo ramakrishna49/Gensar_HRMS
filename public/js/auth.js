@@ -13,9 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (token && onLoginPage) {
         const user = getCurrentUser();
         if (user && user.role === 'admin') {
-            window.location.href = '/pages/admin/dashboard.html';
+            window.location.href = '/admin/dashboard';
         } else if (user) {
-            window.location.href = '/pages/employee/dashboard.html';
+            window.location.href = '/employee/dashboard';
         }
     }
 });
@@ -74,11 +74,11 @@ async function handleLogin(event, portal) {
             
             setTimeout(() => {
                 if (data.must_change_password && data.user.role !== 'admin') {
-                    window.location.href = '/pages/employee/profile.html';
+                    window.location.href = '/employee/profile';
                 } else if (data.user.role === 'admin') {
-                    window.location.href = '/pages/admin/dashboard.html';
+                    window.location.href = '/admin/dashboard';
                 } else {
-                    window.location.href = '/pages/employee/dashboard.html';
+                    window.location.href = '/employee/dashboard';
                 }
             }, 800);
         } else {
@@ -262,7 +262,7 @@ function requireAdmin() {
     if (!checkAuth()) return false;
     const user = getCurrentUser();
     if (!user || user.role !== 'admin') {
-        window.location.href = '/pages/employee/dashboard.html';
+        window.location.href = '/employee/dashboard';
         return false;
     }
     return true;
