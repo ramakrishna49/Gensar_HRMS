@@ -95,7 +95,7 @@
         .cal-day, .cal-tag, .cal-in { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         /* Month summary cards - one line on desktop, 3x2 on phone */
-        .att-stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 14px; }
+        .att-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; margin-bottom: 14px; }
         @media (max-width: 768px) { .att-stats-grid { grid-template-columns: repeat(3, 1fr); } }
         .att-stats-grid .stat-card { padding: 10px 12px; margin: 0; }
         .att-stats-grid .stat-info h3 { font-size: 1.05rem; }
@@ -116,11 +116,13 @@
         .cal-cell.cal-present { background: #D1FAE5; color: #065F46; }
         .cal-cell.cal-late { background: #FEF3C7; color: #92400E; }
         .cal-cell.cal-half-day { background: #FED7AA; color: #9A3412; }
+        .cal-cell.cal-leave { background: #EDE9FE; color: #5B21B6; }
         .cal-cell.cal-absent { background: #FEE2E2; color: #991B1B; }
         .cal-cell.cal-holiday { background: #E0E7FF; color: #3730A3; }
         .dark-mode .cal-cell.cal-present { background: #064E3B; color: #34D399; }
         .dark-mode .cal-cell.cal-late { background: #78350F; color: #FBBF24; }
         .dark-mode .cal-cell.cal-half-day { background: #7C2D12; color: #FDBA74; }
+        .dark-mode .cal-cell.cal-leave { background: #4C1D95; color: #C4B5FD; }
         .dark-mode .cal-cell.cal-absent { background: #7F1D1D; color: #F87171; }
         .dark-mode .cal-cell.cal-holiday { background: #312E81; color: #A5B4FC; }
         .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; font-size: 0.78rem; }
@@ -155,7 +157,28 @@
         let currentView = 'month';
         let lastRecords = [];
         let lastHolidays = [];
+        let lastLeaveDays = new Set();   // approved-leave YYYY-MM-DD keys
         let lastMonthCounts = null;
+
+        // Expand an approved leave range into per-day keys.
+        function expandLeaveDays(startRaw, endRaw) {
+            const s = (startRaw || '').split('T')[0];
+            const e = (endRaw || '').split('T')[0];
+            if (!s || !e) return [];
+            const out = [];
+            const cur = new Date(s + 'T00:00:00Z');
+            const end = new Date(e + 'T00:00:00Z');
+            while (cur <= end && out.length < 62) {
+                out.push(cur.toISOString().substring(0, 10));
+                cur.setUTCDate(cur.getUTCDate() + 1);
+            }
+            return out;
+        }
+
+        function isLeaveDay(key, rec) {
+            if (lastLeaveDays.has(key)) return true;
+            return !!(rec && rec.remarks && String(rec.remarks).indexOf('On leave') === 0);
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             if (!checkAuth()) throw new Error('Not authenticated');
@@ -202,13 +225,21 @@
                 applyAttendanceData(month, year);
             }
 
-            const [attRes, holRes] = await Promise.all([
+            const [attRes, holRes, lvRes] = await Promise.all([
                 apiCall(`/attendance/my?month=${month}&year=${year}`),
-                apiCall('/holidays?year=' + year)
+                apiCall('/holidays?year=' + year),
+                apiCall('/leave/my')
             ]);
             const records = (attRes && attRes.success) ? (attRes.attendance || []) : [];
             lastRecords = records;
             lastHolidays = (holRes && holRes.success) ? (holRes.holidays || []) : [];
+            lastLeaveDays = new Set();
+            if (lvRes && lvRes.success) {
+                (lvRes.leaves || []).forEach(l => {
+                    if (l.status !== 'approved') return;
+                    expandLeaveDays(l.start_date, l.end_date).forEach(k => lastLeaveDays.add(k));
+                });
+            }
             try { localStorage.setItem(cacheKey, JSON.stringify({ records, holidays: lastHolidays })); } catch (e) { /* ignore quota */ }
             applyAttendanceData(month, year);
         }
@@ -219,19 +250,20 @@
             const summaryEl = document.getElementById('summaryBar');
 
             // Month counters shared by the list and monthly views. Week offs +
-            // holidays count toward Total Present Days (elapsed days only, and
-            // a day actually worked always wins).
-            const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0 };
+            // holidays + approved leaves count toward Total Present Days
+            // (elapsed days only, and a day actually worked always wins).
+            const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0, leave: 0 };
             records.forEach(a => {
                 if (a.status === 'present') counts.present++;
                 else if (a.status === 'late') counts.late++;
                 else if (a.status === 'half-day') counts['half-day']++;
-                else if (a.status === 'absent') counts.absent++;
+                else if (a.status === 'absent' && !isLeaveDay((a.date || '').split('T')[0], a)) counts.absent++;
+                else if (a.status === 'absent') counts.leave++;   // approved leave back-filled row
             });
             const holidayMap = {};
             (lastHolidays || []).forEach(h => { const k = (h.date || '').split('T')[0]; if (k) holidayMap[k] = h.name; });
             const statusByDate = {};
-            records.forEach(a => { statusByDate[(a.date || '').split('T')[0]] = a.status; });
+            records.forEach(a => { statusByDate[(a.date || '').split('T')[0]] = a; });
             const daysInMonth = new Date(year, month, 0).getDate();
             const nowD = new Date();
             const isCurrentMonth = parseInt(month, 10) === nowD.getMonth() + 1 && parseInt(year, 10) === nowD.getFullYear();
@@ -239,18 +271,21 @@
             const lastCounted = isCurrentMonth ? nowD.getDate() : daysInMonth;
             for (let dd = 1; dd <= lastCounted; dd++) {
                 const key = year + '-' + String(month).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
-                const st = statusByDate[key];
+                const rec = statusByDate[key];
+                const st = rec ? rec.status : null;
                 if (st === 'present' || st === 'late' || st === 'half-day') continue;
                 if (holidayMap[key]) { counts.holiday++; continue; }
                 const dow = new Date(year, month - 1, dd).getDay();
                 if (dow === 0 || dow === 6) { counts.weekoff++; continue; }
+                if (lastLeaveDays.has(key)) { counts.leave++; continue; }   // approved leave
+                if (st === 'absent' && isLeaveDay(key, rec)) { counts.leave++; continue; }
                 if (key < todayKey) counts.absent++;
             }
             lastMonthCounts = counts;
 
-            const totalPresent = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday;
+            const totalPresent = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday + counts.leave;
             document.getElementById('attStatsBar').innerHTML = buildStatsCardsHtml(counts);
-            summaryEl.innerHTML = '<span style="font-weight:500;">Total Present Days (incl. late logins, half days, week offs &amp; holidays): <strong>' + totalPresent + '</strong> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
+            summaryEl.innerHTML = '<span style="font-weight:500;">Total Present Days (incl. late logins, half days, approved leaves, week offs &amp; holidays): <strong>' + totalPresent + '</strong> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
 
             if (records.length === 0) {
                 showEmptyState(container, 'fa-clock', 'No Records', 'No attendance records for this period');
@@ -302,7 +337,8 @@
                         html += '<td>' + escapeHtml(a.check_out || '-') + '</td>';
                         html += '<td style="text-align:center;">' + locHtml + '</td>';
                         html += '<td>' + hoursWorked + '</td>';
-                        html += '<td><span class="badge badge-' + getStatusBadge(a.status) + '">' + escapeHtml(getStatusText(a.status)) + '</span></td>';
+                        const isLeaveRow = a.status === 'absent' && isLeaveDay(adate, a);
+                        html += '<td><span class="badge badge-' + (isLeaveRow ? 'info' : getStatusBadge(a.status)) + '">' + escapeHtml(isLeaveRow ? 'On Leave (Paid)' : getStatusText(a.status)) + '</span></td>';
                         html += '<td>' + formatHours(a.overtime_hours) + '</td>';
                         html += '</tr>';
                     });
@@ -354,6 +390,7 @@
                     if (status === 'present') { cls = 'cal-present'; tag = 'Present'; counts.present++; }
                     else if (status === 'late') { cls = 'cal-late'; tag = 'Late'; counts.late++; }
                     else if (status === 'half-day') { cls = 'cal-half-day'; tag = 'Half Day'; counts['half-day']++; }
+                    else if (status === 'absent' && isLeaveDay(dateStr, rec)) { cls = 'cal-leave'; tag = 'On Leave (Paid)'; counts.leave++; }
                     else if (status === 'absent') { cls = 'cal-absent'; tag = 'Absent'; counts.absent++; }
                     else { cls = 'cal-weekoff'; tag = status; counts.weekoff++; }
                     const fmtT = (t) => { const m = String(t).match(/(\d{1,2}:\d{2})/); return m ? m[1] : t; };
@@ -367,6 +404,9 @@
                     cls = 'cal-holiday'; tag = holidayDates[dateStr]; counts.holiday++;
                 } else if (dayOfWeek === 0 || dayOfWeek === 6) {
                     cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++;
+                } else if (lastLeaveDays.has(dateStr)) {
+                    // Approved leave with no attendance row yet - never absent.
+                    cls = 'cal-leave'; tag = 'On Leave (Paid)'; counts.leave++;
                 } else if (dateStr === todayStr) {
                     // Today before check-in is not an absence yet.
                     cls = 'cal-cell';
@@ -398,16 +438,18 @@
                 present: ['#10B981', '#ECFDF5'],
                 late: ['#F59E0B', '#FFFBEB'],
                 half: ['#F97316', '#FFF7ED'],
+                leave: ['#8B5CF6', '#F5F3FF'],
                 absent: ['#EF4444', '#FEF2F2'],
                 weekoff: ['#3B82F6', '#EFF6FF'],
                 holiday: ['#D946EF', '#FDF4FF']
             };
             const statCard = (val, label, c) => '<div class="stat-card" style="margin:0;border-left:4px solid ' + c[0] + ';background:' + c[1] + ';"><div class="stat-info" style="text-align:center;"><h3 style="color:' + c[0] + ';">' + val + '</h3><p>' + label + '</p></div></div>';
-            const presentTotal = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday;
+            const presentTotal = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday + counts.leave;
             let html = '<div class="att-stats-grid">';
             html += statCard(presentTotal, 'Total Present Days', cardColors.present);
             html += statCard(counts.late, 'Late Logins', cardColors.late);
             html += statCard(counts['half-day'], 'Half Days', cardColors.half);
+            html += statCard(counts.leave, 'On Leave (Paid)', cardColors.leave);
             html += statCard(counts.absent, 'Absent Days', cardColors.absent);
             html += statCard(counts.weekoff, 'Week Offs', cardColors.weekoff);
             html += statCard(counts.holiday, 'Holidays', cardColors.holiday);
