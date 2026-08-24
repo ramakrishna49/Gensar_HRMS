@@ -527,3 +527,69 @@ ALTER TABLE payroll ADD COLUMN IF NOT EXISTS total_deductions DECIMAL(10,2) DEFA
 CREATE UNIQUE INDEX IF NOT EXISTS payroll_employee_month_year_uidx ON payroll (employee_id, month, year);
 
 CREATE INDEX IF NOT EXISTS idx_payroll_status ON payroll(status);
+
+-- ============================================
+-- ONBOARDING MODULE MIGRATIONS (idempotent)
+-- ============================================
+
+-- Checklist templates managed by the admin. When a new employee profile is
+-- created, every active template is copied into that employee's onboarding
+-- process as a pending task. Default templates are seeded below and the
+-- onboarding service also self-seeds an empty table so databases that were
+-- only migrated (db:migrate skips INSERTs) never end up with zero templates.
+CREATE TABLE IF NOT EXISTS hr_task_templates (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    assignee_role VARCHAR(20) NOT NULL DEFAULT 'employee' CHECK (assignee_role IN ('admin', 'employee')),
+    sequence INT DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_hr_task_templates_active ON hr_task_templates(is_active);
+
+-- One onboarding journey per employee (type kept for a future offboarding flow).
+CREATE TABLE IF NOT EXISTS employee_processes (
+    id SERIAL PRIMARY KEY,
+    employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    type VARCHAR(20) NOT NULL DEFAULT 'onboarding' CHECK (type IN ('onboarding', 'offboarding')),
+    status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed')),
+    started_by INT REFERENCES employees(id) ON DELETE SET NULL,
+    started_at TIMESTAMP DEFAULT NOW(),
+    completed_at TIMESTAMP,
+    UNIQUE (employee_id, type)
+);
+CREATE INDEX IF NOT EXISTS idx_employee_processes_employee ON employee_processes(employee_id);
+CREATE INDEX IF NOT EXISTS idx_employee_processes_status ON employee_processes(status);
+
+-- Per-employee checklist items copied from the active templates at start time
+-- (copied so later template edits never rewrite an existing journey's history).
+CREATE TABLE IF NOT EXISTS process_tasks (
+    id SERIAL PRIMARY KEY,
+    process_id INT NOT NULL REFERENCES employee_processes(id) ON DELETE CASCADE,
+    template_id INT REFERENCES hr_task_templates(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    assignee_role VARCHAR(20) NOT NULL DEFAULT 'employee' CHECK (assignee_role IN ('admin', 'employee')),
+    sequence INT DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done')),
+    remarks TEXT,
+    completed_by INT REFERENCES employees(id) ON DELETE SET NULL,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_process_tasks_process ON process_tasks(process_id);
+
+-- Default onboarding checklist (idempotent). The onboarding service re-seeds
+-- an empty table at runtime as well, so this only matters for fresh installs.
+INSERT INTO hr_task_templates (title, description, assignee_role, sequence)
+SELECT v.title, v.description, v.assignee_role, v.sequence
+FROM (VALUES
+    ('Complete your profile details', 'Log in and fill your personal, contact and identification details under My Profile.', 'employee', 1),
+    ('Submit bank & statutory details', 'Add bank account, PAN, Aadhaar and UAN/PF/ESI numbers in My Profile for payroll processing.', 'employee', 2),
+    ('Collect laptop, ID card & access badge', 'Hand over the company laptop, ID card and building access to the new joiner.', 'admin', 3),
+    ('Create office email & tool access', 'Set up the office email account and grant access to the tools the employee needs.', 'admin', 4),
+    ('Meet reporting manager & team introduction', 'Introductory meeting with the reporting manager and the team.', 'employee', 5),
+    ('Acknowledge company policies', 'Read and acknowledge the HR, attendance and leave policies.', 'employee', 6)
+) AS v(title, description, assignee_role, sequence)
+WHERE NOT EXISTS (SELECT 1 FROM hr_task_templates);

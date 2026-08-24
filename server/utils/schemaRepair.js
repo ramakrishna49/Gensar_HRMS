@@ -72,6 +72,51 @@ const ENSURE_TABLE_DDL = {
         )`,
         `CREATE INDEX IF NOT EXISTS idx_att_reg_employee ON attendance_regularizations (employee_id, created_at DESC)`,
         `CREATE INDEX IF NOT EXISTS idx_att_reg_status ON attendance_regularizations (status)`
+    ],
+    // Onboarding module release. Created lazily on the first 42P01 so no manual
+    // db:migrate is required on the live database - purely additive DDL.
+    hr_task_templates: [
+        `CREATE TABLE IF NOT EXISTS hr_task_templates (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL UNIQUE,
+            description TEXT,
+            assignee_role VARCHAR(20) NOT NULL DEFAULT 'employee' CHECK (assignee_role IN ('admin', 'employee')),
+            sequence INT DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_hr_task_templates_active ON hr_task_templates(is_active)`
+    ],
+    employee_processes: [
+        `CREATE TABLE IF NOT EXISTS employee_processes (
+            id SERIAL PRIMARY KEY,
+            employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+            type VARCHAR(20) NOT NULL DEFAULT 'onboarding' CHECK (type IN ('onboarding', 'offboarding')),
+            status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed')),
+            started_by INT REFERENCES employees(id) ON DELETE SET NULL,
+            started_at TIMESTAMP DEFAULT NOW(),
+            completed_at TIMESTAMP,
+            UNIQUE (employee_id, type)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_employee_processes_employee ON employee_processes(employee_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_employee_processes_status ON employee_processes(status)`
+    ],
+    process_tasks: [
+        `CREATE TABLE IF NOT EXISTS process_tasks (
+            id SERIAL PRIMARY KEY,
+            process_id INT NOT NULL REFERENCES employee_processes(id) ON DELETE CASCADE,
+            template_id INT REFERENCES hr_task_templates(id) ON DELETE SET NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            assignee_role VARCHAR(20) NOT NULL DEFAULT 'employee' CHECK (assignee_role IN ('admin', 'employee')),
+            sequence INT DEFAULT 0,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done')),
+            remarks TEXT,
+            completed_by INT REFERENCES employees(id) ON DELETE SET NULL,
+            completed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_process_tasks_process ON process_tasks(process_id)`
     ]
 };
 

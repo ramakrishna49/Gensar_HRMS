@@ -199,4 +199,69 @@ async function sendOTPEmail(email, otp, meta) {
     }
 }
 
-module.exports = { sendOTPEmail, sendPayslipEmail };
+// Welcome mail for a brand-new joiner: login credentials + the HRMS URL and
+// pointers to complete their profile / onboarding checklist. Sent to the
+// personal address when the admin captured one, else to the office address.
+// Returns { success, reason } so callers can report status without failing
+// the employee creation itself.
+async function sendWelcomeEmail(email, meta) {
+    meta = meta || {};
+    const mailTransporter = getTransporter();
+    if (!mailTransporter) {
+        return { success: false, reason: 'Email service not configured. Set SMTP_USER / SMTP_PASS in .env' };
+    }
+    const greetName = meta.name ? meta.name.split(' ')[0] : '';
+    const empId = meta.empId || '';
+    const tempPassword = meta.tempPassword || '';
+    const loginUrl = process.env.APP_URL || 'https://gensarhrms.in';
+    const subject = `Welcome to Gensar HRMS - Your Account Details${empId ? ' (' + empId + ')' : ''}`;
+    const html = baseEmail({
+        preheader: `Your Gensar HRMS account is ready. Log in at ${loginUrl} and complete your profile.`,
+        headerTitle: 'WELCOME',
+        headerSubline: 'Account Created',
+        bodyHtml: `
+            <p style="margin:0 0 6px;font-size:16px;font-weight:600;color:#111827;">${greetName ? 'Hi ' + greetName + ',' : 'Hello,'}</p>
+            <p style="margin:0 0 20px;">Welcome aboard! Your <strong>Gensar HRMS</strong> account has been created. Use the credentials below to log in for the first time.</p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px;color:#374151;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:20px;">
+                <tr><td style="padding:10px 16px;color:#6B7280;border-bottom:1px solid #e5e7eb;">&#129485;&nbsp; Employee ID</td><td align="right" style="padding:10px 16px;font-weight:700;font-family:'Consolas','Courier New',monospace;border-bottom:1px solid #e5e7eb;">${empId || '-'}</td></tr>
+                <tr><td style="padding:10px 16px;color:#6B7280;">&#128273;&nbsp; Temporary Password</td><td align="right" style="padding:10px 16px;font-weight:700;font-family:'Consolas','Courier New',monospace;">${tempPassword || '-'}</td></tr>
+            </table>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td align="center" style="padding:4px 0 22px;">
+                    <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#4F46E5 0%,#9333EA 100%);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 38px;border-radius:10px;">Log in to Gensar HRMS</a>
+                    <div style="margin-top:8px;font-size:12px;color:#9CA3AF;">${loginUrl}</div>
+                </td>
+            </tr></table>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2ff" style="background:#eef2ff;border-left:4px solid #4F46E5;border-radius:6px;margin-bottom:20px;"><tr>
+                <td style="padding:12px 16px;font-size:13px;color:#3730a3;">
+                    <strong>What to do first:</strong>
+                    <ol style="margin:8px 0 0;padding-left:18px;">
+                        <li>Log in with your Employee ID and the temporary password.</li>
+                        <li>You will be asked to set a new password of your choice.</li>
+                        <li>Open <strong>My Profile</strong> and fill in your personal, bank and statutory details.</li>
+                        <li>Track the remaining steps in <strong>My Onboarding</strong>.</li>
+                    </ol>
+                </td>
+            </tr></table>
+            <p style="margin:0 0 6px;font-size:13px;color:#6B7280;">If the button does not work, copy and paste this link into your browser: <a href="${loginUrl}" style="color:#4F46E5;">${loginUrl}</a></p>
+            <p style="margin:22px 0 0;">Best regards,<br><strong>Gensar HRMS &ndash; People Team</strong></p>
+        `
+    });
+    const text = `Hello ${greetName},\n\nWelcome aboard! Your Gensar HRMS account is ready.\n\nEmployee ID: ${empId}\nTemporary Password: ${tempPassword}\nLogin URL: ${loginUrl}\n\nSteps:\n1. Log in with the credentials above.\n2. Set a new password when prompted.\n3. Fill your details under My Profile.\n4. Track pending steps under My Onboarding.\n\nBest regards,\nGensar HRMS - People Team\nGensar IT Solutions`;
+    try {
+        await mailTransporter.sendMail({
+            from: `"Gensar HRMS" <${process.env.SMTP_USER}>`,
+            to: email,
+            subject,
+            text,
+            html
+        });
+        console.log(`Welcome email sent to ${email}`);
+        return { success: true, to: email };
+    } catch (error) {
+        console.error('Failed to send welcome email:', error.message);
+        return { success: false, reason: error.message };
+    }
+}
+
+module.exports = { sendOTPEmail, sendPayslipEmail, sendWelcomeEmail };

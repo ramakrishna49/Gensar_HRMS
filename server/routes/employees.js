@@ -8,6 +8,8 @@ const { validateEmployee, collectFieldErrors } = require('../middleware/validati
 const { deleteFile, deleteFileByUrl } = require('../services/storage');
 const { runWithSchemaRepair, pgErrorResponse } = require('../utils/schemaRepair');
 const { logAudit } = require('../utils/audit');
+const { startOnboarding } = require('../services/onboarding');
+const { sendWelcomeEmail } = require('../services/email');
 
 const MAIN_ADMIN_ID = 1;
 
@@ -395,7 +397,7 @@ async function createEmployeeRecord(body, req) {
          $32, $33, $34, $35, $36, $37,
          $38, $39, $40, $41, $42, $43, $44,
          $45, $46, $47, $48, $49, $50) 
-        RETURNING id, employee_id, first_name, last_name, email, role`,
+        RETURNING id, employee_id, first_name, last_name, email, personal_email, role, status`,
         [
             employee_id, first_name, last_name, email, phone, password_hash,
             cleanNum(department_id) ?? null, cleanNum(designation_id) ?? null, joining_date,
@@ -434,7 +436,45 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
             ip: req.ip
         });
 
-        res.status(201).json({ success: true, employee: created.employee, temp_password: created.tempPassword });
+        // Auto-start the onboarding journey (copies the active checklist
+        // templates into per-employee tasks + welcome push). Best-effort:
+        // a failure here must never fail the employee creation itself.
+        let onboarding_started = false;
+        try {
+            const ob = await startOnboarding(created.employee.id, req.user.id);
+            onboarding_started = !!(ob && ob.ok && !ob.already);
+        } catch (obError) {
+            console.error('Onboarding auto-start error:', obError.message);
+        }
+
+        // Welcome mail with login credentials. Goes to the personal address
+        // when the admin captured one, else to the office address. Opt-out via
+        // send_welcome_email:false. Best-effort as well - the response reports
+        // email_sent so the admin knows whether the joiner was notified.
+        let email_sent = false;
+        if (req.body.send_welcome_email !== false) {
+            try {
+                const mailResult = await sendWelcomeEmail(
+                    created.employee.personal_email || created.employee.email,
+                    {
+                        name: `${created.employee.first_name} ${created.employee.last_name}`,
+                        empId: created.employee.employee_id,
+                        tempPassword: created.tempPassword
+                    }
+                );
+                email_sent = !!(mailResult && mailResult.success);
+            } catch (mailError) {
+                console.error('Welcome email error:', mailError.message);
+            }
+        }
+
+        res.status(201).json({
+            success: true,
+            employee: created.employee,
+            temp_password: created.tempPassword,
+            email_sent,
+            onboarding_started
+        });
 
     } catch (error) {
         console.error('Create employee error:', error);

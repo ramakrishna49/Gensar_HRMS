@@ -54,6 +54,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/profile-updates', require('./routes/profileUpdates'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/tickets', require('./routes/tickets'));
+app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/manager', require('./routes/manager'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/cron', require('./routes/cron'));

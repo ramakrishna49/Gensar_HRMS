@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Onboarding - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .progress-track { background:var(--border-color,#e5e7eb); border-radius:999px; height:8px; min-width:110px; overflow:hidden; }
+        .progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--primary),#9333EA); transition:width .3s ease; }
+        .progress-fill.complete { background:linear-gradient(90deg,#059669,#10b981); }
+        .task-row { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-color,#eef2f7); }
+        .task-row:last-child { border-bottom:none; }
+        .task-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:.85rem; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/pages/admin/dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">Employee Management</div>
+            <a href="/pages/admin/employees.html" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
+            <a href="/pages/admin/onboarding.html" class="nav-item active"><i class="fas fa-user-plus"></i><span class="nav-text">Onboarding</span></a>
+            <a href="/pages/admin/departments.html" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
+            <a href="/pages/admin/designations.html" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
+            <div class="nav-section-title">Time & Leave</div>
+            <a href="/pages/admin/attendance.html" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/pages/admin/leave.html" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/pages/admin/wfh.html" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/pages/admin/holidays.html" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <div class="nav-section-title">Finance</div>
+            <a href="/pages/admin/payroll.html" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/pages/admin/tickets.html" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
+            <div class="nav-section-title">Communication</div>
+            <a href="/pages/admin/announcements.html" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/pages/admin/documents.html" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <div class="nav-section-title">Analytics</div>
+            <a href="/pages/admin/reports.html" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/pages/admin/audit-logs.html" class="nav-item"><i class="fas fa-clipboard-list"></i><span class="nav-text">Audit Logs</span></a>
+            <a href="/pages/admin/settings.html" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">Onboarding Management</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/pages/admin/settings.html" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-body">
+            <div class="card mb-3 slide-up stagger-1">
+                <h3 style="font-weight:600;"><i class="fas fa-user-plus" style="color:var(--secondary);margin-right:8px;"></i>New Joiner Onboarding</h3>
+                <p style="font-size:.85rem;color:var(--text-secondary);margin-top:6px;">A checklist starts automatically for every new employee profile you create. Use "Start for existing employee" below to begin onboarding for anyone created earlier.</p>
+            </div>
+
+            <div class="card slide-up stagger-2">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Employee</th><th>Department</th><th>Joining Date</th><th>Progress</th><th>Status</th><th>Started</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="processTableBody">
+                            <tr><td colspan="7" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card slide-up stagger-3" style="margin-top:24px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                    <h3 style="font-weight:600;"><i class="fas fa-list-check" style="color:var(--secondary);margin-right:8px;"></i>Checklist Templates</h3>
+                    <button class="btn btn-primary btn-sm" onclick="openTemplateModal()"><i class="fas fa-plus"></i> Add Template</button>
+                </div>
+                <p style="font-size:.82rem;color:var(--text-secondary);margin-top:6px;">These tasks are copied into every new joiner's onboarding checklist. Disabled templates are skipped.</p>
+                <div class="table-container" style="margin-top:12px;">
+                    <table>
+                        <thead>
+                            <tr><th>#</th><th>Task</th><th>Description</th><th>Assignee</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="templateTableBody">
+                            <tr><td colspan="6" style="text-align:center;padding:30px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Checklist modal -->
+    <div class="modal" id="checklistModal">
+        <div class="modal-content" style="max-width:640px;">
+            <div class="modal-header">
+                <h2 id="checklistTitle">Onboarding Checklist</h2>
+                <button onclick="closeChecklistModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="checklistEmployeeInfo" style="margin-bottom:14px;"></div>
+                <div id="checklistProgressWrap" style="margin-bottom:14px;"></div>
+                <div id="checklistTasks"></div>
+                <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-color,#eef2f7);">
+                    <strong style="font-size:.9rem;">Add a custom task</strong>
+                    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                        <input type="text" id="customTaskTitle" class="form-control" placeholder="Task title" style="flex:2;min-width:180px;">
+                        <select id="customTaskAssignee" class="form-control" style="flex:1;min-width:130px;">
+                            <option value="employee">Employee does it</option>
+                            <option value="admin">HR / Admin does it</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="addCustomTask()"><i class="fas fa-plus"></i> Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start onboarding modal -->
+    <div class="modal" id="startModal">
+        <div class="modal-content" style="max-width:480px;">
+            <div class="modal-header">
+                <h2>Start Onboarding</h2>
+                <button onclick="closeModal('startModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Employee (without an active onboarding)</label>
+                    <select id="startEmployeeSelect" class="form-control"></select>
+                </div>
+                <p style="font-size:.8rem;color:var(--text-secondary);">The active checklist templates are copied as this employee's pending tasks and they receive a push notification.</p>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('startModal')">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitStartOnboarding()">Start Onboarding</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template add/edit modal -->
+    <div class="modal" id="templateModal">
+        <div class="modal-content" style="max-width:480px;">
+            <div class="modal-header">
+                <h2 id="templateModalTitle">Add Template</h2>
+                <button onclick="closeModal('templateModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="templateForm" onsubmit="saveTemplate(event)">
+                    <input type="hidden" id="templateEditId">
+                    <div class="form-group"><label>Title *</label><input type="text" class="form-control" id="tplTitle" required maxlength="255"></div>
+                    <div class="form-group"><label>Description</label><textarea class="form-control" id="tplDescription" rows="3"></textarea></div>
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label>Assignee</label>
+                            <select id="tplAssignee" class="form-control">
+                                <option value="employee">Employee</option>
+                                <option value="admin">HR / Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Sequence</label><input type="number" class="form-control" id="tplSequence" value="0"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('templateModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Template</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script>
+        if (!requireAdmin()) throw new Error('Not authenticated');
+        let processes = [];
+        let templates = [];
+        let currentProcessId = null;
+        let allEmployeesCache = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProcesses();
+            loadTemplates();
+        });
+
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function progressBar(p) {
+            const pct = p.percent || 0;
+            return '<div style="display:flex;align-items:center;gap:10px;">' +
+                '<div class="progress-track"><div class="progress-fill' + (pct === 100 ? ' complete' : '') + '" style="width:' + pct + '%;"></div></div>' +
+                '<span style="font-size:.78rem;font-weight:600;white-space:nowrap;">' + p.done + '/' + p.total + ' (' + pct + '%)</span></div>';
+        }
+
+        async function loadProcesses() {
+            const d = await apiCall('/onboarding/processes');
+            const t = document.getElementById('processTableBody');
+            if (d && d.success) {
+                processes = d.processes || [];
+                if (processes.length === 0) {
+                    t.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-user-plus"></i><h3>No Onboarding Yet</h3><p>Onboarding starts automatically when you add a new employee.<br>You can also start it manually for existing employees.</p><button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="openStartModal()"><i class="fas fa-play"></i> Start for existing employee</button></div></td></tr>';
+                    return;
+                }
+                t.innerHTML = processes.map(p => {
+                    const statusBadge = p.status === 'completed'
+                        ? '<span class="badge badge-success">Completed</span>'
+                        : '<span class="badge badge-info">In Progress</span>';
+                    return '<tr>' +
+                        '<td><div style="font-weight:600;">' + escapeHtml(p.first_name + ' ' + p.last_name) + '</div><div style="font-size:.75rem;color:var(--text-secondary);">' + escapeHtml(p.emp_code || '') + '</div></td>' +
+                        '<td>' + escapeHtml(p.department_name || '-') + '</td>' +
+                        '<td>' + (p.joining_date ? formatDate(p.joining_date) : '-') + '</td>' +
+                        '<td>' + progressBar(p.progress) + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '<td style="color:var(--text-secondary);">' + formatDate(p.started_at) + '</td>' +
+                        '<td><button class="btn btn-sm btn-secondary" onclick="openChecklist(' + p.id + ')"><i class="fas fa-tasks"></i> View</button></td>' +
+                    '</tr>';
+                }).join('');
+            } else {
+                t.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load onboarding data. Did you run the DB migration?</p></div></td></tr>';
+            }
+        }
+
+        async function loadTemplates() {
+            const d = await apiCall('/onboarding/templates');
+            const t = document.getElementById('templateTableBody');
+            if (d && d.success) {
+                templates = d.templates || [];
+                if (templates.length === 0) {
+                    t.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-list-check"></i><h3>No Templates</h3><p>Add checklist templates that new joiners should complete.</p></div></td></tr>';
+                    return;
+                }
+                t.innerHTML = templates.map(tp =>
+                    '<tr' + (tp.is_active ? '' : ' style="opacity:0.55;"') + '>' +
+                        '<td>' + tp.sequence + '</td>' +
+                        '<td style="font-weight:500;">' + escapeHtml(tp.title) + '</td>' +
+                        '<td style="color:var(--text-secondary);">' + escapeHtml(tp.description || '-') + '</td>' +
+                        '<td><span class="badge badge-' + (tp.assignee_role === 'admin' ? 'warning' : 'info') + '">' + (tp.assignee_role === 'admin' ? 'HR / Admin' : 'Employee') + '</span></td>' +
+                        '<td><span class="badge badge-' + (tp.is_active ? 'success' : 'secondary') + '">' + (tp.is_active ? 'Active' : 'Disabled') + '</span></td>' +
+                        '<td><div style="display:flex;gap:4px;">' +
+                            '<button class="btn btn-sm btn-secondary" onclick="editTemplate(' + tp.id + ')" title="Edit"><i class="fas fa-edit"></i></button>' +
+                            (tp.is_active
+                                ? '<button class="btn btn-sm btn-danger" onclick="disableTemplate(' + tp.id + ')" title="Disable"><i class="fas fa-ban"></i></button>'
+                                : '') +
+                        '</div></td>' +
+                    '</tr>'
+                ).join('');
+            } else {
+                t.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load templates.</p></div></td></tr>';
+            }
+        }
+
+        async function openChecklist(processId) {
+            currentProcessId = processId;
+            const d = await apiCall('/onboarding/processes/' + processId + '/tasks');
+            if (!d || !d.success) {
+                showToast('Failed to load checklist', 'error');
+                return;
+            }
+            const p = d.process;
+            document.getElementById('checklistTitle').textContent =
+                'Onboarding - ' + p.first_name + ' ' + p.last_name;
+            document.getElementById('checklistEmployeeInfo').innerHTML =
+                '<span class="badge badge-secondary">' + escapeHtml(p.emp_code || '') + '</span> ' +
+                '<span style="font-size:.85rem;color:var(--text-secondary);margin-left:6px;">Status: ' + (p.status === 'completed' ? 'Completed' : 'In Progress') + '</span>';
+            document.getElementById('checklistProgressWrap').innerHTML = progressBar(d.progress);
+
+            const wrap = document.getElementById('checklistTasks');
+            if (d.tasks.length === 0) {
+                wrap.innerHTML = '<div class="empty-state"><i class="fas fa-tasks"></i><h3>No Tasks</h3><p>This journey has no tasks yet.</p></div>';
+            } else {
+                wrap.innerHTML = d.tasks.map(t => {
+                    const done = t.status === 'done';
+                    const iconCls = done ? 'background:#dcfce7;color:#059669;' : (t.assignee_role === 'admin' ? 'background:#fef3c7;color:#b45309;' : 'background:#e0e7ff;color:#4338ca;');
+                    const iconFa = done ? 'fa-check' : (t.assignee_role === 'admin' ? 'fa-user-shield' : 'fa-user');
+                    let meta = '';
+                    if (done) {
+                        meta = '<div style="font-size:.75rem;color:var(--text-secondary);margin-top:4px;">Done' +
+                            (t.completed_by_name ? ' by ' + escapeHtml(t.completed_by_name) : '') +
+                            (t.completed_at ? ' on ' + formatDate(t.completed_at, { month: 'short', day: 'numeric', year: 'numeric' }) : '') +
+                            (t.remarks ? ' &mdash; "' + escapeHtml(t.remarks) + '"' : '') + '</div>';
+                    } else {
+                        meta = '<div style="font-size:.75rem;color:var(--text-secondary);margin-top:4px;">Assigned to: ' + (t.assignee_role === 'admin' ? 'HR / Admin' : 'Employee') + '</div>';
+                    }
+                    return '<div class="task-row">' +
+                        '<div class="task-icon" style="' + iconCls + '"><i class="fas ' + iconFa + '"></i></div>' +
+                        '<div style="flex:1;min-width:0;">' +
+                            '<div style="font-weight:600;' + (done ? 'text-decoration:line-through;color:var(--text-secondary);' : '') + 'font-size:.92rem;">' + escapeHtml(t.title) + '</div>' +
+                            (t.description ? '<div style="font-size:.8rem;color:var(--text-secondary);margin-top:2px;">' + escapeHtml(t.description) + '</div>' : '') +
+                            meta +
+                        '</div>' +
+                        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
+                            (done
+                                ? '<button class="btn btn-sm btn-secondary" onclick="reopenTask(' + t.id + ')" title="Re-open"><i class="fas fa-rotate-left"></i></button>'
+                                : '<button class="btn btn-sm btn-success" onclick="completeTask(' + t.id + ', this)" title="Mark done"><i class="fas fa-check"></i> Done</button>') +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+            }
+            document.getElementById('customTaskTitle').value = '';
+            document.getElementById('checklistModal').classList.add('active');
+        }
+
+        function closeChecklistModal() {
+            closeModal('checklistModal');
+            currentProcessId = null;
+        }
+
+        function completeTask(taskId) {
+            showConfirmDialog('Mark Task Done', 'Mark this onboarding task as completed?', 'Mark Done', 'btn-primary', async function() {
+                const r = await apiCall('/onboarding/tasks/' + taskId + '/complete', 'POST', {});
+                if (r && r.success) {
+                    showToast(r.process_completed ? 'Task done - onboarding completed!' : 'Task marked as done', 'success');
+                    openChecklist(currentProcessId);
+                    loadProcesses();
+                } else {
+                    showToast(r?.message || 'Failed to update task', 'error');
+                }
+            });
+        }
+
+        function reopenTask(taskId) {
+            showConfirmDialog('Re-open Task', 'Re-open this task? The journey goes back to in-progress.', 'Re-open', 'btn-warning', async function() {
+                const r = await apiCall('/onboarding/tasks/' + taskId + '/reopen', 'POST', {});
+                if (r && r.success) {
+                    showToast('Task re-opened', 'success');
+                    openChecklist(currentProcessId);
+                    loadProcesses();
+                } else {
+                    showToast(r?.message || 'Failed to re-open task', 'error');
+                }
+            });
+        }
+
+        async function addCustomTask() {
+            const titleEl = document.getElementById('customTaskTitle');
+            const title = titleEl.value.trim();
+            if (!title) { showToast('Enter a task title', 'error'); return; }
+            const r = await apiCall('/onboarding/processes/' + currentProcessId + '/tasks', 'POST', {
+                title,
+                assignee_role: document.getElementById('customTaskAssignee').value
+            });
+            if (r && r.success) {
+                showToast('Custom task added', 'success');
+                openChecklist(currentProcessId);
+                loadProcesses();
+            } else {
+                showToast(r?.message || 'Failed to add task', 'error');
+            }
+        }
+
+        // ---------- Start onboarding for an existing employee ----------
+        async function openStartModal() {
+            const data = await apiCall('/employees?limit=1000&status=active');
+            if (!(data && data.success)) {
+                showToast('Failed to load employees', 'error');
+                return;
+            }
+            allEmployeesCache = data.employees || [];
+            const withProcess = new Set(processes.map(p => String(p.employee_id)));
+            const candidates = allEmployeesCache.filter(e => e.role !== 'admin' && !withProcess.has(String(e.id)));
+            const sel = document.getElementById('startEmployeeSelect');
+            if (candidates.length === 0) {
+                sel.innerHTML = '<option value="">No eligible employees found</option>';
+            } else {
+                sel.innerHTML = candidates.map(e =>
+                    '<option value="' + e.id + '">' + escapeHtml(e.employee_id + ' - ' + e.first_name + ' ' + e.last_name) + '</option>'
+                ).join('');
+            }
+            document.getElementById('startModal').classList.add('active');
+        }
+
+        async function submitStartOnboarding() {
+            const empId = document.getElementById('startEmployeeSelect').value;
+            if (!empId) { showToast('No employee selected', 'error'); return; }
+            const r = await apiCall('/onboarding/start/' + empId, 'POST', {});
+            if (r && r.success) {
+                showToast(r.message || 'Onboarding started', 'success');
+                closeModal('startModal');
+                loadProcesses();
+            } else {
+                showToast(r?.message || 'Failed to start onboarding', 'error');
+            }
+        }
+
+        // ---------- Templates ----------
+        function openTemplateModal() {
+            document.getElementById('templateForm').reset();
+            document.getElementById('templateEditId').value = '';
+            document.getElementById('tplSequence').value = templates.length + 1;
+            document.getElementById('templateModalTitle').textContent = 'Add Template';
+            document.getElementById('templateModal').classList.add('active');
+        }
+
+        function editTemplate(id) {
+            const tp = templates.find(x => x.id === id);
+            if (!tp) return;
+            document.getElementById('templateEditId').value = tp.id;
+            document.getElementById('tplTitle').value = tp.title;
+            document.getElementById('tplDescription').value = tp.description || '';
+            document.getElementById('tplAssignee').value = tp.assignee_role;
+            document.getElementById('tplSequence').value = tp.sequence || 0;
+            document.getElementById('templateModalTitle').textContent = 'Edit Template';
+            document.getElementById('templateModal').classList.add('active');
+        }
+
+        async function saveTemplate(e) {
+            e.preventDefault();
+            const id = document.getElementById('templateEditId').value;
+            const payload = {
+                title: document.getElementById('tplTitle').value,
+                description: document.getElementById('tplDescription').value,
+                assignee_role: document.getElementById('tplAssignee').value,
+                sequence: Number(document.getElementById('tplSequence').value) || 0,
+                is_active: 1
+            };
+            const r = id
+                ? await apiCall('/onboarding/templates/' + id, 'PUT', payload)
+                : await apiCall('/onboarding/templates', 'POST', payload);
+            if (r && r.success) {
+                showToast('Template saved', 'success');
+                closeModal('templateModal');
+                loadTemplates();
+            } else {
+                showToast(r?.message || 'Failed to save template', 'error');
+            }
+        }
+
+        function disableTemplate(id) {
+            showConfirmDialog('Disable Template', 'This template will no longer be added to new onboarding journeys. Existing checklists are not affected.', 'Disable', 'btn-danger', async function() {
+                const r = await apiCall('/onboarding/templates/' + id, 'DELETE');
+                if (r && r.success) {
+                    showToast('Template disabled', 'success');
+                    loadTemplates();
+                } else {
+                    showToast(r?.message || 'Failed to disable template', 'error');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
