@@ -20,6 +20,17 @@ function getTransporter() {
     return null;
 }
 
+// Sender identity shown to recipients. SMTP_FROM lets the mails come from the
+// office address (e.g. hr@gensaritsolutions.com) while SMTP_USER stays just the
+// login credential for the SMTP server. NOTE for Gmail: the From address must
+// be added as a "Send mail as" alias in the SMTP account, otherwise Gmail
+// rewrites it back to the login address.
+function getFromAddress() {
+    const from = (process.env.SMTP_FROM || '').trim();
+    if (from) return `"Gensar HRMS" <${from}>`;
+    return `"Gensar HRMS" <${process.env.SMTP_USER}>`;
+}
+
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -128,7 +139,7 @@ async function sendPayslipEmail(email, filename, pdfBuffer, meta) {
     const text = `Hello,\n\nYour salary payslip for ${period} is attached as a PDF (${attachName}).\n\nPlease review the details. For any discrepancy contact the HR / Payroll team.\n\nBest regards,\nGensar HRMS - Payroll Team\nGensar IT Solutions`;
     try {
         await mailTransporter.sendMail({
-            from: `"Gensar HRMS" <${process.env.SMTP_USER}>`,
+            from: getFromAddress(),
             to: email,
             subject,
             text,
@@ -184,7 +195,7 @@ async function sendOTPEmail(email, otp, meta) {
     const text = `Hello,\n\nWe received a request to reset your Gensar HRMS password.\n\nVerification code: ${otp}\nExpires in: 5 minutes\n\nNever share this code with anyone. If you did not request a reset, ignore this email - your password will remain unchanged.\n\nBest regards,\nGensar HRMS - Security Team\nGensar IT Solutions`;
     try {
         await mailTransporter.sendMail({
-            from: `"Gensar HRMS" <${process.env.SMTP_USER}>`,
+            from: getFromAddress(),
             to: email,
             subject,
             text,
@@ -250,7 +261,7 @@ async function sendWelcomeEmail(email, meta) {
     const text = `Hello ${greetName},\n\nWelcome aboard! Your Gensar HRMS account is ready.\n\nEmployee ID: ${empId}\nTemporary Password: ${tempPassword}\nLogin URL: ${loginUrl}\n\nSteps:\n1. Log in with the credentials above.\n2. Set a new password when prompted.\n3. Fill your details under My Profile.\n4. Track pending steps under My Onboarding.\n\nBest regards,\nGensar HRMS - People Team\nGensar IT Solutions`;
     try {
         await mailTransporter.sendMail({
-            from: `"Gensar HRMS" <${process.env.SMTP_USER}>`,
+            from: getFromAddress(),
             to: email,
             subject,
             text,
