@@ -35,27 +35,6 @@ app.use(cors({
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// TEMPORARY verification (removed next commit): confirm onboarding coverage.
-let __onboardVerifyDone = false;
-app.use((req, res, next) => {
-    if (!__onboardVerifyDone) {
-        __onboardVerifyDone = true;
-        (async () => {
-            try {
-                const r = await query(
-                    `SELECT
-                        (SELECT COUNT(*)::int FROM employees WHERE status = 'active' AND role <> 'admin') AS active_employees,
-                        (SELECT COUNT(DISTINCT employee_id)::int FROM employee_processes WHERE type = 'onboarding') AS with_onboarding`
-                );
-                console.log('[OnboardingVerify]', JSON.stringify(r.rows[0]));
-            } catch (e) {
-                console.error('[OnboardingVerify] failed:', e.message);
-            }
-        })();
-    }
-    next();
-});
-
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/employees', require('./routes/employees'));
