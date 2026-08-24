@@ -35,6 +35,35 @@ app.use(cors({
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 
+// TEMPORARY one-time backfill: every active pre-existing employee gets the
+// onboarding checklist that new joiners already receive. Runs exactly once
+// on the first request, logs results, removed in the next commit.
+let __onboardingBackfilled = false;
+app.use((req, res, next) => {
+    if (!__onboardingBackfilled) {
+        __onboardingBackfilled = true;
+        (async () => {
+            try {
+                const missing = await query(
+                    `SELECT id FROM employees
+                    WHERE status = 'active' AND role <> 'admin'
+                      AND id NOT IN (SELECT employee_id FROM employee_processes WHERE type = 'onboarding')`
+                );
+                const { startOnboarding } = require('./services/onboarding');
+                let started = 0;
+                for (const emp of missing.rows) {
+                    const r = await startOnboarding(emp.id, null);
+                    if (r.ok && !r.already) started++;
+                }
+                console.log('[OnboardingBackfill] employees without checklist:', missing.rows.length, '| started:', started);
+            } catch (e) {
+                console.error('[OnboardingBackfill] failed:', e.message);
+            }
+        })();
+    }
+    next();
+});
+
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/employees', require('./routes/employees'));
