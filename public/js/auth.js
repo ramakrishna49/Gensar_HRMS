@@ -5,11 +5,18 @@ function getLoginUrl(user) {
     return '/';
 }
 
-// Check if user is already logged in
+// Login-page detection must match ONLY the actual login surfaces.
+// Never use startsWith('/admin') here - every admin portal page lives
+// under /admin/<page> now, and matching those caused an infinite
+// redirect loop between the page and itself after the clean-URL change.
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
     const path = window.location.pathname;
-    const onLoginPage = path.includes('login.html') || path === '/' || path === '' || path.startsWith('/admin');
+    const onLoginPage =
+        path === '/' || path === '' ||
+        path === '/login' ||
+        path === '/admin' || path === '/admin/' ||
+        path.includes('login.html'); // legacy /pages/*.html paths
     if (token && onLoginPage) {
         const user = getCurrentUser();
         if (user && user.role === 'admin') {
@@ -355,7 +362,8 @@ let installBtnEl = null;
 // Only surface the floating install button on the login screens.
 function isLoginPage() {
     const p = location.pathname;
-    return p === '/' || /\/pages\/login\.html$/.test(p) || /\/pages\/admin-login\.html$/.test(p);
+    return p === '/' || p === '/login' || p === '/admin' || p === '/admin/' ||
+        /\/pages\/login\.html$/.test(p) || /\/pages\/admin-login\.html$/.test(p);
 }
 
 function ensureInstallButton() {

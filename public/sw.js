@@ -4,7 +4,7 @@
    - Push notification handlers for installed PWA
    Bump CACHE_VERSION on every deploy that changes cached assets so clients
    pick up the new build instead of serving a stale app-shell forever. */
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const APP_SHELL_CACHE = 'gensar-app-shell-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'gensar-runtime-' + CACHE_VERSION;
 const RUNTIME_CACHE_MAX_ENTRIES = 100;
