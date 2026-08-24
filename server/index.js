@@ -35,6 +35,28 @@ app.use(cors({
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 
+// TEMPORARY one-time data migration: restrict leave types to Sick Leave only.
+// Runs exactly once on the first request in any environment (local + Vercel),
+// logs the result, and will be removed in the very next commit.
+let __leavePolicyApplied = false;
+app.use((req, res, next) => {
+    if (!__leavePolicyApplied) {
+        __leavePolicyApplied = true;
+        (async () => {
+            try {
+                await query(`UPDATE leave_types SET is_active = 1 WHERE name = 'Sick Leave'`);
+                const r = await query(`UPDATE leave_types SET is_active = 0
+                    WHERE name IN ('Casual Leave', 'Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Earned Leave')`);
+                const check = await query(`SELECT name, is_active FROM leave_types ORDER BY name`);
+                console.log('[LeavePolicy] applied. rows updated:', r.rowCount, '| state:', JSON.stringify(check.rows));
+            } catch (e) {
+                console.error('[LeavePolicy] failed:', e.message);
+            }
+        })();
+    }
+    next();
+});
+
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/employees', require('./routes/employees'));
