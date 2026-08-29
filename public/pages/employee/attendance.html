@@ -351,7 +351,7 @@
                     else counts.absent++;
                     continue;
                 }
-                if (key < todayKey) counts.absent++;
+                if (key <= todayKey) counts.absent++;
             }
             lastMonthCounts = counts;
 
@@ -499,8 +499,9 @@
                     if (earnedWeekend(dateStr)) { cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++; }
                     else { cls = 'cal-absent'; tag = 'Absent'; counts.absent++; }
                 } else if (dateStr === todayStr) {
-                    // Today before check-in is not an absence yet.
-                    cls = 'cal-cell';
+                    // Today before check-in is counted as absent so today reaches
+                    // the totals (it updates to present once the employee logs in).
+                    cls = 'cal-absent'; tag = 'Absent'; counts.absent++;
                 } else {
                     cls = 'cal-absent'; tag = 'Absent'; counts.absent++;
                 }

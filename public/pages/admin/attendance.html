@@ -453,11 +453,7 @@
                 return;
             }
             if (status === 'holiday') {
-                // Admin may mark a declared holiday as absent too (someone was
-                // mandated to work/did not). Marking present undoes it.
-                showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' (holiday) as absent?', 'Mark Absent', 'btn-danger', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
-                });
+                showToast('This is a declared holiday - always shown as H', 'warning');
                 return;
             }
             if (status === 'onleave') {
