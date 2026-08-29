@@ -367,7 +367,7 @@
                     const label = cell.check_in
                         ? escapeHtml(cell.check_in) + (cell.check_out ? '<span style="display:block;font-size:0.6rem;color:var(--text-secondary);margin-top:2px;">' + escapeHtml(cell.check_out) + '</span>' : '')
                         : escapeHtml(getStatusForDisplay(isLopLeave ? 'absent' : cell.status));
-                    html += '<td class="' + cls + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml((isLopLeave ? 'absent' : cell.status) || '') + '"' + (cell.adminWeekendAbsent ? ' data-weekend-absent="1"' : '') + ' data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
+                    html += '<td class="' + cls + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml((isLopLeave ? 'absent' : cell.status) || '') + '" data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
                 }
                 grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandLeave += lv; grandHoliday += hv;
                 // Weekends (week offs), paid leave and holidays are all included
@@ -410,7 +410,7 @@
         function matrixCellClick(e) {
             const td = e.target && e.target.closest ? e.target.closest('td[data-emp]') : null;
             if (!td) return;
-            handleCellClick(parseInt(td.getAttribute('data-emp'), 10), parseInt(td.getAttribute('data-day'), 10), td.getAttribute('data-status'), td.getAttribute('data-weekend-absent') === '1');
+            handleCellClick(parseInt(td.getAttribute('data-emp'), 10), parseInt(td.getAttribute('data-day'), 10), td.getAttribute('data-status'));
         }
 
         function showTooltip(e, name, day, status, checkIn, checkOut, location) {
@@ -432,7 +432,7 @@
             document.getElementById('cellTooltip').style.display = 'none';
         }
 
-        function handleCellClick(empId, day, status, weekendAbsent) {
+        function handleCellClick(empId, day, status) {
             const month = document.getElementById('filterMonth').value;
             const year = document.getElementById('filterYear').value;
             const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
@@ -446,17 +446,9 @@
             }
             if (status === 'weekoff') {
                 // Admin may mark a week end as absent (e.g. someone didn't work
-                // the weekend). Confirms before writing; clicking it again undoes it.
+                // the weekend). Confirms before writing; marking present undoes it.
                 showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' (week end) as absent?', 'Mark Absent', 'btn-danger', function() {
                     apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
-                });
-                return;
-            }
-            if (status === 'absent' && weekendAbsent) {
-                // An admin-set weekend absent: toggle it back to a week off by
-                // deleting the explicit absent record.
-                showConfirmDialog('Undo', 'Restore ' + dateStr + ' (week end) back to Week Off?', 'Undo', 'btn-success', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr, status: 'present' }).then(() => loadMatrix());
                 });
                 return;
             }
