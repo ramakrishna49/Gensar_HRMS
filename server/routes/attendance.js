@@ -623,14 +623,11 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
                     matrix[emp.id][d] = { status: 'excluded', check_in: null, check_out: null };
                 } else if (date > today) {
                     matrix[emp.id][d] = { status: 'upcoming', check_in: null, check_out: null };
-                } else if (dayOfWeek === 0) {
-                    // Sunday week off - only credited if earned around present days.
-                    matrix[emp.id][d] = earnedNonWorking(dateStr)
-                        ? { status: 'weekoff', check_in: null, check_out: null }
-                        : { status: 'absent', check_in: null, check_out: null };
-                } else if (dayOfWeek === 6) {
-                    // Saturday: week off by default, but a real check-in (or
-                    // sandwich leave) makes it a working/leave day instead.
+                } else if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    // Week end. An EXPLICIT attendance record always wins: a real
+                    // check-in (present/late/half-day) on a weekend, or a weekend
+                    // an admin marked absent. Only with NO record do we show the
+                    // default week off (earned around present days) or absent.
                     if (rec) {
                         matrix[emp.id][d] = rec;
                     } else if (leaveCls) {
