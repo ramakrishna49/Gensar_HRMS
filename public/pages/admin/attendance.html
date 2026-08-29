@@ -27,16 +27,12 @@
         .cell-absent { background: #FEE2E2; color: #991B1B; cursor: pointer; }
         .cell-weekoff { background: #F3F4F6; color: #9CA3AF; }
         .cell-upcoming { background: transparent; color: var(--text-tertiary); }
-        .cell-onleave { background: #EDE9FE; color: #6D28D9; }
-        .cell-holiday { background: #FDF4FF; color: #A21CAF; }
         .dark-mode .cell-present { background: #064E3B; color: #34D399; }
         .dark-mode .cell-late { background: #78350F; color: #FBBF24; }
         .dark-mode .cell-half-day { background: #7C2D12; color: #FDBA74; }
         .dark-mode .cell-absent { background: #7F1D1D; color: #F87171; }
         .dark-mode .cell-weekoff { background: #374151; color: #6B7280; }
         .dark-mode .cell-upcoming { background: transparent; color: #4B5563; }
-        .dark-mode .cell-onleave { background: #4C1D95; color: #C4B5FD; }
-        .dark-mode .cell-holiday { background: #701A75; color: #F0ABFC; }
         .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.8rem; }
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .legend-dot { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); }
@@ -124,10 +120,8 @@
                 <div class="stat-item"><div class="num" id="statPresent" style="color:var(--success);">0</div><div class="lbl">Present</div></div>
                 <div class="stat-item"><div class="num" id="statLate" style="color:var(--warning);">0</div><div class="lbl">Late</div></div>
                 <div class="stat-item"><div class="num" id="statHalfDay" style="color:var(--accent);">0</div><div class="lbl">Half Day</div></div>
-                <div class="stat-item"><div class="num" id="statLeave" style="color:#6D28D9;">0</div><div class="lbl">On Leave</div></div>
-                <div class="stat-item"><div class="num" id="statAbsent" style="color:var(--danger);">0</div><div class="lbl">Absent (LOP)</div></div>
+                <div class="stat-item"><div class="num" id="statAbsent" style="color:var(--danger);">0</div><div class="lbl">Absent</div></div>
                 <div class="stat-item"><div class="num" id="statWeekoff" style="color:var(--text-tertiary);">0</div><div class="lbl">Weekoff</div></div>
-                <div class="stat-item"><div class="num" id="statHoliday" style="color:#A21CAF;">0</div><div class="lbl">Holidays</div></div>
             </div>
 
             <p style="font-size:0.8rem;color:var(--text-secondary);margin:-4px 0 8px;"><i class="fas fa-info-circle"></i> Present count includes late logins.</p>
@@ -141,9 +135,7 @@
                 <span class="legend-item"><span class="legend-dot cell-present"></span> Present</span>
                 <span class="legend-item"><span class="legend-dot cell-late"></span> Late Login</span>
                 <span class="legend-item"><span class="legend-dot cell-half-day"></span> Half Day</span>
-                <span class="legend-item"><span class="legend-dot cell-onleave"></span> On Leave</span>
-                <span class="legend-item"><span class="legend-dot cell-holiday"></span> Holiday</span>
-                <span class="legend-item"><span class="legend-dot cell-absent"></span> Absent (LOP)</span>
+                <span class="legend-item"><span class="legend-dot cell-absent"></span> Absent</span>
                 <span class="legend-item"><span class="legend-dot cell-weekoff"></span> Week Off</span>
             </div>
 
@@ -249,7 +241,7 @@
 
         let matrixData = null;
         const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const statusLabels = { present:'Present', late:'Late Login', 'half-day':'Half Day', absent:'Absent', weekoff:'Week Off', upcoming:'--', onleave:'On Leave', holiday:'Holiday' };
+        const statusLabels = { present:'Present', late:'Late Login', 'half-day':'Half Day', absent:'Absent', weekoff:'Week Off', upcoming:'--' };
 
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
@@ -291,7 +283,7 @@
         }
 
         function getStatusForDisplay(status) {
-            const map = { present: 'P', late: 'L', 'half-day': 'HD', absent: 'A', weekoff: '-', upcoming: '', onleave: 'Lv', holiday: 'H' };
+            const map = { present: 'P', late: 'L', 'half-day': 'HD', absent: 'A', weekoff: '-', upcoming: '' };
             return map[status] || '?';
         }
 
@@ -334,38 +326,32 @@
                 const isFuture = date > today;
                 html += '<th style="' + (isWeekend || isFuture ? 'color:var(--text-tertiary);' : '') + '" title="' + dayName + ' ' + d + '">' + d + '<br><span style="font-size:0.55rem;font-weight:400;">' + dayName + '</span></th>';
             }
-            html += '<th style="font-size:0.65rem;">P* / L / HD / A / Lv</th><th style="font-size:0.65rem;">Total Days</th></tr></thead><tbody>';
+            html += '<th style="font-size:0.65rem;">P* / L / HD / A</th><th style="font-size:0.65rem;">Total Days</th></tr></thead><tbody>';
 
-            let grandPresent = 0, grandLate = 0, grandHalf = 0, grandAbsent = 0, grandWeekoff = 0, grandLeave = 0, grandHoliday = 0;
+            let totals = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, upcoming: 0 };
+            let grandPresent = 0, grandLate = 0, grandHalf = 0, grandAbsent = 0, grandWeekoff = 0, grandUpcoming = 0;
 
             employees.forEach(emp => {
                 html += '<tr>';
                 html += '<td class="emp-name">' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '</td>';
-                let p = 0, l = 0, h = 0, a = 0, w = 0, u = 0, lv = 0, hv = 0;
+                let p = 0, l = 0, h = 0, a = 0, w = 0, u = 0;
                 for (let d = 1; d <= days; d++) {
                     const cell = matrix[emp.id] && matrix[emp.id][d] ? matrix[emp.id][d] : { status: 'absent', check_in: null, check_out: null };
-                    // A leave-day backfilled as 'absent' carries leave:true so it
-                    // can be told apart from a genuine absence (both reduce pay, but
-                    // only the first leave day is paid 'onleave').
-                    const isLopLeave = cell.status === 'absent' && cell.leave === true;
-                    const cls = isLopLeave ? 'cell-absent' : getCellClass(cell.status);
+                    const cls = getCellClass(cell.status);
                     if (cell.status === 'present') p++;
                     else if (cell.status === 'late') l++;
                     else if (cell.status === 'half-day') h++;
-                    else if (cell.status === 'onleave') lv++;
-                    else if (cell.status === 'holiday') hv++;
                     else if (cell.status === 'absent') a++;
                     else if (cell.status === 'weekoff') w++;
                     else if (cell.status === 'upcoming') u++;
                     const label = cell.check_in
                         ? escapeHtml(cell.check_in) + (cell.check_out ? '<span style="display:block;font-size:0.6rem;color:var(--text-secondary);margin-top:2px;">' + escapeHtml(cell.check_out) + '</span>' : '')
-                        : escapeHtml(getStatusForDisplay(isLopLeave ? 'absent' : cell.status));
-                    html += '<td class="' + cls + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml((isLopLeave ? 'absent' : cell.status) || '') + '" data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
+                        : escapeHtml(getStatusForDisplay(cell.status));
+                    html += '<td class="' + cls + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml(cell.status || '') + '" data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
                 }
-                grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandLeave += lv; grandHoliday += hv;
-                // Weekends (week offs) and paid leave are included in Total Days.
-                const totalDays = p + l + (h * 0.5) + lv + w;
-                html += '<td style="font-weight:600;font-size:0.7rem;text-align:center;white-space:nowrap;">' + (p + l) + ' / ' + l + ' / ' + h + ' / ' + a + ' / ' + lv + '</td>';
+                grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandUpcoming += u;
+                const totalDays = p + l + (h * 0.5);
+                html += '<td style="font-weight:600;font-size:0.7rem;text-align:center;white-space:nowrap;">' + (p + l) + ' / ' + l + ' / ' + h + ' / ' + a + '</td>';
                 html += '<td style="font-weight:700;font-size:0.75rem;text-align:center;white-space:nowrap;color:var(--primary);">' + formatHalfDays(totalDays) + '</td>';
                 html += '</tr>';
             });
@@ -383,10 +369,8 @@
             document.getElementById('statPresent').textContent = grandPresent + grandLate;
             document.getElementById('statLate').textContent = grandLate;
             document.getElementById('statHalfDay').textContent = grandHalf;
-            document.getElementById('statLeave').textContent = grandLeave;
             document.getElementById('statAbsent').textContent = grandAbsent;
             document.getElementById('statWeekoff').textContent = grandWeekoff;
-            document.getElementById('statHoliday').textContent = grandHoliday;
         }
 
         function matrixCellMouseOver(e) {
@@ -428,12 +412,8 @@
             const month = document.getElementById('filterMonth').value;
             const year = document.getElementById('filterYear').value;
             const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            if (status === 'upcoming' || status === 'weekoff' || status === 'holiday') {
-                showToast('These dates cannot be modified', 'warning');
-                return;
-            }
-            if (status === 'onleave') {
-                showToast('This is an approved leave day. Mark absences individually.', 'warning');
+            if (status === 'upcoming') {
+                showToast('Cannot modify future dates', 'warning');
                 return;
             }
             if (status === 'absent') {
