@@ -29,6 +29,7 @@
         .cell-upcoming { background: transparent; color: var(--text-tertiary); }
         .cell-onleave { background: #EDE9FE; color: #6D28D9; }
         .cell-holiday { background: #FDF4FF; color: #A21CAF; }
+        .cell-excluded { background: transparent; color: transparent; }
         .dark-mode .cell-present { background: #064E3B; color: #34D399; }
         .dark-mode .cell-late { background: #78350F; color: #FBBF24; }
         .dark-mode .cell-half-day { background: #7C2D12; color: #FDBA74; }
@@ -249,7 +250,7 @@
 
         let matrixData = null;
         const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const statusLabels = { present:'Present', late:'Late Login', 'half-day':'Half Day', absent:'Absent', weekoff:'Week Off', upcoming:'--', onleave:'On Leave', holiday:'Holiday' };
+        const statusLabels = { present:'Present', late:'Late Login', 'half-day':'Half Day', absent:'Absent', weekoff:'Week Off', upcoming:'--', onleave:'On Leave', holiday:'Holiday', excluded:'Before Joining' };
 
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
@@ -344,6 +345,12 @@
                 let p = 0, l = 0, h = 0, a = 0, w = 0, u = 0, lv = 0, hv = 0;
                 for (let d = 1; d <= days; d++) {
                     const cell = matrix[emp.id] && matrix[emp.id][d] ? matrix[emp.id][d] : { status: 'absent', check_in: null, check_out: null };
+                    // A day before the employee joined is excluded: not counted in
+                    // any column and rendered blank/distinct.
+                    if (cell.status === 'excluded') {
+                        html += '<td class="cell-excluded" data-emp="' + emp.id + '" data-day="' + d + '" data-status="excluded" data-in="" data-out="" data-loc="" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">&ndash;</td>';
+                        continue;
+                    }
                     // A leave-day backfilled as 'absent' carries leave:true so it
                     // can be told apart from a genuine absence (both reduce pay, but
                     // only the first leave day is paid 'onleave').
@@ -428,6 +435,10 @@
             const month = document.getElementById('filterMonth').value;
             const year = document.getElementById('filterYear').value;
             const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            if (status === 'excluded') {
+                showToast('Before joining date - not counted', 'warning');
+                return;
+            }
             if (status === 'upcoming' || status === 'weekoff' || status === 'holiday') {
                 showToast('These dates cannot be modified', 'warning');
                 return;
