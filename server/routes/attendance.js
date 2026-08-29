@@ -638,12 +638,11 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
                             : { status: 'absent', check_in: null, check_out: null };
                     }
                 } else if (holidaySet.has(dateStr)) {
-                    // Declared holiday. It ALWAYS shows as H (and counts as a
-                    // holiday) - a plain 'absent' row must NOT turn it into A.
-                    // Only a real check-in on a working holiday (present/late/
-                    // half-day) overrides it.
-                    const hst = rec ? rec.status : null;
-                    if (hst && hst !== 'absent') {
+                    // Declared holiday. An EXPLICIT attendance record always wins
+                    // (e.g. admin marks the holiday as absent, or a real check-in
+                    // on a working holiday); otherwise a sandwiched leave shows as
+                    // leave, and only with nothing does it default to holiday.
+                    if (rec) {
                         matrix[emp.id][d] = rec;
                     } else if (leaveCls) {
                         matrix[emp.id][d] = { status: leaveCls === 'paid' ? 'onleave' : 'absent', check_in: null, check_out: null, leave: true };
