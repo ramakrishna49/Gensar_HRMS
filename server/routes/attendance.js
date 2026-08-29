@@ -481,7 +481,7 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
 
         const [attendance, leaveRows, holRows] = await Promise.all([
             query(
-                `SELECT employee_id, date, check_in, check_out, status, check_in_location
+                `SELECT employee_id, date, check_in, check_out, status, check_in_location, remarks
                  FROM attendance 
                  WHERE to_char(date, 'MM') = $1 AND to_char(date, 'YYYY') = $2`,
                 [String(month).padStart(2, '0'), String(year)]
@@ -503,7 +503,7 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
         attendance.rows.forEach(a => {
             const day = new Date(a.date).getDate();
             if (!attMap[a.employee_id]) attMap[a.employee_id] = {};
-            attMap[a.employee_id][day] = { check_in: a.check_in, check_out: a.check_out, status: a.status, check_in_location: a.check_in_location };
+            attMap[a.employee_id][day] = { check_in: a.check_in, check_out: a.check_out, status: a.status, check_in_location: a.check_in_location, remarks: a.remarks || '' };
         });
 
         // Declared holidays for the month (YYYY-MM-DD => name overrides below).
@@ -638,13 +638,13 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
                             : { status: 'absent', check_in: null, check_out: null };
                     }
                 } else if (holidaySet.has(dateStr)) {
-                    // Declared holiday. It ALWAYS shows as H (and counts as a
-                    // holiday) - a plain 'absent' row must NOT turn it into A.
-                    // Only a real check-in on a working holiday (present/late/
-                    // half-day) overrides it.
-                    const hst = rec ? rec.status : null;
-                    if (hst && hst !== 'absent') {
-                        matrix[emp.id][d] = rec;
+                    // Declared holiday: ALWAYS shown as H for everyone. A real
+                    // check-in on the holiday is ignored (shows H, not the time).
+                    // The ONLY way a holiday shows A is an explicit admin mark
+                    // (recognised by its remark), so admin can turn H -> A.
+                    const adminHolidayAbsent = rec && rec.status === 'absent' && /Admin marked holiday absent/.test(rec.remarks || '');
+                    if (adminHolidayAbsent) {
+                        matrix[emp.id][d] = { status: 'absent', check_in: null, check_out: null, remarks: rec.remarks || '' };
                     } else if (leaveCls) {
                         matrix[emp.id][d] = { status: leaveCls === 'paid' ? 'onleave' : 'absent', check_in: null, check_out: null, leave: true };
                     } else {

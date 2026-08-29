@@ -453,7 +453,12 @@
                 return;
             }
             if (status === 'holiday') {
-                showToast('This is a declared holiday - always shown as H', 'warning');
+                // Holidays show H for everyone, but admin may explicitly mark one
+                // as absent for a specific employee (H -> A). Marking present again
+                // (or reset) turns it back to H.
+                showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' (holiday) as absent for this employee?', 'Mark Absent', 'btn-danger', function() {
+                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr, remarks: 'Admin marked holiday absent' }).then(() => loadMatrix());
+                });
                 return;
             }
             if (status === 'onleave') {
