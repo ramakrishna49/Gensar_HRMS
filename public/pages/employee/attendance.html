@@ -448,7 +448,7 @@
                 html += '<div class="cal-cell weekoff" style="min-height:0;border-style:dashed;opacity:0.4;"><div class="cal-day">' + pad.getDate() + '</div></div>';
             }
 
-            const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0, leave: 0 };
+            const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0 };
             for (let d = 1; d <= lastDay; d++) {
                 const date = new Date(year, month - 1, d);
                 const dayOfWeek = date.getDay();
