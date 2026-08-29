@@ -368,6 +368,52 @@ async function computeAttendanceSummary(employeeId, month, year) {
     wfhRes.rows.forEach(w => markActivityEnd(w.start_date, w.end_date));
     leaveRes.rows.forEach(l => markActivityEnd(l.start_date, l.end_date));
 
+    // Presence per calendar day (only meaningful on working days): a real
+    // check-in (present/late/half-day), approved WFH, or approved leave.
+    const presence = {};
+    Object.keys(statusByDate).forEach(ds => {
+        const st = statusByDate[ds];
+        if (st === 'present' || st === 'late' || st === 'half-day') presence[ds] = true;
+    });
+    wfhRes.rows.forEach(w => {
+        const ws = fmtD(w.start_date), we = fmtD(w.end_date);
+        if (!ws || !we) return;
+        let c = new Date(ws + 'T00:00:00Z'); const ce = new Date(we + 'T00:00:00Z');
+        while (c <= ce) { presence[c.toISOString().substring(0, 10)] = true; c.setUTCDate(c.getUTCDate() + 1); }
+    });
+    leaveRes.rows.forEach(l => {
+        const ls = fmtD(l.start_date), le = fmtD(l.end_date);
+        if (!ls || !le) return;
+        let c = new Date(ls + 'T00:00:00Z'); const ce = new Date(le + 'T00:00:00Z');
+        while (c <= ce) { presence[c.toISOString().substring(0, 10)] = true; c.setUTCDate(c.getUTCDate() + 1); }
+    });
+
+    // Working days of the period (non-holiday, non-weekend), in order - used to
+    // find the working day on each side of a week off / holiday.
+    const workingDaysArr = [];
+    {
+        let cc = new Date(effStart + 'T00:00:00Z');
+        const ceEnd = new Date(end + 'T00:00:00Z');
+        while (cc <= ceEnd) {
+            const dw = cc.getUTCDay();
+            const ds = cc.toISOString().substring(0, 10);
+            if (!holidaySet.has(ds) && dw !== 0 && dw !== 6) workingDaysArr.push(ds);
+            cc.setUTCDate(cc.getUTCDate() + 1);
+        }
+    }
+    // A week off / holiday is "earned" (credited as a free present day) only if
+    // the employee was present on at least one neighbouring working day. If they
+    // were absent BOTH before AND after it (e.g. off the whole surrounding week),
+    // the day must not count as present - it is effectively lost like an absence.
+    const earnedNonWorking = (ds) => {
+        let prev = null, next = null;
+        for (let i = 0; i < workingDaysArr.length; i++) {
+            if (workingDaysArr[i] < ds) prev = workingDaysArr[i];
+            else if (workingDaysArr[i] > ds) { next = workingDaysArr[i]; break; }
+        }
+        return !!(presence[prev] || presence[next]);
+    };
+
     let creditedWOs = 0, creditedHols = 0;
     if (lastActive) {
         let c = new Date(effStart + 'T00:00:00Z');
@@ -379,10 +425,10 @@ async function computeAttendanceSummary(employeeId, month, year) {
             // rule, so it must NOT also be credited as a free week off/holiday
             // in present_days. Only non-sandwich non-working days count here.
             if (holidaySet.has(ds)) {
-                if (!sandwichDays.has('H' + ds)) creditedHols++;
+                if (!sandwichDays.has('H' + ds) && earnedNonWorking(ds)) creditedHols++;
             } else {
                 const dw = c.getUTCDay();
-                if ((dw === 0 || dw === 6) && !sandwichDays.has(ds)) creditedWOs++;
+                if ((dw === 0 || dw === 6) && !sandwichDays.has(ds) && earnedNonWorking(ds)) creditedWOs++;
             }
             c.setUTCDate(c.getUTCDate() + 1);
         }

@@ -569,19 +569,53 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
         const matrix = {};
         const today = new Date();
         today.setHours(0,0,0,0);
+        // Working days of the month (for earned-weekend lookups).
+        const workingDaysArr = [];
+        for (let dd = 1; dd <= lastDay; dd++) {
+            const date = new Date(year, month - 1, dd);
+            const dow = date.getDay();
+            const ds = key(0, dd);
+            if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) workingDaysArr.push(ds);
+        }
         employees.rows.forEach(emp => {
             matrix[emp.id] = {};
+
+            // Presence on each day: a real check-in / WFH / approved leave day.
+            // (attMap holds attendance rows; WFH/leave handled via profiles.)
+            const empAtt = attMap[emp.id] || {};
+            const presence = {};
+            Object.keys(empAtt).forEach(dayNum => {
+                const st = empAtt[dayNum].status;
+                if (st === 'present' || st === 'late' || st === 'half-day') presence[key(emp.id, dayNum)] = true;
+            });
+            Object.keys(leaveClassByEmp[emp.id] || {}).forEach(ds => { presence[ds] = true; });
+
+            // A week off is only "earned" (credited as present) if the employee
+            // was present on at least one neighbouring working day. Absent both
+            // before AND after => it is not earned and counts as absent.
+            const earnedNonWorking = (ds) => {
+                let prev = null, next = null;
+                for (let i = 0; i < workingDaysArr.length; i++) {
+                    if (workingDaysArr[i] < ds) prev = workingDaysArr[i];
+                    else if (workingDaysArr[i] > ds) { next = workingDaysArr[i]; break; }
+                }
+                return !!(presence[prev] || presence[next]);
+            };
+
             for (let d = 1; d <= lastDay; d++) {
                 const date = new Date(year, month - 1, d);
                 const dayOfWeek = date.getDay();
                 const dateStr = key(emp.id, d);
-                const rec = (attMap[emp.id] && attMap[emp.id][d]) || null;
+                const rec = empAtt[d] || null;
                 const leaveCls = (leaveClassByEmp[emp.id] || {})[dateStr];
 
                 if (date > today) {
                     matrix[emp.id][d] = { status: 'upcoming', check_in: null, check_out: null };
                 } else if (dayOfWeek === 0) {
-                    matrix[emp.id][d] = { status: 'weekoff', check_in: null, check_out: null };
+                    // Sunday week off - only credited if earned around present days.
+                    matrix[emp.id][d] = earnedNonWorking(dateStr)
+                        ? { status: 'weekoff', check_in: null, check_out: null }
+                        : { status: 'absent', check_in: null, check_out: null };
                 } else if (dayOfWeek === 6) {
                     // Saturday: week off by default, but a real check-in (or
                     // sandwich leave) makes it a working/leave day instead.
@@ -590,7 +624,9 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
                     } else if (leaveCls) {
                         matrix[emp.id][d] = { status: leaveCls === 'paid' ? 'onleave' : 'absent', check_in: null, check_out: null, leave: true };
                     } else {
-                        matrix[emp.id][d] = { status: 'weekoff', check_in: null, check_out: null };
+                        matrix[emp.id][d] = earnedNonWorking(dateStr)
+                            ? { status: 'weekoff', check_in: null, check_out: null }
+                            : { status: 'absent', check_in: null, check_out: null };
                     }
                 } else if (holidaySet.has(dateStr)) {
                     matrix[emp.id][d] = { status: 'holiday', check_in: null, check_out: null };
