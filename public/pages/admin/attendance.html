@@ -436,8 +436,6 @@
             const month = document.getElementById('filterMonth').value;
             const year = document.getElementById('filterYear').value;
             const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            const dow = new Date(year, month - 1, day).getDay();
-            const isWeekendDay = dow === 0 || dow === 6;
             if (status === 'excluded') {
                 showToast('Before joining date - not counted', 'warning');
                 return;
@@ -454,10 +452,10 @@
                 });
                 return;
             }
-            if (status === 'absent' && isWeekendDay) {
-                // A week end shown as absent: toggle it back to Week Off by
-                // removing the explicit absent record.
-                showConfirmDialog('Mark as Week Off', 'Restore ' + dateStr + ' (week end) back to Week Off?', 'Mark as Week Off', 'btn-success', function() {
+            if (status === 'absent' && weekendAbsent) {
+                // An admin-set weekend absent: toggle it back to a week off by
+                // deleting the explicit absent record.
+                showConfirmDialog('Undo', 'Restore ' + dateStr + ' (week end) back to Week Off?', 'Undo', 'btn-success', function() {
                     apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr, status: 'present' }).then(() => loadMatrix());
                 });
                 return;
