@@ -439,16 +439,8 @@
                 showToast('Before joining date - not counted', 'warning');
                 return;
             }
-            if (status === 'upcoming' || status === 'holiday') {
+            if (status === 'upcoming' || status === 'weekoff' || status === 'holiday') {
                 showToast('These dates cannot be modified', 'warning');
-                return;
-            }
-            if (status === 'weekoff') {
-                // Admin may mark a week end as absent (e.g. someone didn't work
-                // the weekend). Confirms before writing; marking present undoes it.
-                showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' (week end) as absent?', 'Mark Absent', 'btn-danger', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
-                });
                 return;
             }
             if (status === 'onleave') {

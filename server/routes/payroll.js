@@ -425,10 +425,10 @@ async function computeAttendanceSummary(employeeId, month, year) {
             // rule, so it must NOT also be credited as a free week off/holiday
             // in present_days. Only non-sandwich non-working days count here.
             if (holidaySet.has(ds)) {
-                if (!sandwichDays.has('H' + ds) && statusByDate[ds] !== 'absent' && earnedNonWorking(ds)) creditedHols++;
+                if (!sandwichDays.has('H' + ds) && earnedNonWorking(ds)) creditedHols++;
             } else {
                 const dw = c.getUTCDay();
-                if ((dw === 0 || dw === 6) && !sandwichDays.has(ds) && statusByDate[ds] !== 'absent' && earnedNonWorking(ds)) creditedWOs++;
+                if ((dw === 0 || dw === 6) && !sandwichDays.has(ds) && earnedNonWorking(ds)) creditedWOs++;
             }
             c.setUTCDate(c.getUTCDate() + 1);
         }
