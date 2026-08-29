@@ -464,11 +464,8 @@
                 }
 
                 let cls = '', tag = '', tagColor = '', checkIn = '', checkOut = '', extra = '';
-                // A declared holiday always wins - shown as H for everyone, even
-                // if a check-in record happens to exist on the holiday.
-                if (holidayDates[dateStr]) {
-                    cls = 'cal-holiday'; tag = holidayDates[dateStr]; counts.holiday++;
-                } else if (rec) {
+                // A declared holiday always wins over a stale auto-absent row.
+                if (rec && !(rec.status === 'absent' && holidayDates[dateStr])) {
                     const status = rec.status;
                     if (status === 'present') { cls = 'cal-present'; tag = 'Present'; counts.present++; }
                     else if (status === 'late') { cls = 'cal-late'; tag = 'Late'; counts.late++; }
@@ -485,6 +482,10 @@
                     if (rec.check_out) checkOut = fmtT(rec.check_out);
                 } else if (isFuture) {
                     cls = 'future';
+                } else if (holidayDates[dateStr]) {
+                    // Holidays must win over weekends: a Sunday holiday should
+                    // show its name, not "Week Off".
+                    cls = 'cal-holiday'; tag = holidayDates[dateStr]; counts.holiday++;
                 } else if (leaveClass[dateStr]) {
                     // Approved leave (working day OR sandwiched weekend) with no
                     // attendance row yet - never absent. Checked before weekoff so
