@@ -474,18 +474,67 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
             ['active']
         );
 
-        const attendance = await query(
-            `SELECT employee_id, date, check_in, check_out, status, check_in_location
-             FROM attendance 
-             WHERE to_char(date, 'MM') = $1 AND to_char(date, 'YYYY') = $2`,
-            [String(month).padStart(2, '0'), String(year)]
-        );
+        const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+        const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+        const [attendance, leaveRows, holRows] = await Promise.all([
+            query(
+                `SELECT employee_id, date, check_in, check_out, status, check_in_location, remarks
+                 FROM attendance 
+                 WHERE to_char(date, 'MM') = $1 AND to_char(date, 'YYYY') = $2`,
+                [String(month).padStart(2, '0'), String(year)]
+            ),
+            query(
+                `SELECT employee_id, start_date, end_date FROM leave_applications
+                 WHERE status = 'approved'
+                   AND end_date >= $1 AND start_date <= $2`,
+                [monthStart, monthEnd]
+            ),
+            query(
+                `SELECT to_char(date, 'YYYY-MM-DD') AS d FROM holidays
+                 WHERE is_active = 1 AND date >= $1 AND date <= $2`,
+                [monthStart, monthEnd]
+            )
+        ]);
 
         const attMap = {};
         attendance.rows.forEach(a => {
             const day = new Date(a.date).getDate();
             if (!attMap[a.employee_id]) attMap[a.employee_id] = {};
-            attMap[a.employee_id][day] = { check_in: a.check_in, check_out: a.check_out, status: a.status, check_in_location: a.check_in_location };
+            attMap[a.employee_id][day] = { check_in: a.check_in, check_out: a.check_out, status: a.status, check_in_location: a.check_in_location, remarks: a.remarks || '' };
+        });
+
+        // Declared holidays for the month.
+        const holidaySet = new Set((holRows.rows || []).map(r => r.d));
+
+        // Approved leave days per employee (YYYY-MM-DD => set).
+        const fmtD = (v) => String(v).substring(0, 10);
+        const key = (empId, day) => `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const leaveByEmp = {};
+        leaveRows.rows.forEach(l => {
+            const s = fmtD(l.start_date), e = fmtD(l.end_date);
+            if (!s || !e) return;
+            let c = new Date(s + 'T00:00:00Z');
+            const cEnd = new Date(e + 'T00:00:00Z');
+            while (c <= cEnd) {
+                const ds = c.toISOString().substring(0, 10);
+                (leaveByEmp[l.employee_id] = leaveByEmp[l.employee_id] || new Set()).add(ds);
+                c.setUTCDate(c.getUTCDate() + 1);
+            }
+        });
+
+        // Paid/LOP classification: the FIRST approved leave day of the month is
+        // paid ('onleave'); any extra leave days beyond it are LOP ('absent').
+        const leaveClassByEmp = {};
+        Object.keys(leaveByEmp).forEach(empId => {
+            const days = Array.from(leaveByEmp[empId]).sort();
+            const cls = {};
+            let leaveCount = 0;
+            days.forEach(ds => {
+                cls[ds] = leaveCount < 1 ? 'paid' : 'lop';
+                if (cls[ds] === 'paid') leaveCount++;
+            });
+            leaveClassByEmp[empId] = cls;
         });
 
         const matrix = {};
@@ -493,22 +542,37 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
         today.setHours(0,0,0,0);
         employees.rows.forEach(emp => {
             matrix[emp.id] = {};
+            const empAtt = attMap[emp.id] || {};
             for (let d = 1; d <= lastDay; d++) {
                 const date = new Date(year, month - 1, d);
                 const dayOfWeek = date.getDay();
+                const dateStr = key(emp.id, d);
+                const rec = empAtt[d] || null;
+                const leaveCls = (leaveClassByEmp[emp.id] || {})[dateStr];
+
                 if (date > today) {
                     matrix[emp.id][d] = { status: 'upcoming', check_in: null, check_out: null };
-                } else if (dayOfWeek === 0) {
-                    matrix[emp.id][d] = { status: 'weekoff', check_in: null, check_out: null };
-                } else if (dayOfWeek === 6) {
-                    // Saturday: week off, but a check-in makes it a working day
-                    if (attMap[emp.id] && attMap[emp.id][d]) {
-                        matrix[emp.id][d] = attMap[emp.id][d];
+                } else if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    // Week end. An EXPLICIT attendance record always wins (a real
+                    // check-in, or a weekend an admin marked absent). With no
+                    // record it shows the default Week Off, or a leave day.
+                    if (rec) {
+                        matrix[emp.id][d] = rec;
+                    } else if (leaveCls) {
+                        matrix[emp.id][d] = { status: leaveCls === 'paid' ? 'onleave' : 'absent', check_in: null, check_out: null, leave: true };
                     } else {
                         matrix[emp.id][d] = { status: 'weekoff', check_in: null, check_out: null };
                     }
-                } else if (attMap[emp.id] && attMap[emp.id][d]) {
-                    matrix[emp.id][d] = attMap[emp.id][d];
+                } else if (holidaySet.has(dateStr)) {
+                    // Declared holiday: ALWAYS shown as H for everyone, even if a
+                    // check-in record happens to exist on the holiday.
+                    matrix[emp.id][d] = { status: 'holiday', check_in: null, check_out: null };
+                } else if (leaveCls) {
+                    // Approved leave (paid within monthly quota, LOP beyond). An
+                    // auto-marked/back-filled 'absent' row must not shadow it.
+                    matrix[emp.id][d] = { status: leaveCls === 'paid' ? 'onleave' : 'absent', check_in: null, check_out: null, leave: true };
+                } else if (rec) {
+                    matrix[emp.id][d] = rec;
                 } else {
                     matrix[emp.id][d] = { status: 'absent', check_in: null, check_out: null };
                 }
@@ -521,6 +585,7 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
             year,
             days: lastDay,
             employees: employees.rows,
+            holidays: Array.from(holidaySet),
             matrix
         });
     } catch (error) {
