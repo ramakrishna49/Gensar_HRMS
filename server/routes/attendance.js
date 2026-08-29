@@ -369,8 +369,6 @@ router.post('/mark-absent', verifyToken, isAdmin, async (req, res) => {
 router.get('/my', verifyToken, async (req, res) => {
     try {
         const { month, year } = req.query;
-        const empRes = await query('SELECT joining_date FROM employees WHERE id = $1', [req.user.id]);
-        const joiningDate = empRes.rows.length ? (empRes.rows[0].joining_date ? String(empRes.rows[0].joining_date).substring(0, 10) : null) : null;
         let sqlQuery = `SELECT a.id, a.employee_id, a.date, a.check_in, a.check_out, a.status,
                 a.overtime_hours, a.remarks, a.created_at, a.break_start, a.break_end, a.break_log,
                 a.check_in_location, a.check_out_location,
@@ -389,7 +387,7 @@ router.get('/my', verifyToken, async (req, res) => {
         
         sqlQuery += ' ORDER BY a.date DESC';
         const result = await query(sqlQuery, params);
-        res.json({ success: true, attendance: result.rows, joining_date: joiningDate });
+        res.json({ success: true, attendance: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }
@@ -469,7 +467,7 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
         const lastDay = new Date(year, month, 0).getDate();
 
         const employees = await query(
-            `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.department_id, d.name as department_name, e.joining_date
+            `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.department_id, d.name as department_name
              FROM employees e
              LEFT JOIN departments d ON e.department_id = d.id
              WHERE e.status = $1 AND e.role != 'admin' ORDER BY e.first_name`,
@@ -582,13 +580,6 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
         employees.rows.forEach(emp => {
             matrix[emp.id] = {};
 
-            // Day the employee joined (1-based day of month), if this month.
-            // All calendar days BEFORE this are excluded (never counted as
-            // present / absent / weekend / total / holiday / leave).
-            let joinDay = null;
-            const joinStr = emp.joining_date ? String(emp.joining_date).substring(0, 10) : null;
-            if (joinStr && joinStr >= monthStart && joinStr <= monthEnd) joinDay = new Date(joinStr + 'T00:00:00Z').getUTCDate();
-
             // Presence on each day: a real check-in / WFH / approved leave day.
             // (attMap holds attendance rows; WFH/leave handled via profiles.)
             const empAtt = attMap[emp.id] || {};
@@ -618,10 +609,7 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
                 const rec = empAtt[d] || null;
                 const leaveCls = (leaveClassByEmp[emp.id] || {})[dateStr];
 
-                if (joinDay !== null && d < joinDay) {
-                    // Not yet joined: excluded, not counted anywhere.
-                    matrix[emp.id][d] = { status: 'excluded', check_in: null, check_out: null };
-                } else if (date > today) {
+                if (date > today) {
                     matrix[emp.id][d] = { status: 'upcoming', check_in: null, check_out: null };
                 } else if (dayOfWeek === 0) {
                     // Sunday week off - only credited if earned around present days.

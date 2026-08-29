@@ -119,7 +119,6 @@
         .cal-cell.cal-leave { background: #EDE9FE; color: #5B21B6; }
         .cal-cell.cal-absent { background: #FEE2E2; color: #991B1B; }
         .cal-cell.cal-holiday { background: #E0E7FF; color: #3730A3; }
-        .cal-excluded { min-height: 0 !important; padding: 2px !important; background: transparent !important; color: transparent !important; border-style: dashed; opacity: 0.4; }
         .dark-mode .cal-cell.cal-present { background: #064E3B; color: #34D399; }
         .dark-mode .cal-cell.cal-late { background: #78350F; color: #FBBF24; }
         .dark-mode .cal-cell.cal-half-day { background: #7C2D12; color: #FDBA74; }
@@ -161,7 +160,6 @@
         let lastLeaveDays = new Set();   // approved-leave YYYY-MM-DD keys
         let leaveClass = {};             // key -> 'paid' | 'lop' (module scope: shared by list + monthly views)
         let lastMonthCounts = null;
-        let joiningDate = null;          // employee's joining date (YYYY-MM-DD)
 
         // Data for the "earned weekend" rule: a week off counts as present only
         // when the employee worked on an adjacent working day.
@@ -233,7 +231,6 @@
             if (cached && Array.isArray(cached.records)) {
                 lastRecords = cached.records;
                 lastHolidays = cached.holidays || [];
-                if (cached.joiningDate) joiningDate = cached.joiningDate;
                 applyAttendanceData(month, year);
             }
 
@@ -244,7 +241,6 @@
             ]);
             const records = (attRes && attRes.success) ? (attRes.attendance || []) : [];
             lastRecords = records;
-            if (attRes && attRes.success && attRes.joining_date) joiningDate = attRes.joining_date;
             lastHolidays = (holRes && holRes.success) ? (holRes.holidays || []) : [];
             lastLeaveDays = new Set();
             if (lvRes && lvRes.success) {
@@ -279,7 +275,7 @@
                     if (allOff && gap.length > 0) gap.forEach(k => lastLeaveDays.add(k));
                 }
             }
-            try { localStorage.setItem(cacheKey, JSON.stringify({ records, holidays: lastHolidays, joiningDate })); } catch (e) { /* ignore quota */ }
+            try { localStorage.setItem(cacheKey, JSON.stringify({ records, holidays: lastHolidays })); } catch (e) { /* ignore quota */ }
             applyAttendanceData(month, year);
         }
 
@@ -325,9 +321,6 @@
             const lastCounted = isCurrentMonth ? nowD.getDate() : daysInMonth;
             for (let dd = 1; dd <= lastCounted; dd++) {
                 const key = year + '-' + String(month).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
-                // Days before the employee joined are excluded from attendance
-                // entirely (not present/absent/weekend/holiday/leave/total).
-                if (joiningDate && key < joiningDate) continue;
                 const rec = statusByDate[key];
                 const st = rec ? rec.status : null;
                 if (st === 'present') { counts.present++; continue; }
@@ -456,12 +449,6 @@
                 const rec = byDate[dateStr];
                 const isToday = dateStr === todayStr;
                 const isFuture = date > new Date();
-
-                // Days before the employee joined are excluded entirely.
-                if (joiningDate && dateStr < joiningDate) {
-                    html += '<div class="cal-cell cal-excluded" title="Before Joining"><div class="cal-day">' + d + '</div></div>';
-                    continue;
-                }
 
                 let cls = '', tag = '', tagColor = '', checkIn = '', checkOut = '', extra = '';
                 // A declared holiday always wins over a stale auto-absent row.
