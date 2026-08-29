@@ -239,10 +239,22 @@ async function computeAttendanceSummary(employeeId, month, year) {
     const holidaySet = new Set(holRes.rows.map(r => fmtD(r.date)));
 
     // ---- Sandwich leave policy ----
-    // An approved leave application that SPANS a week off / declared holiday
-    // (non-working days strictly inside its date range) pays for them too:
-    // those days become LEAVE days instead of free paid days.
+    // 1) A single approved leave application that SPANS a week off / declared
+    //    holiday (non-working days strictly inside its date range) pays for
+    //    them too: those days become LEAVE days instead of free paid days.
+    // 2) Front+back: leave put on BOTH sides of a weekend/holiday (e.g. Fri and
+    //    the following Mon as two separate applications) also sandwiches the
+    //    intervening non-working days into leave.
+    const isNonWorkingDay = (ds) => {
+        if (holidaySet.has(ds)) return true;
+        const dw = new Date(ds + 'T00:00:00Z').getUTCDay();
+        return dw === 0 || dw === 6;
+    };
     const sandwichDays = new Set();
+    const addSandwichDay = (ds) => {
+        if (holidaySet.has(ds)) sandwichDays.add('H' + ds);
+        else sandwichDays.add(ds);
+    };
     for (const l of leaveRes.rows) {
         const s = fmtD(l.start_date), e = fmtD(l.end_date);
         if (!s || !e || s >= e) continue;
@@ -251,9 +263,33 @@ async function computeAttendanceSummary(employeeId, month, year) {
         const cEnd = new Date(e + 'T00:00:00Z');   // strictly before end
         while (c < cEnd) {
             const ds = c.toISOString().substring(0, 10);
-            if (holidaySet.has(ds)) sandwichDays.add('H' + ds);
-            else { const dw = c.getUTCDay(); if (dw === 0 || dw === 6) sandwichDays.add(ds); }
+            if (isNonWorkingDay(ds)) addSandwichDay(ds);
             c.setUTCDate(c.getUTCDate() + 1);
+        }
+    }
+    // Front+back sandwich: for every consecutive pair of approved leave
+    // ranges, if every day strictly between them is a non-working day, the
+    // whole gap is sandwiched leave (not free week offs).
+    if (leaveRes.rows.length >= 2) {
+        const ranges = leaveRes.rows
+            .map(r => ({ s: fmtD(r.start_date), e: fmtD(r.end_date) }))
+            .filter(r => r.s && r.e)
+            .sort((a, b) => (a.s < b.s ? -1 : a.s > b.s ? 1 : 0));
+        for (let i = 0; i < ranges.length - 1; i++) {
+            const a = ranges[i], b = ranges[i + 1];
+            if (b.s <= a.e) continue;               // overlapping/contiguous: not a gap
+            let c = new Date(a.e + 'T00:00:00Z');
+            c.setUTCDate(c.getUTCDate() + 1);       // day after previous leave ends
+            const cEnd = new Date(b.s + 'T00:00:00Z'); // strictly before next leave starts
+            let allNonWorking = true;
+            const gap = [];
+            while (c < cEnd) {
+                const ds = c.toISOString().substring(0, 10);
+                if (!isNonWorkingDay(ds)) { allNonWorking = false; break; }
+                gap.push(ds);
+                c.setUTCDate(c.getUTCDate() + 1);
+            }
+            if (allNonWorking && gap.length > 0) gap.forEach(ds => addSandwichDay(ds));
         }
     }
 
@@ -338,8 +374,16 @@ async function computeAttendanceSummary(employeeId, month, year) {
         const cEnd = new Date(lastActive + 'T00:00:00Z');
         while (c <= cEnd) {
             const ds = c.toISOString().substring(0, 10);
-            if (holidaySet.has(ds)) creditedHols++;
-            else { const dw = c.getUTCDay(); if (dw === 0 || dw === 6) creditedWOs++; }
+            // A "sandwich" day (week off / holiday falling strictly INSIDE an
+            // approved leave range) is already paid as leave by the sandwich
+            // rule, so it must NOT also be credited as a free week off/holiday
+            // in present_days. Only non-sandwich non-working days count here.
+            if (holidaySet.has(ds)) {
+                if (!sandwichDays.has('H' + ds)) creditedHols++;
+            } else {
+                const dw = c.getUTCDay();
+                if ((dw === 0 || dw === 6) && !sandwichDays.has(ds)) creditedWOs++;
+            }
             c.setUTCDate(c.getUTCDate() + 1);
         }
     }

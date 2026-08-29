@@ -235,6 +235,32 @@
                     if (l.status !== 'approved') return;
                     expandLeaveDays(l.start_date, l.end_date).forEach(k => lastLeaveDays.add(k));
                 });
+                // Front+back sandwich leave: leave on BOTH sides of a weekend/
+                // holiday (e.g. Fri + Mon as two applications) turns the gap into
+                // leave too, matching payroll & the admin matrix.
+                const holidayMap = {};
+                (lastHolidays || []).forEach(h => { const k = (h.date || '').split('T')[0]; if (k) holidayMap[k] = true; });
+                const leaves = (lvRes.leaves || [])
+                    .filter(l => l.status === 'approved')
+                    .map(l => ({ s: String(l.start_date).split('T')[0], e: String(l.end_date).split('T')[0] }))
+                    .filter(r => r.s && r.e)
+                    .sort((a, b) => a.s < b.s ? -1 : a.s > b.s ? 1 : 0);
+                for (let i = 0; i < leaves.length - 1; i++) {
+                    const a = leaves[i], b = leaves[i + 1];
+                    if (b.s <= a.e) continue;
+                    const cur = new Date(a.e + 'T00:00:00Z');
+                    cur.setUTCDate(cur.getUTCDate() + 1);
+                    const end = new Date(b.s + 'T00:00:00Z');
+                    let allOff = true; const gap = [];
+                    while (cur < end) {
+                        const ds = cur.toISOString().substring(0, 10);
+                        const dow = cur.getUTCDay();
+                        if (!holidayMap[ds] && dow !== 0 && dow !== 6) { allOff = false; break; }
+                        gap.push(ds);
+                        cur.setUTCDate(cur.getUTCDate() + 1);
+                    }
+                    if (allOff && gap.length > 0) gap.forEach(k => lastLeaveDays.add(k));
+                }
             }
             try { localStorage.setItem(cacheKey, JSON.stringify({ records, holidays: lastHolidays })); } catch (e) { /* ignore quota */ }
             applyAttendanceData(month, year);
@@ -274,14 +300,16 @@
                 if (st === 'late') { counts.late++; continue; }
                 if (st === 'half-day') { counts['half-day']++; continue; }
                 if (holidayMap[key]) { counts.holiday++; continue; }
-                const dow = new Date(year, month - 1, dd).getDay();
-                if (dow === 0 || dow === 6) { counts.weekoff++; continue; }
                 if (leaveClass[key]) {
-                    // Approved leave: paid for the monthly quota, LOP beyond it.
+                    // Approved leave (working day OR sandwitched weekend): paid
+                    // for the monthly quota, LOP beyond it. Checked BEFORE the
+                    // weekoff branch so a sandwiched weekend counts as leave.
                     if (leaveClass[key] === 'paid') { /* counts.leave already tallied */ }
                     else counts.absent++;
                     continue;
                 }
+                const dow = new Date(year, month - 1, dd).getDay();
+                if (dow === 0 || dow === 6) { counts.weekoff++; continue; }
                 if (key < todayKey) counts.absent++;
             }
             lastMonthCounts = counts;
@@ -411,12 +439,14 @@
                     // Holidays must win over weekends: a Sunday holiday should
                     // show its name, not "Week Off".
                     cls = 'cal-holiday'; tag = holidayDates[dateStr]; counts.holiday++;
-                } else if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++;
                 } else if (leaveClass[dateStr]) {
-                    // Approved leave with no attendance row yet - never absent.
+                    // Approved leave (working day OR sandwiched weekend) with no
+                    // attendance row yet - never absent. Checked before weekoff so
+                    // a sandwiched Saturday/Sunday renders as leave, not Week Off.
                     if (leaveClass[dateStr] === 'paid') { cls = 'cal-leave'; tag = 'On Leave (Paid)'; counts.leave++; }
                     else { cls = 'cal-absent'; tag = 'Absent (LOP)'; counts.absent++; }
+                } else if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++;
                 } else if (dateStr === todayStr) {
                     // Today before check-in is not an absence yet.
                     cls = 'cal-cell';
