@@ -629,7 +629,12 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
                     // an admin marked absent. Only with NO record do we show the
                     // default week off (earned around present days) or absent.
                     if (rec) {
-                        matrix[emp.id][d] = rec;
+                        // An attendance record on a week end is admin-initiated
+                        // (auto-mark/leave skip week ends). Flag an admin-set
+                        // absent so the frontend can offer to toggle it back.
+                        const cellRec = Object.assign({}, rec);
+                        if (rec.status === 'absent') cellRec.adminWeekendAbsent = true;
+                        matrix[emp.id][d] = cellRec;
                     } else if (leaveCls) {
                         matrix[emp.id][d] = { status: leaveCls === 'paid' ? 'onleave' : 'absent', check_in: null, check_out: null, leave: true };
                     } else {
