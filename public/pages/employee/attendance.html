@@ -161,19 +161,6 @@
         let leaveClass = {};             // key -> 'paid' | 'lop' (module scope: shared by list + monthly views)
         let lastMonthCounts = null;
 
-        // Data for the "earned weekend" rule: a week off counts as present only
-        // when the employee worked on an adjacent working day.
-        let workingDaysArr = [];
-        let workingPresence = {};
-        function earnedWeekend(kk) {
-            let prev = null, next = null;
-            for (let i = 0; i < workingDaysArr.length; i++) {
-                if (workingDaysArr[i] < kk) prev = workingDaysArr[i];
-                else if (workingDaysArr[i] > kk) { next = workingDaysArr[i]; break; }
-            }
-            return !!(workingPresence[prev] || workingPresence[next]);
-        }
-
         // Expand an approved leave range into per-day keys.
         function expandLeaveDays(startRaw, endRaw) {
             const s = (startRaw || '').split('T')[0];
@@ -301,20 +288,6 @@
             });
 
             const daysInMonth = new Date(year, month, 0).getDate();
-            // Presence map + working-day list so a week off is only "earned"
-            // (counted as present) when the employee worked on an adjacent day.
-            workingDaysArr = [];
-            for (let dd = 1; dd <= daysInMonth; dd++) {
-                const kk = year + '-' + String(month).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
-                const dow = new Date(year, month - 1, dd).getDay();
-                if (dow !== 0 && dow !== 6 && !holidayMap[kk]) workingDaysArr.push(kk);
-            }
-            workingPresence = {};
-            Object.keys(statusByDate).forEach(kk => {
-                const st = statusByDate[kk].status;
-                if (st === 'present' || st === 'late' || st === 'half-day') workingPresence[kk] = true;
-            });
-            Object.keys(leaveClass).forEach(kk => { workingPresence[kk] = true; });
             const nowD = new Date();
             const isCurrentMonth = parseInt(month, 10) === nowD.getMonth() + 1 && parseInt(year, 10) === nowD.getFullYear();
             const todayKey = getTodayIST();
@@ -336,14 +309,7 @@
                     continue;
                 }
                 const dow = new Date(year, month - 1, dd).getDay();
-                if (dow === 0 || dow === 6) {
-                    // Week off only counts as a (free) present day if the employee
-                    // worked on an adjacent working day. Absent before AND after =>
-                    // it is not earned and counts as absent instead.
-                    if (earnedWeekend(key)) { counts.weekoff++; }
-                    else counts.absent++;
-                    continue;
-                }
+                if (dow === 0 || dow === 6) { counts.weekoff++; continue; }
                 if (key < todayKey) counts.absent++;
             }
             lastMonthCounts = counts;
@@ -480,11 +446,7 @@
                     if (leaveClass[dateStr] === 'paid') { cls = 'cal-leave'; tag = 'On Leave (Paid)'; counts.leave++; }
                     else { cls = 'cal-absent'; tag = 'Absent (LOP)'; counts.absent++; }
                 } else if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    // Week off only counts as a free present day if the employee
-                    // worked on an adjacent working day. Absent before AND after
-                    // => not earned, shown as Absent.
-                    if (earnedWeekend(dateStr)) { cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++; }
-                    else { cls = 'cal-absent'; tag = 'Absent'; counts.absent++; }
+                    cls = 'cal-weekoff'; tag = 'Week Off'; counts.weekoff++;
                 } else if (dateStr === todayStr) {
                     // Today before check-in is not an absence yet.
                     cls = 'cal-cell';
