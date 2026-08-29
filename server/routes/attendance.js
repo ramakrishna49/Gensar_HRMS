@@ -564,9 +564,17 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
                         matrix[emp.id][d] = { status: 'weekoff', check_in: null, check_out: null };
                     }
                 } else if (holidaySet.has(dateStr)) {
-                    // Declared holiday: ALWAYS shown as H for everyone, even if a
-                    // check-in record happens to exist on the holiday.
-                    matrix[emp.id][d] = { status: 'holiday', check_in: null, check_out: null };
+                    // Declared holiday: ALWAYS shown as H for everyone unless an
+                    // admin explicitly marked this holiday absent for this
+                    // employee (recognised by its remark) - then it shows A.
+                    const adminHolidayAbsent = rec && rec.status === 'absent' && /Admin marked holiday absent/.test(rec.remarks || '');
+                    if (adminHolidayAbsent) {
+                        matrix[emp.id][d] = { status: 'absent', check_in: null, check_out: null, remarks: rec.remarks || '', leave: false };
+                    } else if (leaveCls) {
+                        matrix[emp.id][d] = { status: leaveCls === 'paid' ? 'onleave' : 'absent', check_in: null, check_out: null, leave: true };
+                    } else {
+                        matrix[emp.id][d] = { status: 'holiday', check_in: null, check_out: null };
+                    }
                 } else if (leaveCls) {
                     // Approved leave (paid within monthly quota, LOP beyond). An
                     // auto-marked/back-filled 'absent' row must not shadow it.
