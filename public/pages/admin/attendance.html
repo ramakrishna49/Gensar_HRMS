@@ -370,9 +370,8 @@
                     html += '<td class="' + cls + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml((isLopLeave ? 'absent' : cell.status) || '') + '" data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
                 }
                 grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandLeave += lv; grandHoliday += hv;
-                // Weekends (week offs), paid leave and holidays are all included
-                // in Total Days (they are counted working/present days).
-                const totalDays = p + l + (h * 0.5) + lv + w + hv;
+                // Weekends (week offs) and paid leave are included in Total Days.
+                const totalDays = p + l + (h * 0.5) + lv + w;
                 html += '<td style="font-weight:600;font-size:0.7rem;text-align:center;white-space:nowrap;">' + (p + l) + ' / ' + l + ' / ' + h + ' / ' + a + ' / ' + lv + '</td>';
                 html += '<td style="font-weight:700;font-size:0.75rem;text-align:center;white-space:nowrap;color:var(--primary);">' + formatHalfDays(totalDays) + '</td>';
                 html += '</tr>';
@@ -440,7 +439,7 @@
                 showToast('Before joining date - not counted', 'warning');
                 return;
             }
-            if (status === 'upcoming') {
+            if (status === 'upcoming' || status === 'holiday') {
                 showToast('These dates cannot be modified', 'warning');
                 return;
             }
@@ -448,14 +447,6 @@
                 // Admin may mark a week end as absent (e.g. someone didn't work
                 // the weekend). Confirms before writing; marking present undoes it.
                 showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' (week end) as absent?', 'Mark Absent', 'btn-danger', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
-                });
-                return;
-            }
-            if (status === 'holiday') {
-                // Admin may mark a declared holiday as absent too (someone was
-                // mandated to work/did not). Marking present undoes it.
-                showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' (holiday) as absent?', 'Mark Absent', 'btn-danger', function() {
                     apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
                 });
                 return;
