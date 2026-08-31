@@ -220,6 +220,7 @@
             if (cached && Array.isArray(cached.records)) {
                 lastRecords = cached.records;
                 lastHolidays = cached.holidays || [];
+                lastLeaveDays = new Set();
                 applyAttendanceData(month, year);
             }
 
@@ -256,9 +257,10 @@
             const statusByDate = {};
             records.forEach(a => { statusByDate[(a.date || '').split('T')[0]] = a; });
 
-            // Classify every approved leave day of this month: 'paid' or 'lop'.
+            // Classify only this month's approved leave days: first day 'paid', rest 'lop'.
+            const monthPrefix = year + '-' + String(month).padStart(2, '0') + '-';
             leaveClass = {};
-            Array.from(lastLeaveDays).sort().forEach(k => {
+            Array.from(lastLeaveDays).filter(k => k.startsWith(monthPrefix)).sort().forEach(k => {
                 leaveClass[k] = counts.leave < 1 ? 'paid' : 'lop';
                 if (leaveClass[k] === 'paid') counts.leave++;
             });
@@ -390,7 +392,7 @@
                 html += '<div class="cal-cell weekoff" style="min-height:0;border-style:dashed;opacity:0.4;"><div class="cal-day">' + pad.getDate() + '</div></div>';
             }
 
-            const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0 };
+            const counts = { present: 0, late: 0, 'half-day': 0, absent: 0, weekoff: 0, holiday: 0, leave: 0 };
             for (let d = 1; d <= lastDay; d++) {
                 const date = new Date(year, month - 1, d);
                 const dayOfWeek = date.getDay();

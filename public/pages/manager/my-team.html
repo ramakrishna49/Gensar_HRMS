@@ -36,7 +36,7 @@
         }
     </style>
 </head>
-<body>
+<body class="employee-app">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
@@ -142,11 +142,10 @@
                 <div id="tabRegularization" style="display:none;"></div>
                 <div id="tabAttendance" style="display:none;">
                     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-                        <select id="attMonth" class="form-control" style="width:auto;"></select>
-                        <input type="number" id="attYear" class="form-control" style="width:100px;">
-                        <button class="btn btn-secondary btn-sm" onclick="loadTeamAttendance()"><i class="fas fa-search"></i> View</button>
+                        <select id="attMonth" class="form-control" style="width:auto;" onchange="loadTeamAttendance()"></select>
+                        <input type="number" id="attYear" class="form-control" style="width:100px;" onchange="loadTeamAttendance()" oninput="loadTeamAttendance()">
                     </div>
-                    <div id="attContainer"><div style="text-align:center;padding:20px;color:var(--text-secondary);">Select month and click View</div></div>
+                    <div id="attContainer"><div style="text-align:center;padding:20px;color:var(--text-secondary);">Loading…</div></div>
                 </div>
             </div>
         </div>
@@ -542,6 +541,7 @@
             document.getElementById('tabTickets').style.display = tab === 'tickets' ? 'block' : 'none';
             document.getElementById('tabRegularization').style.display = tab === 'regularization' ? 'block' : 'none';
             document.getElementById('tabAttendance').style.display = tab === 'attendance' ? 'block' : 'none';
+            if (tab === 'attendance') loadTeamAttendance();
         }
 
         let pendingDecision = null;
