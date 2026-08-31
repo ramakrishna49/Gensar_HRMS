@@ -115,7 +115,7 @@ function computeTotals(v) {
     const attendanceValid = (presentDays + leaveDays + lopDays) <= workingDays + 0.001;
     const actualPayableGross = gross - totalDeductions + bonus;
     const totalDeductionsWithEmployer = totalDeductions + employerTotal;
-    const netPayable = actualPayableGross - employerTotal;
+    const netPayable = actualPayableGross;
     const perDaySalary = workingDays > 0 ? netPayable / workingDays : 0;
     const lopDeduction = perDaySalary * lopDays;
     const net = netPayable - lopDeduction;
@@ -250,9 +250,9 @@ async function computeAttendanceSummary(employeeId, month, year) {
         c.setUTCDate(c.getUTCDate() + 1);          // day after start
         const cEnd = new Date(e + 'T00:00:00Z');   // strictly before end
         while (c < cEnd) {
-            const ds = c.toISOString().substring(0, 10);
+            const ds = istDateString(c);
             if (holidaySet.has(ds)) sandwichDays.add('H' + ds);
-            else { const dw = c.getUTCDay(); if (dw === 0 || dw === 6) sandwichDays.add(ds); }
+            else { const dow = new Date(ds + 'T00:00:00').getDay(); if (dow === 0 || dow === 6) sandwichDays.add(ds); }
             c.setUTCDate(c.getUTCDate() + 1);
         }
     }
@@ -268,9 +268,9 @@ async function computeAttendanceSummary(employeeId, month, year) {
 
     const cursor = new Date(effStart + 'T00:00:00Z');
     const endDate = new Date(end + 'T00:00:00Z');
-    while (cursor <= endDate) {
-        const ds = cursor.toISOString().substring(0, 10);
-        const dow = cursor.getUTCDay();
+    while (istDateString(cursor) <= istDateString(endDate)) {
+        const ds = istDateString(cursor);
+        const dow = new Date(ds + 'T00:00:00').getDay();
         cursor.setUTCDate(cursor.getUTCDate() + 1);
 
         totalDays++;
@@ -293,6 +293,7 @@ async function computeAttendanceSummary(employeeId, month, year) {
 
         const st = statusByDate[ds];
         if (st === 'present') { paidRaw++; tally.present++; }
+        else if (st === 'wfh') { paidRaw++; tally.wfh++; }
         else if (st === 'late') {
             // Late-login policy: first 3 lates in the period are excused
             // (full day); every late from the 4th onward counts as half day.
@@ -336,17 +337,17 @@ async function computeAttendanceSummary(employeeId, month, year) {
     if (lastActive) {
         let c = new Date(effStart + 'T00:00:00Z');
         const cEnd = new Date(lastActive + 'T00:00:00Z');
-        while (c <= cEnd) {
-            const ds = c.toISOString().substring(0, 10);
+        while (istDateString(c) <= istDateString(cEnd)) {
+            const ds = istDateString(c);
             if (holidaySet.has(ds)) creditedHols++;
-            else { const dw = c.getUTCDay(); if (dw === 0 || dw === 6) creditedWOs++; }
+            else { const dw = new Date(ds + 'T00:00:00').getDay(); if (dw === 0 || dw === 6) creditedWOs++; }
             c.setUTCDate(c.getUTCDate() + 1);
         }
     }
     // Present days follow the employee-view convention: check-ins (incl.
     // late logins & half days), approved WFH, plus week offs and holidays
     // up to the employee's last active day.
-    const presentDays = Math.min(totalDays, Math.round(paidRaw) + creditedWOs + creditedHols);
+    const presentDays = Math.min(totalDays, Math.floor(paidRaw) + creditedWOs + creditedHols);
 
     // ---- Leave quota vs LOP ----
     // Every employee earns ONE paid leave per month. Approved leaves up to
@@ -366,7 +367,7 @@ async function computeAttendanceSummary(employeeId, month, year) {
         {
             let c = new Date(effStart + 'T00:00:00Z');
             const cE = new Date([end, todayStr].sort()[0] + 'T00:00:00Z');
-            while (c <= cE) { elapsedAll++; c.setUTCDate(c.getUTCDate() + 1); }
+            while (istDateString(c) <= istDateString(cE)) { elapsedAll++; c.setUTCDate(c.getUTCDate() + 1); }
         }
         lopDays = Math.max(0, elapsedAll - quotaCovered);
     } else {
@@ -374,14 +375,14 @@ async function computeAttendanceSummary(employeeId, month, year) {
         {
             let c = new Date(effStart + 'T00:00:00Z');
             const cE = new Date([end, todayStr].sort()[0] + 'T00:00:00Z');
-            while (c <= cE) {
-                const ds2 = c.toISOString().substring(0, 10);
-                const dw2 = c.getUTCDay();
+            while (istDateString(c) <= istDateString(cE)) {
+                const ds2 = istDateString(c);
+                const dw2 = new Date(ds2 + 'T00:00:00').getDay();
                 if (!holidaySet.has(ds2) && dw2 !== 0 && dw2 !== 6) elapsedWorkDays++;
                 c.setUTCDate(c.getUTCDate() + 1);
             }
         }
-        lopDays = Math.max(0, elapsedWorkDays - Math.round(paidRaw) - quotaCovered);
+        lopDays = Math.max(0, elapsedWorkDays - Math.floor(paidRaw) - quotaCovered);
     }
 
     return {
@@ -1226,12 +1227,11 @@ router.post('/generate', verifyToken, isAdmin, async (req, res) => {
         }
         // Always compute attendance server-side so the late-login grace,
         // sandwich policy, monthly leave quota and LOP rules are applied
-        // consistently. Day values sent by the form are intentionally
-        // ignored - only salary components come from the request.
-        const attVals = (await computeAttendanceSummary(employee_id, month, year)) || {
-            working_days: v.working_days, present_days: v.present_days,
-            leave_days: v.leave_days, lop_days: v.lop_days
-        };
+        // consistently. Day values sent by the form are intentionally ignored.
+        const attVals = await computeAttendanceSummary(employee_id, month, year);
+        if (!attVals) {
+            return res.status(404).json({ success: false, message: 'Employee attendance could not be computed. Check joining date and try again.' });
+        }
         const finalValues = { ...payrollValues, ...attVals };
         const totals = computeTotals(finalValues);
         if (!totals.attendanceValid) {
@@ -1350,10 +1350,12 @@ router.post('/generate-bulk', verifyToken, isAdmin, async (req, res) => {
                 }
                 // Always recompute server-side (same as single generation) so
                 // every attendance policy is applied uniformly in bulk runs.
-                const attVals = (await computeAttendanceSummary(employee_id, month, year)) || {
-                    working_days: v.working_days, present_days: v.present_days,
-                    leave_days: v.leave_days, lop_days: v.lop_days
-                };
+                const attVals = await computeAttendanceSummary(employee_id, month, year);
+                if (!attVals) {
+                    failed++;
+                    results.push({ employee_id, ok: false, reason: 'Employee attendance could not be computed' });
+                    continue;
+                }
                 const finalValues = { ...payrollValues, ...attVals };
                 const totals = computeTotals(finalValues);
                 if (!totals.attendanceValid) {

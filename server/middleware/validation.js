@@ -11,7 +11,7 @@ const validatePhone = (phone) => {
 };
 
 const validatePassword = (password) => {
-    return password && password.length >= 6;
+    return password && password.length >= 8;
 };
 
 const validatePan = (pan) => {
@@ -77,7 +77,7 @@ const validateRegistration = (req, res, next) => {
     }
     
     if (!password || !validatePassword(password)) {
-        errors.push('Password is required (min 6 characters)');
+        errors.push('Password is required (min 8 characters)');
     }
     
     if (errors.length > 0) {

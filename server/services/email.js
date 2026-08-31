@@ -161,7 +161,6 @@ async function sendOTPEmail(email, otp, meta) {
     meta = meta || {};
     const mailTransporter = getTransporter();
     if (!mailTransporter) {
-        console.log(`[DEV] OTP for ${email}: ${otp}`);
         return true;
     }
     // Show the employee ID in the copy when we have it - it is less
@@ -205,7 +204,6 @@ async function sendOTPEmail(email, otp, meta) {
         return true;
     } catch (error) {
         console.error('Failed to send email:', error.message);
-        console.log(`OTP for ${email}: ${otp} (fallback - email failed)`);
         return false;
     }
 }

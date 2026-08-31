@@ -34,4 +34,15 @@ router.get('/purge-photos', async (req, res) => {
     }
 });
 
+router.get('/expire-announcements', async (req, res) => {
+    if (!isCronAuthorized(req)) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    try {
+        const result = await query("UPDATE announcements SET is_active = 0 WHERE is_active = 1 AND expires_at IS NOT NULL AND expires_at <= NOW()");
+        res.json({ success: true, expired: result.changes || 0 });
+    } catch (error) {
+        console.error('Expire announcements cron error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 module.exports = router;

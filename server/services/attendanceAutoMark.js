@@ -20,7 +20,9 @@ async function getOfficeEndTime() {
 async function isPastCutoff(now) {
     const currentTime = istTimeString(now);
     const officeEnd = await getOfficeEndTime();
-    return currentTime > officeEnd;
+    // Normalize both to minutes to avoid string length issues ('18:30' vs '18:30:00')
+    const toMins = (t) => { const [h,m] = String(t).split(':').map(Number); return (h||0)*60 + (m||0); };
+    return toMins(currentTime) > toMins(officeEnd);
 }
 
 // Mark absent for a single date. Skips holidays, approved leave, approved WFH,
@@ -99,9 +101,11 @@ async function runAutoMark() {
 }
 
 // Legacy entry point kept for compatibility. Vercel Cron triggers runAutoMark directly.
+let autoMarkInterval = null;
 function startAutoMarkScheduler() {
+    if (autoMarkInterval) clearInterval(autoMarkInterval);
     runAutoMark().catch(e => console.error('[Attendance] Auto-absent startup run error:', e.message));
-    setInterval(() => {
+    autoMarkInterval = setInterval(() => {
         runAutoMark().catch(e => console.error('[Attendance] Auto-absent run error:', e.message));
     }, CHECK_INTERVAL_MS);
 }

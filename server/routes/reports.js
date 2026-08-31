@@ -24,7 +24,7 @@ router.get('/dashboard', verifyToken, isAdmin, async (req, res) => {
                     )
                     OR (
                         id NOT IN (SELECT employee_id FROM attendance WHERE date = $1)
-                        AND $2 > COALESCE((SELECT setting_value FROM company_settings WHERE setting_key = 'office_end_time'), '18:30')
+                        AND $2 > COALESCE((SELECT setting_value FROM company_settings WHERE setting_key = 'office_end_time'), '18:30:00')
                     )
                 )`,
                 [today, now]

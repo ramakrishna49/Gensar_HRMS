@@ -22,12 +22,13 @@ router.post('/subscribe', verifyToken, async (req, res) => {
         if (!subscription || !subscription.endpoint) {
             return res.status(400).json({ success: false, message: 'Valid subscription required' });
         }
+        // Prevent endpoint hijacking: remove endpoint owned by another user before upsert
+        await query('DELETE FROM push_subscriptions WHERE endpoint = $1 AND employee_id != $2', [subscription.endpoint, req.user.id]);
         const result = await query(
             `INSERT INTO push_subscriptions (employee_id, endpoint, subscription, user_agent)
             VALUES ($1, $2, $3, $4)
             ON CONFLICT (endpoint)
-            DO UPDATE SET employee_id = EXCLUDED.employee_id,
-                subscription = EXCLUDED.subscription,
+            DO UPDATE SET subscription = EXCLUDED.subscription,
                 user_agent = EXCLUDED.user_agent,
                 updated_at = NOW()
             RETURNING id`,

@@ -8,8 +8,6 @@ const buckets = new Map();
 let lastSweep = Date.now();
 
 function clientIp(req) {
-    const fwd = req.headers['x-forwarded-for'];
-    if (typeof fwd === 'string' && fwd.length > 0) return fwd.split(',')[0].trim();
     return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 

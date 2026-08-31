@@ -237,6 +237,7 @@
                     headers: { 'Authorization': 'Bearer ' + token },
                     body: formData
                 });
+                if (response.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = getLoginUrl(getCurrentUser()); return; }
                 const data = await response.json();
                 if (data.success) {
                     showToast('Document uploaded successfully!', 'success');

@@ -193,9 +193,13 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 }
 
 // Logout function
-function logout() {
+async function logout() {
+    const token = localStorage.getItem('token');
     const user = getCurrentUser();
     const loginUrl = getLoginUrl(user);
+    try {
+        if (token) await fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+    } catch(e) {}
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = loginUrl;
@@ -294,8 +298,11 @@ function formatCurrency(amount) {
 
 // Format date
 function formatDate(dateString, options = {}) {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '';
     const defaults = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-IN', { ...defaults, ...options });
+    return d.toLocaleDateString('en-IN', { ...defaults, ...options });
 }
 
 // Today's date in IST as YYYY-MM-DD. Never use toISOString().split('T')[0]

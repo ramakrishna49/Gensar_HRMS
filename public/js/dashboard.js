@@ -155,8 +155,13 @@ async function loadNotificationList() {
 
 function formatTimeAgo(dateStr) {
     if (!dateStr) return '';
-    const date = new Date(dateStr.replace(' ', 'T') + 'Z');
+    let iso = String(dateStr).trim();
+    if (!iso.endsWith('Z') && !iso.match(/[+-]\d{2}:\d{2}$/)) iso = iso.replace(' ', 'T') + 'Z';
+    else iso = iso.replace(' ', 'T');
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return '';
     const diff = Date.now() - date.getTime();
+    if (isNaN(diff) || diff < 0) return 'Just now';
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'Just now';
     if (mins < 60) return mins + 'm ago';
@@ -558,8 +563,10 @@ function getStatusBadge(status) {
         resolved: 'success',
         closed: 'secondary',
         low: 'secondary',
+        normal: 'info',
         medium: 'warning',
-        high: 'danger'
+        high: 'danger',
+        urgent: 'danger'
     };
     return badges[status] || 'secondary';
 }

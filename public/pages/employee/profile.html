@@ -500,10 +500,12 @@
                 if (!img) {
                     img = document.createElement('img');
                     img.alt = 'Profile';
+                    img.onerror = function() { this.style.display='none'; const fb=wrapper.querySelector('.profile-photo-fallback'); if(fb) fb.style.display=''; };
                     const fallback = wrapper.querySelector('.profile-photo-fallback');
                     if (fallback) wrapper.insertBefore(img, fallback);
                     else wrapper.insertBefore(img, wrapper.firstChild);
                 }
+                img.onerror = function() { this.style.display='none'; const fb=wrapper.querySelector('.profile-photo-fallback'); if(fb) fb.style.display=''; };
                 img.src = url;
                 img.style.display = '';
                 const fallback = wrapper.querySelector('.profile-photo-fallback');
@@ -516,7 +518,10 @@
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + token },
                 body: formData
-            }).then(r => r.json()).then(d => {
+            }).then(r => {
+                if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = getLoginUrl(getCurrentUser()); return Promise.reject('Unauthorized'); }
+                return r.json();
+            }).then(d => {
                 if (d.success) {
                     showToast('Profile photo updated!', 'success');
                     const u = getCurrentUser();

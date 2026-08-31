@@ -63,7 +63,7 @@ router.post('/check-in', verifyToken, async (req, res) => {
                 [req.user.id, monthStart, today]
             );
             const currentLateCount = parseInt(lateCount.rows[0].count);
-            if (currentLateCount >= 3) {
+            if (currentLateCount >= 2) {
                 status = 'half-day';
             } else {
                 status = 'late';

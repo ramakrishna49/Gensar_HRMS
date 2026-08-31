@@ -165,36 +165,44 @@ router.post('/:id/review', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'This request was already reviewed' });
         }
 
-        await q(
-            `UPDATE attendance_regularizations
-            SET status = $1, reviewed_by = $2, review_note = $3, reviewed_at = NOW()
-            WHERE id = $4`,
-            [status, req.user.id, (review_note || '').trim() || null, req.params.id]
-        );
-
-        if (status === 'approved') {
-            // Write-back into attendance: update existing row or insert one.
-            const att = await q(
-                'SELECT id FROM attendance WHERE employee_id = $1 AND date = $2',
-                [requestRow.employee_id, requestRow.date]
+        await query('BEGIN');
+        try {
+            await q(
+                `UPDATE attendance_regularizations
+                SET status = $1, reviewed_by = $2, review_note = $3, reviewed_at = NOW()
+                WHERE id = $4`,
+                [status, req.user.id, (review_note || '').trim() || null, req.params.id]
             );
-            if (att.rows.length > 0) {
-                await q(
-                    `UPDATE attendance SET
-                        check_in = COALESCE($1, check_in),
-                        check_out = COALESCE($2, check_out),
-                        status = CASE WHEN status IN ('absent') THEN 'present' ELSE status END,
-                        remarks = COALESCE(remarks, '') || ' [regularized]'
-                    WHERE id = $3`,
-                    [requestRow.check_in, requestRow.check_out, att.rows[0].id]
+
+            if (status === 'approved') {
+                // Write-back into attendance: update existing row or insert one.
+                const att = await q(
+                    'SELECT id, remarks FROM attendance WHERE employee_id = $1 AND date = $2',
+                    [requestRow.employee_id, requestRow.date]
                 );
-            } else {
-                await q(
-                    `INSERT INTO attendance (employee_id, date, check_in, check_out, status, remarks)
-                    VALUES ($1, $2, $3, $4, 'present', '[regularized]')`,
-                    [requestRow.employee_id, requestRow.date, requestRow.check_in, requestRow.check_out]
-                );
+                if (att.rows.length > 0) {
+                    const alreadyTagged = String(att.rows[0].remarks || '').includes('[regularized]');
+                    await q(
+                        `UPDATE attendance SET
+                            check_in = COALESCE($1, check_in),
+                            check_out = COALESCE($2, check_out),
+                            status = CASE WHEN status IN ('absent') THEN 'present' ELSE status END,
+                            remarks = CASE WHEN $4 THEN remarks ELSE COALESCE(remarks, '') || ' [regularized]' END
+                        WHERE id = $3`,
+                        [requestRow.check_in, requestRow.check_out, att.rows[0].id, alreadyTagged]
+                    );
+                } else {
+                    await q(
+                        `INSERT INTO attendance (employee_id, date, check_in, check_out, status, remarks)
+                        VALUES ($1, $2, $3, $4, 'present', '[regularized]')`,
+                        [requestRow.employee_id, requestRow.date, requestRow.check_in, requestRow.check_out]
+                    );
+                }
             }
+            await query('COMMIT');
+        } catch (txErr) {
+            try { await query('ROLLBACK'); } catch(e) {}
+            throw txErr;
         }
 
         res.json({ success: true, message: 'Request ' + status });

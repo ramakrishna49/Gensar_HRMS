@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     break_start TIME,
     break_end TIME,
     break_log TEXT,
-    status VARCHAR(20) DEFAULT 'present' CHECK (status IN ('present', 'absent', 'half-day', 'late', 'holiday', 'weekoff')),
+    status VARCHAR(20) DEFAULT 'present' CHECK (status IN ('present', 'absent', 'half-day', 'late', 'holiday', 'weekoff', 'wfh')),
     overtime_hours DECIMAL(4,2) DEFAULT 0,
     remarks TEXT,
     check_in_location TEXT,
@@ -600,3 +600,15 @@ FROM (VALUES
     ('Acknowledge company policies', 'Read and acknowledge the HR, attendance and leave policies.', 'employee', 6)
 ) AS v(title, description, assignee_role, sequence)
 WHERE NOT EXISTS (SELECT 1 FROM hr_task_templates);
+
+-- Attendance: allow 'wfh' status (idempotent migration for existing DBs)
+DO $$ BEGIN
+    ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_status_check;
+EXCEPTION WHEN undefined_object THEN NULL;
+END $$;
+ALTER TABLE attendance ADD CONSTRAINT attendance_status_check CHECK (status IN ('present', 'absent', 'half-day', 'late', 'holiday', 'weekoff', 'wfh'));
+
+-- Announcements: auto-expiry column (Asia/Kolkata timezone, admin sets via datetime-local)
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
+
+CREATE INDEX IF NOT EXISTS idx_announcements_expires_at ON announcements(expires_at);

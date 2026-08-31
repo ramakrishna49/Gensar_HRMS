@@ -533,7 +533,7 @@ async function createEmployeeRecord(body, req) {
 
     // Generate random temp password if not provided
     const tempPassword = password || crypto.randomBytes(6).toString('base64url');
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     const password_hash = await bcrypt.hash(tempPassword, salt);
 
     const result = await runWithSchemaRepair(() => query(
@@ -879,7 +879,7 @@ router.post('/:id/reset-password', verifyToken, isAdmin, async (req, res) => {
         }
 
         const tempPassword = req.body.password || crypto.randomBytes(6).toString('base64url') + 'A1';
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(12);
         const password_hash = await bcrypt.hash(tempPassword, salt);
 
         const result = await query(

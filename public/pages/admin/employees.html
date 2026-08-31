@@ -1248,6 +1248,7 @@
                         signatory_name: document.getElementById('letterSignatory').value.trim() || undefined
                     })
                 });
+                if (response.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = getLoginUrl(getCurrentUser()); return; }
                 if (!response.ok) {
                     let msg = 'Letter generation failed';
                     try { const j = await response.json(); if (j.message) msg = j.message; } catch (_) {}

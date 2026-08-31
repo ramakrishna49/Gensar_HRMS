@@ -34,7 +34,7 @@ const passwordLimiter = rateLimit({
 // Constant bcrypt hash used only to equalize the response time of the
 // "unknown user" path with the "wrong password" path (prevents user
 // enumeration by timing). Computed once at startup.
-const TIMING_EQUALIZER_HASH = bcrypt.hashSync('gensar-timing-equalizer-' + Math.random(), 10);
+const TIMING_EQUALIZER_HASH = bcrypt.hashSync('gensar-timing-equalizer-' + Math.random(), 12);
 
 // ---------- Forgot password (OTP over email) ----------
 // The password_reset_otps table + sendOTPEmail service already existed; these
@@ -211,7 +211,7 @@ router.post('/reset-password', otpResetLimiter, async (req, res) => {
         // Consume the code (and any siblings), set the new password, and bump
         // token_version so other devices are signed out everywhere.
         await query('UPDATE password_reset_otps SET is_used = 1 WHERE email = $1 AND is_used = 0', [user.email]);
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(12);
         const password_hash = await bcrypt.hash(new_password, salt);
         await query(
             `UPDATE employees SET password_hash = $1, must_change_password = 0,
@@ -429,7 +429,7 @@ router.put('/change-password', verifyToken, passwordLimiter, async (req, res) =>
         }
         
         // Hash new password
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(12);
         const password_hash = await bcrypt.hash(new_password, salt);
         
         // Update password and clear must_change_password flag. rotatePasswordCredential
@@ -480,7 +480,7 @@ router.post('/set-password', verifyToken, passwordLimiter, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Password change is not required' });
         }
 
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(12);
         const password_hash = await bcrypt.hash(new_password, salt);
 
         await query(

@@ -118,6 +118,11 @@
                             </select>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label>Auto-expire at (optional) <small style="color:var(--text-tertiary)">— Asia/Kolkata</small></label>
+                        <input type="datetime-local" class="form-control" id="expiresAt">
+                        <small style="color:var(--text-tertiary)">Leave empty for no expiry. Announcement auto-deletes after this time.</small>
+                    </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                         <button type="submit" class="btn btn-primary" id="submitBtn">Publish</button>
@@ -182,7 +187,7 @@
                                     ${a.target_audience && a.target_audience !== 'all' ? `<span class="badge badge-primary"><i class="fas fa-users"></i> ${escapeHtml(a.target_audience)}</span>` : ''}
                                 </div>
                                 <p style="color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">${escapeHtml(a.content)}</p>
-                                <small style="color:var(--text-tertiary);"><i class="fas fa-user"></i> Posted by ${escapeHtml(a.posted_by_name || 'Admin')} &middot; <i class="fas fa-calendar"></i> ${formatDate(a.created_at)}</small>
+                                <small style="color:var(--text-tertiary);"><i class="fas fa-user"></i> Posted by ${escapeHtml(a.posted_by_name || 'Admin')} &middot; <i class="fas fa-calendar"></i> ${formatDate(a.created_at)}${a.expires_at ? ` &middot; <i class="fas fa-clock"></i> Expires ${formatDate(a.expires_at)}` : ''}</small>
                             </div>
                             <div style="display:flex;gap:4px;flex-shrink:0;">
                                 <button class="btn btn-sm btn-secondary" onclick="editAnnouncement(${a.id})" title="Edit"><i class="fas fa-edit"></i></button>
@@ -202,6 +207,13 @@
             document.getElementById('modal').classList.add('active');
         }
 
+        function toLocalDatetimeValue(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '';
+            const pad = n => String(n).padStart(2,'0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
         function editAnnouncement(id) {
             const a = allAnnouncements.find(x => x.id === id);
             if (!a) return;
@@ -210,6 +222,7 @@
             document.getElementById('content').value = a.content;
             document.getElementById('priority').value = a.priority;
             document.getElementById('targetAudience').value = a.target_audience || 'all';
+            document.getElementById('expiresAt').value = toLocalDatetimeValue(a.expires_at);
             document.getElementById('modalTitle').textContent = 'Edit Announcement';
             document.getElementById('submitBtn').textContent = 'Update';
             document.getElementById('modal').classList.add('active');
@@ -223,11 +236,13 @@
         async function saveAnnouncement(e) {
             e.preventDefault();
             const id = document.getElementById('editId').value;
+            const expiresVal = document.getElementById('expiresAt').value;
             const data = {
                 title: document.getElementById('title').value,
                 content: document.getElementById('content').value,
                 priority: document.getElementById('priority').value,
-                target_audience: document.getElementById('targetAudience').value
+                target_audience: document.getElementById('targetAudience').value,
+                expires_at: expiresVal ? new Date(expiresVal).toISOString() : null
             };
             let result;
             if (id) {

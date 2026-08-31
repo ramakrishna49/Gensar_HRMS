@@ -12,7 +12,8 @@ router.get('/', verifyToken, async (req, res) => {
             FROM announcements a
             LEFT JOIN employees e ON a.posted_by = e.id
             LEFT JOIN announcement_reads ar ON ar.announcement_id = a.id AND ar.employee_id = $1
-            WHERE a.is_active = 1 AND a.target_audience = ANY($2::text[])
+            WHERE a.is_active = 1 AND (a.expires_at IS NULL OR a.expires_at > NOW())
+              AND a.target_audience = ANY($2::text[])
             ORDER BY a.created_at DESC`,
             [req.user.id, audienceForRole(req.user.role)]
         );
@@ -26,7 +27,7 @@ router.get('/unread-count', verifyToken, async (req, res) => {
     try {
         const result = await query(
             `SELECT COUNT(*) as count FROM announcements a
-            WHERE a.is_active = 1
+            WHERE a.is_active = 1 AND (a.expires_at IS NULL OR a.expires_at > NOW())
             AND a.target_audience = ANY($2::text[])
             AND a.id NOT IN (
                 SELECT announcement_id FROM announcement_reads WHERE employee_id = $1
@@ -85,13 +86,19 @@ router.post('/:id/read', verifyToken, async (req, res) => {
 
 router.post('/', verifyToken, isAdmin, async (req, res) => {
     try {
-        const { title, content, priority, target_audience } = req.body;
+        const { title, content, priority, target_audience, expires_at } = req.body;
         if (!title || !content) return res.status(400).json({ success: false, message: 'Title and content required' });
-        
+        let expiresAt = null;
+        if (expires_at) {
+            const d = new Date(expires_at);
+            if (isNaN(d.getTime())) return res.status(400).json({ success: false, message: 'Invalid expiry date' });
+            // Store as UTC; frontend sends local datetime which JS parses as local
+            expiresAt = d;
+        }
         const result = await query(
-            `INSERT INTO announcements (title, content, priority, posted_by, target_audience) 
-            VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [title, content, priority || 'normal', req.user.id, target_audience || 'all']
+            `INSERT INTO announcements (title, content, priority, posted_by, target_audience, expires_at) 
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [title, content, priority || 'normal', req.user.id, target_audience || 'all', expiresAt]
         );
 
         try {
@@ -111,7 +118,24 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
 
 router.put('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        const { title, content, priority, target_audience } = req.body;
+        const { title, content, priority, target_audience, expires_at } = req.body;
+        if (expires_at !== undefined) {
+            let expiresAt = null;
+            if (expires_at !== null && expires_at !== '') {
+                const d = new Date(expires_at);
+                if (isNaN(d.getTime())) return res.status(400).json({ success: false, message: 'Invalid expiry date' });
+                expiresAt = d;
+            }
+            const result = await query(
+                `UPDATE announcements SET title = COALESCE($1, title), content = COALESCE($2, content), 
+                priority = COALESCE($3, priority), target_audience = COALESCE($4, target_audience),
+                expires_at = $5
+                WHERE id = $6 RETURNING *`,
+                [title, content, priority, target_audience, expiresAt, req.params.id]
+            );
+            if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
+            return res.json({ success: true, announcement: result.rows[0] });
+        }
         const result = await query(
             `UPDATE announcements SET title = COALESCE($1, title), content = COALESCE($2, content), 
             priority = COALESCE($3, priority), target_audience = COALESCE($4, target_audience) 

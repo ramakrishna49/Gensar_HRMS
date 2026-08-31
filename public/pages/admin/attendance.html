@@ -570,6 +570,7 @@
                 const res = await fetch('/api/attendance/photo/' + encodeURIComponent(token), {
                     headers: { 'Authorization': 'Bearer ' + tokenStr }
                 });
+                if (res.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = getLoginUrl(getCurrentUser()); return; }
                 if (!res.ok) {
                     const msg = res.status === 404 ? 'Photo expired or already viewed' : 'Failed to load photo';
                     container.innerHTML = '<p style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> ' + msg + '</p>';

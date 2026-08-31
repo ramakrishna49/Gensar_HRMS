@@ -11,12 +11,15 @@ function isWeekend(dateStr) {
     return day === 0 || day === 6;
 }
 
-function calcBusinessDays(start, end) {
+function calcBusinessDays(start, end, holidays = new Set()) {
     let count = 0;
     const s = new Date(start);
     const e = new Date(end);
     for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+        if (d.getDay() === 0 || d.getDay() === 6) continue;
+        const ds = istDateString(d);
+        if (holidays.has(ds)) continue;
+        count++;
     }
     return count;
 }
@@ -50,7 +53,9 @@ router.post('/apply', verifyToken, async (req, res) => {
         }
         const reporting_manager_id = needsManager ? emp.reporting_manager_id : null;
 
-        const totalDays = calcBusinessDays(start_date, end_date);
+        const holRows = await query(`SELECT to_char(date, 'YYYY-MM-DD') as d FROM holidays WHERE date BETWEEN $1 AND $2 AND is_active = 1`, [start_date, end_date]);
+        const holidays = new Set((holRows.rows || []).map(r => r.d));
+        const totalDays = calcBusinessDays(start_date, end_date, holidays);
 
         const result = await query(
             `INSERT INTO wfh_requests (employee_id, reporting_manager_id, start_date, end_date, total_days, reason)
@@ -85,36 +90,33 @@ router.post('/apply', verifyToken, async (req, res) => {
 // @access  Private
 router.post('/:id/cancel', verifyToken, async (req, res) => {
     try {
-        const result = await query(
-            'SELECT status, start_date, employee_id FROM wfh_requests WHERE id = $1 AND employee_id = $2',
+        await query('BEGIN');
+        const sel = await query(
+            'SELECT id, status, start_date, end_date, employee_id FROM wfh_requests WHERE id = $1 AND employee_id = $2 FOR UPDATE',
             [req.params.id, req.user.id]
         );
-        if (result.rows.length === 0) {
+        if (sel.rows.length === 0) {
+            await query('ROLLBACK');
             return res.status(404).json({ success: false, message: 'WFH request not found' });
         }
-        const app = result.rows[0];
+        const app = sel.rows[0];
         const today = istDateString();
         const isApproved = app.status === 'approved';
-        if (app.status !== 'pending' && !(isApproved && app.start_date > today)) {
+        if (app.status !== 'pending' && !(isApproved && String(app.start_date).substring(0,10) > today)) {
+            await query('ROLLBACK');
             return res.status(400).json({ success: false, message: 'This request can no longer be cancelled' });
         }
-
-        await query(
-            `UPDATE wfh_requests SET status = 'cancelled', updated_at = NOW()
-            WHERE id = $1 AND employee_id = $2`,
-            [req.params.id, req.user.id]
-        );
-
+        await query(`UPDATE wfh_requests SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [req.params.id]);
         if (isApproved) {
             await query(
-                `DELETE FROM attendance
-                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'Work from home%'`,
-                [app.employee_id, app.start_date, app.end_date]
+                `DELETE FROM attendance WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'Work from home: ' || $4 || '%'`,
+                [app.employee_id, app.start_date, app.end_date, String(app.id)]
             );
         }
-
+        await query('COMMIT');
         res.json({ success: true, message: 'WFH request cancelled' });
     } catch (error) {
+        try { await query('ROLLBACK'); } catch(e) {}
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
@@ -230,8 +232,8 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
                 if (existing.rows.length === 0) {
                     await query(
                         `INSERT INTO attendance (employee_id, date, status, remarks) 
-                        VALUES ($1, $2, 'present', $3)`,
-                        [app.employee_id, dateStr, 'Work from home' + (remarks ? ': ' + remarks : '')]
+                        VALUES ($1, $2, 'wfh', $3)`,
+                        [app.employee_id, dateStr, 'Work from home: ' + app.id + ' ' + (remarks || '')]
                     );
                 }
             }
@@ -239,8 +241,8 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
             const app = wfhApp.rows[0];
             await query(
                 `DELETE FROM attendance 
-                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'Work from home%'`,
-                [app.employee_id, app.start_date, app.end_date]
+                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'Work from home: ' || $4 || '%'`,
+                [app.employee_id, app.start_date, app.end_date, String(app.id)]
             );
         }
 

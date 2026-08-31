@@ -14,12 +14,15 @@ function isWeekend(dateStr) {
     return day === 0 || day === 6;
 }
 
-function calcBusinessDays(start, end) {
+function calcBusinessDays(start, end, holidays = new Set()) {
     let count = 0;
     const s = new Date(start);
     const e = new Date(end);
     for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+        if (d.getDay() === 0 || d.getDay() === 6) continue;
+        const ds = istDateString(d);
+        if (holidays.has(ds)) continue;
+        count++;
     }
     return count;
 }
@@ -81,7 +84,9 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
             }
         }
 
-        const totalDays = calcBusinessDays(start_date, end_date);
+        const holRows = await query(`SELECT to_char(date, 'YYYY-MM-DD') as d FROM holidays WHERE date BETWEEN $1 AND $2 AND is_active = 1`, [start_date, end_date]);
+        const holidays = new Set((holRows.rows || []).map(r => r.d));
+        const totalDays = calcBusinessDays(start_date, end_date, holidays);
 
         // Reject overlapping approved/pending leave or WFH requests.
         const overlapLeave = await query(
@@ -114,7 +119,7 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
                 `SELECT COALESCE(SUM(total_days), 0) as used FROM leave_applications
                 WHERE employee_id = $1 AND leave_type_id = $2
                 AND to_char(start_date, 'YYYY') = $3
-                AND status IN ('approved', 'pending')`,
+                AND status = 'approved'`,
                 [req.user.id, leave_type_id, String(year)]
             );
             const used = parseFloat(usedRes.rows[0].used) || 0;
@@ -275,18 +280,17 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
                     await query(
                         `INSERT INTO attendance (employee_id, date, status, remarks) 
                         VALUES ($1, $2, 'absent', $3)`,
-                        [app.employee_id, dateStr, 'On leave: ' + (remarks || app.reason || '')]
+                        [app.employee_id, dateStr, 'On leave: ' + app.id + ' ' + (remarks || app.reason || '')]
                     );
                 }
             }
         } else if (status === 'rejected') {
-            // Remove any 'On leave' attendance rows that were pre-created for this
-            // request so the employee can check in normally on those days.
+            // Remove only this application's rows (ID-tagged) so overlapping leaves are untouched.
             const app = leaveApp.rows[0];
             await query(
                 `DELETE FROM attendance 
-                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'On leave%'`,
-                [app.employee_id, app.start_date, app.end_date]
+                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'On leave: ' || $4 || '%'`,
+                [app.employee_id, app.start_date, app.end_date, String(app.id)]
             );
         }
         
@@ -312,36 +316,33 @@ router.put('/approve/:id', verifyToken, isAdmin, async (req, res) => {
 // @access  Private
 router.post('/:id/cancel', verifyToken, async (req, res) => {
     try {
-        const result = await query(
-            'SELECT status, start_date, employee_id FROM leave_applications WHERE id = $1 AND employee_id = $2',
+        await query('BEGIN');
+        const sel = await query(
+            'SELECT id, status, start_date, end_date, employee_id FROM leave_applications WHERE id = $1 AND employee_id = $2 FOR UPDATE',
             [req.params.id, req.user.id]
         );
-        if (result.rows.length === 0) {
+        if (sel.rows.length === 0) {
+            await query('ROLLBACK');
             return res.status(404).json({ success: false, message: 'Leave request not found' });
         }
-        const app = result.rows[0];
+        const app = sel.rows[0];
         const today = istDateString();
         const isApproved = app.status === 'approved';
-        if (app.status !== 'pending' && !(isApproved && app.start_date > today)) {
+        if (app.status !== 'pending' && !(isApproved && String(app.start_date).substring(0,10) > today)) {
+            await query('ROLLBACK');
             return res.status(400).json({ success: false, message: 'This request can no longer be cancelled' });
         }
-
-        await query(
-            `UPDATE leave_applications SET status = 'cancelled', updated_at = NOW()
-            WHERE id = $1 AND employee_id = $2`,
-            [req.params.id, req.user.id]
-        );
-
+        await query(`UPDATE leave_applications SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [req.params.id]);
         if (isApproved) {
             await query(
-                `DELETE FROM attendance
-                WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'On leave%'`,
-                [app.employee_id, app.start_date, app.end_date]
+                `DELETE FROM attendance WHERE employee_id = $1 AND date BETWEEN $2 AND $3 AND remarks LIKE 'On leave: ' || $4 || '%'`,
+                [app.employee_id, app.start_date, app.end_date, String(app.id)]
             );
         }
-
+        await query('COMMIT');
         res.json({ success: true, message: 'Leave request cancelled' });
     } catch (error) {
+        try { await query('ROLLBACK'); } catch(e) {}
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
@@ -355,7 +356,8 @@ router.get('/balance', verifyToken, async (req, res) => {
         
         const result = await query(
             `SELECT lt.id, lt.name, lt.days_per_year, lt.gender_eligibility,
-            COALESCE(SUM(la.total_days), 0) as used_days
+            COALESCE(SUM(CASE WHEN la.status = 'approved' THEN la.total_days ELSE 0 END), 0) as used_days,
+            COALESCE(SUM(CASE WHEN la.status = 'pending' THEN la.total_days ELSE 0 END), 0) as pending_days
             FROM leave_types lt
             LEFT JOIN leave_applications la ON lt.id = la.leave_type_id 
             AND la.employee_id = $1 
