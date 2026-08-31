@@ -260,6 +260,120 @@ router.put('/wfh/:id', verifyToken, isManager, async (req, res) => {
     }
 });
 
+// @route   GET /api/manager/leaves/history
+// @desc    All leave requests (any status) from direct reports — for TL history view
+// @access  Private (Manager+)
+router.get('/leaves/history', verifyToken, isManager, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT la.*, lt.name as leave_type_name,
+            e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
+            FROM leave_applications la
+            LEFT JOIN leave_types lt ON la.leave_type_id = lt.id
+            JOIN employees e ON la.employee_id = e.id
+            WHERE la.reporting_manager_id = $1
+            ORDER BY la.created_at DESC LIMIT 100`,
+            [req.user.id]
+        );
+        res.json({ success: true, leaves: result.rows });
+    } catch (error) {
+        console.error('Manager leaves history error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/manager/wfh/history
+// @desc    All WFH requests (any status) from direct reports
+// @access  Private (Manager+)
+router.get('/wfh/history', verifyToken, isManager, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT wr.*,
+            e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
+            FROM wfh_requests wr
+            JOIN employees e ON wr.employee_id = e.id
+            WHERE wr.reporting_manager_id = $1
+            ORDER BY wr.created_at DESC LIMIT 100`,
+            [req.user.id]
+        );
+        res.json({ success: true, wfhRequests: result.rows });
+    } catch (error) {
+        console.error('Manager WFH history error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/manager/regularizations/history
+// @desc    All regularization requests (any status) from team subtree
+// @access  Private (Manager+)
+router.get('/regularizations/history', verifyToken, isManager, async (req, res) => {
+    try {
+        const isAdmin = req.user.role === 'admin' || req.user.role === 'hr';
+        let rows;
+        if (isAdmin) {
+            rows = await query(
+                `SELECT ar.*, e.first_name, e.last_name, e.employee_id,
+                    rev.first_name as rev_first, rev.last_name as rev_last
+                 FROM attendance_regularizations ar
+                 JOIN employees e ON e.id = ar.employee_id
+                 LEFT JOIN employees rev ON rev.id = ar.reviewed_by
+                 ORDER BY ar.created_at DESC LIMIT 100`
+            );
+        } else {
+            rows = await query(
+                `WITH RECURSIVE subtree AS (
+                    SELECT id FROM employees WHERE id = $1
+                    UNION SELECT e.id FROM employees e JOIN subtree s ON e.reporting_manager_id = s.id
+                 )
+                 SELECT ar.*, e.first_name, e.last_name, e.employee_id,
+                    rev.first_name as rev_first, rev.last_name as rev_last
+                 FROM attendance_regularizations ar
+                 JOIN employees e ON e.id = ar.employee_id
+                 LEFT JOIN employees rev ON rev.id = ar.reviewed_by
+                 WHERE ar.employee_id IN (SELECT id FROM subtree)
+                 ORDER BY ar.created_at DESC LIMIT 100`,
+                [req.user.id]
+            );
+        }
+        res.json({ success: true, requests: rows.rows });
+    } catch (error) {
+        console.error('Manager reg history error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/manager/attendance
+// @desc    Team attendance for a month (direct reports) — for TL history view
+// @access  Private (Manager+)
+router.get('/attendance', verifyToken, isManager, async (req, res) => {
+    try {
+        const month = parseInt(req.query.month, 10);
+        const year = parseInt(req.query.year, 10);
+        if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
+
+        const teamRes = await query(
+            `SELECT e.id, e.employee_id, e.first_name, e.last_name FROM employees e WHERE e.reporting_manager_id = $1 AND e.status = 'active' ORDER BY e.first_name`,
+            [req.user.id]
+        );
+        const teamIds = teamRes.rows.map(r => r.id);
+        if (teamIds.length === 0) return res.json({ success: true, team: [], attendance: [], holidays: [] });
+
+        const attRes = await query(
+            `SELECT employee_id, date::text as date, status, check_in::text as check_in, check_out::text as check_out
+             FROM attendance WHERE employee_id = ANY($1) AND EXTRACT(MONTH FROM date) = $2 AND EXTRACT(YEAR FROM date) = $3 ORDER BY date`,
+            [teamIds, month, year]
+        );
+        const holRes = await query(
+            `SELECT name, date::text as date FROM holidays WHERE EXTRACT(MONTH FROM date) = $1 AND EXTRACT(YEAR FROM date) = $2`,
+            [month, year]
+        );
+        res.json({ success: true, team: teamRes.rows, attendance: attRes.rows, holidays: holRes.rows });
+    } catch (error) {
+        console.error('Manager attendance error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // @route   PUT /api/manager/tickets/:id
 // @desc    Respond to / resolve a query from a direct report
 // @access  Private (Manager+)

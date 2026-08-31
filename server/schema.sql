@@ -351,7 +351,7 @@ INSERT INTO companies (name, address, phone, email, website) VALUES
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO leave_types (name, days_per_year, description, gender_eligibility) VALUES
-('Casual Leave', 12, 'For personal work or casual reasons', 'all'),
+('Casual Leave', 0, 'For personal work or casual reasons', 'all'),
 ('Sick Leave', 12, 'For medical reasons or health issues', 'all'),
 ('Maternity Leave', 0, 'Special leave for female employees during pregnancy (no balance deduction)', 'female'),
 ('Paternity Leave', 0, 'For male employees after childbirth', 'male'),
@@ -440,6 +440,8 @@ UPDATE leave_types SET is_active = 0 WHERE name = 'Earned Leave';
 -- Policy change: Sick Leave is the only leave type offered now. All other
 -- types are soft-disabled so historical applications keep their type names,
 -- but they no longer appear in the apply dropdown or balance cards.
+-- Casual Leave is kept at 0 days and hidden from the dropdown.
+UPDATE leave_types SET days_per_year = 0 WHERE name = 'Casual Leave';
 UPDATE leave_types SET is_active = 1 WHERE name = 'Sick Leave';
 UPDATE leave_types SET is_active = 0
 WHERE name IN ('Casual Leave', 'Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Earned Leave');

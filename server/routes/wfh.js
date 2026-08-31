@@ -53,6 +53,18 @@ router.post('/apply', verifyToken, async (req, res) => {
         }
         const reporting_manager_id = needsManager ? emp.reporting_manager_id : null;
 
+        // Overlap check: no approved/pending leave or WFH on same dates
+        const overlapLeave = await query(
+            `SELECT id FROM leave_applications WHERE employee_id = $1 AND status IN ('pending','approved') AND NOT (end_date < $2::date OR start_date > $3::date) LIMIT 1`,
+            [req.user.id, start_date, end_date]
+        );
+        if (overlapLeave.rows.length > 0) return res.status(400).json({ success: false, message: 'You already have a leave request on these dates' });
+        const overlapWfh = await query(
+            `SELECT id FROM wfh_requests WHERE employee_id = $1 AND status IN ('pending','approved') AND NOT (end_date < $2::date OR start_date > $3::date) LIMIT 1`,
+            [req.user.id, start_date, end_date]
+        );
+        if (overlapWfh.rows.length > 0) return res.status(400).json({ success: false, message: 'You already have a WFH request on these dates' });
+
         const holRows = await query(`SELECT to_char(date, 'YYYY-MM-DD') as d FROM holidays WHERE date BETWEEN $1 AND $2 AND is_active = 1`, [start_date, end_date]);
         const holidays = new Set((holRows.rows || []).map(r => r.d));
         const totalDays = calcBusinessDays(start_date, end_date, holidays);

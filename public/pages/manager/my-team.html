@@ -47,15 +47,20 @@
             <a href="/manager/my-team" class="nav-item active"><i class="fas fa-users"></i><span class="nav-text">My Team</span></a>
             <div class="nav-section-title">My Info</div>
             <a href="/employee/profile" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
+            <a href="/employee/onboarding" class="nav-item"><i class="fas fa-user-plus"></i><span class="nav-text">My Onboarding</span></a>
             <a href="/employee/attendance" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
             <a href="/employee/regularization" class="nav-item"><i class="fas fa-clock-rotate-left"></i><span class="nav-text">Regularization</span></a>
             <a href="/employee/leave" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
             <a href="/employee/wfh" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
-            <div class="nav-section-title">Support</div>
-            <a href="/employee/tickets" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
-            <div class="nav-section-title">Resources</div>
+            <a href="/employee/payslips" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
+            <div class="nav-section-title">Company</div>
+            <a href="/employee/documents" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
             <a href="/employee/announcements" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
-        <a href="/employee/directory" class="nav-item"><i class="fas fa-address-book"></i><span class="nav-text">Directory</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/employee/holidays" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <div class="nav-section-title">Resources</div>
+            <a href="/employee/directory" class="nav-item"><i class="fas fa-address-book"></i><span class="nav-text">Directory</span></a>
+            <a href="/employee/tickets" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
         </nav>
     </aside>
 
@@ -129,11 +134,20 @@
                     <button class="tab-btn" onclick="switchTab('wfh')">WFH Requests <span class="tab-badge" id="wfhTabBadge" style="display:none;">0</span></button>
                     <button class="tab-btn" onclick="switchTab('tickets')">Queries <span class="tab-badge" id="ticketTabBadge" style="display:none;">0</span></button>
                     <button class="tab-btn" onclick="switchTab('regularization')">Regularizations <span class="tab-badge" id="regTabBadge" style="display:none;">0</span></button>
+                    <button class="tab-btn" onclick="switchTab('attendance')">Team Attendance</button>
                 </div>
                 <div id="tabLeaves"></div>
                 <div id="tabWfh" style="display:none;"></div>
                 <div id="tabTickets" style="display:none;"></div>
                 <div id="tabRegularization" style="display:none;"></div>
+                <div id="tabAttendance" style="display:none;">
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+                        <select id="attMonth" class="form-control" style="width:auto;"></select>
+                        <input type="number" id="attYear" class="form-control" style="width:100px;">
+                        <button class="btn btn-secondary btn-sm" onclick="loadTeamAttendance()"><i class="fas fa-search"></i> View</button>
+                    </div>
+                    <div id="attContainer"><div style="text-align:center;padding:20px;color:var(--text-secondary);">Select month and click View</div></div>
+                </div>
             </div>
         </div>
     </main>
@@ -191,9 +205,17 @@
             loadWfh();
             loadTickets();
             loadRegularizations();
+            // Init Team Attendance month/year picker
+            const attMonth = document.getElementById('attMonth');
+            if (attMonth) {
+                const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                for (let i = 0; i < 12; i++) { const o = document.createElement('option'); o.value = i + 1; o.textContent = mNames[i]; attMonth.appendChild(o); }
+                attMonth.value = new Date().getMonth() + 1;
+                document.getElementById('attYear').value = new Date().getFullYear();
+            }
             // Deep link support: notification bell URLs carry ?tab=...
             const wanted = new URLSearchParams(window.location.search).get('tab');
-            if (wanted && ['leaves', 'wfh', 'tickets', 'regularization'].includes(wanted)) {
+            if (wanted && ['leaves', 'wfh', 'tickets', 'regularization', 'attendance'].includes(wanted)) {
                 switchTab(wanted);
             }
         });
@@ -268,56 +290,89 @@
         }
 
         async function loadLeaves() {
-            const data = await apiCall('/manager/leaves');
+            const [data, histData] = await Promise.all([apiCall('/manager/leaves'), apiCall('/manager/leaves/history')]);
             const container = document.getElementById('tabLeaves');
             if (data && data.success) {
                 const leaves = data.leaves || [];
                 pendingLeaveCount = leaves.length;
                 renderCounts();
+                let html = '';
                 if (leaves.length === 0) {
-                    showEmptyState(container, 'fa-calendar-check', 'No Pending Leaves', 'No leave requests from your team right now');
-                    return;
+                    html += '<div style="text-align:center;padding:20px;color:var(--text-secondary);"><i class="fas fa-calendar-check" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>No pending leaves</div>';
+                } else {
+                    html += '<div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">Pending (' + leaves.length + ')</div>';
+                    html += leaves.map(l =>
+                        '<div class="request-card">' +
+                            '<div class="req-top"><div><div class="req-emp">' + escapeHtml(l.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(l.emp_id) + '</span></div>' +
+                            '<div class="req-meta">' + escapeHtml(l.leave_type_name || '-') + ' · ' + formatDate(l.start_date) + ' to ' + formatDate(l.end_date) + ' · ' + l.total_days + ' day' + (l.total_days > 1 ? 's' : '') + '</div></div>' +
+                            '<span class="badge badge-warning">Pending</span></div>' +
+                            (l.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(l.reason) + '</div>' : '') +
+                            '<div class="req-actions">' +
+                                '<button class="btn btn-sm btn-success" onclick="openDecision(' + l.id + ', \'leaves\', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
+                                '<button class="btn btn-sm btn-danger" onclick="openDecision(' + l.id + ', \'leaves\', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
+                            '</div>' +
+                        '</div>'
+                    ).join('');
                 }
-                container.innerHTML = leaves.map(l =>
-                    '<div class="request-card">' +
-                        '<div class="req-top"><div><div class="req-emp">' + escapeHtml(l.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(l.emp_id) + '</span></div>' +
-                        '<div class="req-meta">' + escapeHtml(l.leave_type_name || '-') + ' · ' + formatDate(l.start_date) + ' to ' + formatDate(l.end_date) + ' · ' + l.total_days + ' day' + (l.total_days > 1 ? 's' : '') + '</div></div>' +
-                        '<span class="badge badge-warning">Pending</span></div>' +
-                        (l.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(l.reason) + '</div>' : '') +
-                        '<div class="req-actions">' +
-                            '<button class="btn btn-sm btn-success" onclick="openDecision(' + l.id + ', \'leaves\', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
-                            '<button class="btn btn-sm btn-danger" onclick="openDecision(' + l.id + ', \'leaves\', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
-                        '</div>' +
-                    '</div>'
-                ).join('');
+                // History (approved/rejected/cancelled)
+                const hist = (histData && histData.success && histData.leaves) ? histData.leaves.filter(x => x.status !== 'pending') : [];
+                if (hist.length > 0) {
+                    html += '<div style="border-top:1px solid var(--border-light);margin:18px 0;"></div>';
+                    html += '<div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">History (' + hist.length + ' past)</div>';
+                    html += hist.map(l => {
+                        const badge = l.status === 'approved' ? 'success' : l.status === 'rejected' ? 'danger' : 'secondary';
+                        return '<div class="request-card" style="opacity:0.95;">' +
+                            '<div class="req-top"><div><div class="req-emp">' + escapeHtml(l.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(l.emp_id) + '</span></div>' +
+                            '<div class="req-meta">' + escapeHtml(l.leave_type_name || '-') + ' · ' + formatDate(l.start_date) + ' to ' + formatDate(l.end_date) + ' · ' + l.total_days + ' days</div>' +
+                            (l.approval_remarks ? '<div class="req-sub">Remarks: ' + escapeHtml(l.approval_remarks) + '</div>' : '') + '</div>' +
+                            '<span class="badge badge-' + badge + '">' + escapeHtml(l.status) + '</span></div></div>';
+                    }).join('');
+                }
+                container.innerHTML = html || '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No leave requests</div>';
             } else {
                 showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load leave requests');
             }
         }
 
         async function loadWfh() {
-            const data = await apiCall('/manager/wfh');
+            const [data, histData] = await Promise.all([apiCall('/manager/wfh'), apiCall('/manager/wfh/history')]);
             const container = document.getElementById('tabWfh');
             if (data && data.success) {
                 const wfh = data.wfhRequests || [];
                 pendingWfhCount = wfh.length;
                 renderCounts();
+                let html = '';
                 if (wfh.length === 0) {
-                    showEmptyState(container, 'fa-home', 'No Pending WFH', 'No WFH requests from your team right now');
-                    return;
+                    html += '<div style="text-align:center;padding:20px;color:var(--text-secondary);"><i class="fas fa-home" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>No pending WFH</div>';
+                } else {
+                    html += '<div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">Pending (' + wfh.length + ')</div>';
+                    html += wfh.map(w =>
+                        '<div class="request-card">' +
+                            '<div class="req-top"><div><div class="req-emp">' + escapeHtml(w.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(w.emp_id) + '</span></div>' +
+                            '<div class="req-meta">' + formatDate(w.start_date) + ' to ' + formatDate(w.end_date) + ' · ' + w.total_days + ' day' + (w.total_days > 1 ? 's' : '') + '</div></div>' +
+                            '<span class="badge badge-warning">Pending</span></div>' +
+                            (w.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(w.reason) + '</div>' : '') +
+                            '<div class="req-actions">' +
+                                '<button class="btn btn-sm btn-success" onclick="openDecision(' + w.id + ', \'wfh\', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
+                                '<button class="btn btn-sm btn-danger" onclick="openDecision(' + w.id + ', \'wfh\', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
+                            '</div>' +
+                        '</div>'
+                    ).join('');
                 }
-                container.innerHTML = wfh.map(w =>
-                    '<div class="request-card">' +
-                        '<div class="req-top"><div><div class="req-emp">' + escapeHtml(w.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(w.emp_id) + '</span></div>' +
-                        '<div class="req-meta">' + formatDate(w.start_date) + ' to ' + formatDate(w.end_date) + ' · ' + w.total_days + ' day' + (w.total_days > 1 ? 's' : '') + '</div></div>' +
-                        '<span class="badge badge-warning">Pending</span></div>' +
-                        (w.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(w.reason) + '</div>' : '') +
-                        '<div class="req-actions">' +
-                            '<button class="btn btn-sm btn-success" onclick="openDecision(' + w.id + ', \'wfh\', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
-                            '<button class="btn btn-sm btn-danger" onclick="openDecision(' + w.id + ', \'wfh\', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
-                        '</div>' +
-                    '</div>'
-                ).join('');
+                const hist = (histData && histData.success && histData.wfhRequests) ? histData.wfhRequests.filter(x => x.status !== 'pending') : [];
+                if (hist.length > 0) {
+                    html += '<div style="border-top:1px solid var(--border-light);margin:18px 0;"></div>';
+                    html += '<div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">History (' + hist.length + ' past)</div>';
+                    html += hist.map(w => {
+                        const badge = w.status === 'approved' ? 'success' : w.status === 'rejected' ? 'danger' : 'secondary';
+                        return '<div class="request-card" style="opacity:0.95;">' +
+                            '<div class="req-top"><div><div class="req-emp">' + escapeHtml(w.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(w.emp_id) + '</span></div>' +
+                            '<div class="req-meta">' + formatDate(w.start_date) + ' to ' + formatDate(w.end_date) + ' · ' + w.total_days + ' days</div>' +
+                            (w.approval_remarks ? '<div class="req-sub">Remarks: ' + escapeHtml(w.approval_remarks) + '</div>' : '') + '</div>' +
+                            '<span class="badge badge-' + badge + '">' + escapeHtml(w.status) + '</span></div></div>';
+                    }).join('');
+                }
+                container.innerHTML = html || '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No WFH requests</div>';
             } else {
                 showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load WFH requests');
             }
@@ -354,32 +409,113 @@
         }
 
         async function loadRegularizations() {
-            const data = await apiCall('/regularization/pending');
+            const [data, histData] = await Promise.all([apiCall('/regularization/pending'), apiCall('/manager/regularizations/history')]);
             const container = document.getElementById('tabRegularization');
             if (data && data.success) {
                 const regs = data.requests || [];
                 teamRegRequests = regs;
                 pendingRegCount = regs.length;
                 renderCounts();
+                let html = '';
                 if (regs.length === 0) {
-                    showEmptyState(container, 'fa-clock-rotate-left', 'No Pending Regularizations', 'No attendance correction requests from your team right now');
-                    return;
+                    html += '<div style="text-align:center;padding:20px;color:var(--text-secondary);"><i class="fas fa-clock-rotate-left" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>No pending regularizations</div>';
+                } else {
+                    html += '<div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">Pending (' + regs.length + ')</div>';
+                    html += regs.map(r =>
+                        '<div class="request-card">' +
+                            '<div class="req-top"><div><div class="req-emp">' + escapeHtml((r.first_name || '') + ' ' + (r.last_name || '')) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(r.employee_id || '') + '</span></div>' +
+                            '<div class="req-meta">' + formatDate(r.date) + ' · Check-in: ' + escapeHtml(r.check_in ? String(r.check_in).slice(0, 5) : '—') + ' · Check-out: ' + escapeHtml(r.check_out ? String(r.check_out).slice(0, 5) : '—') + '</div></div>' +
+                            '<span class="badge badge-warning">Pending</span></div>' +
+                            (r.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(r.reason) + '</div>' : '') +
+                            '<div class="req-actions">' +
+                                '<button class="btn btn-sm btn-success" onclick="openRegDecision(' + r.id + ', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
+                                '<button class="btn btn-sm btn-danger" onclick="openRegDecision(' + r.id + ', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
+                            '</div>' +
+                        '</div>'
+                    ).join('');
                 }
-                container.innerHTML = regs.map(r =>
-                    '<div class="request-card">' +
-                        '<div class="req-top"><div><div class="req-emp">' + escapeHtml((r.first_name || '') + ' ' + (r.last_name || '')) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(r.employee_id || '') + '</span></div>' +
-                        '<div class="req-meta">' + formatDate(r.date) + ' · Check-in: ' + escapeHtml(r.check_in ? String(r.check_in).slice(0, 5) : '—') + ' · Check-out: ' + escapeHtml(r.check_out ? String(r.check_out).slice(0, 5) : '—') + '</div></div>' +
-                        '<span class="badge badge-warning">Pending</span></div>' +
-                        (r.reason ? '<div class="req-sub"><strong>Reason:</strong> ' + escapeHtml(r.reason) + '</div>' : '') +
-                        '<div class="req-actions">' +
-                            '<button class="btn btn-sm btn-success" onclick="openRegDecision(' + r.id + ', \'approved\')"><i class="fas fa-check"></i> Approve</button>' +
-                            '<button class="btn btn-sm btn-danger" onclick="openRegDecision(' + r.id + ', \'rejected\')"><i class="fas fa-times"></i> Reject</button>' +
-                        '</div>' +
-                    '</div>'
-                ).join('');
+                const hist = (histData && histData.success && histData.requests) ? histData.requests.filter(x => x.status !== 'pending') : [];
+                if (hist.length > 0) {
+                    html += '<div style="border-top:1px solid var(--border-light);margin:18px 0;"></div>';
+                    html += '<div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">History (' + hist.length + ' past)</div>';
+                    html += hist.map(r => {
+                        const badge = r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : 'secondary';
+                        return '<div class="request-card" style="opacity:0.95;">' +
+                            '<div class="req-top"><div><div class="req-emp">' + escapeHtml((r.first_name || '') + ' ' + (r.last_name || '')) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(r.employee_id || '') + '</span></div>' +
+                            '<div class="req-meta">' + formatDate(r.date) + ' · Check-in: ' + escapeHtml(r.check_in ? String(r.check_in).slice(0, 5) : '—') + ' · Check-out: ' + escapeHtml(r.check_out ? String(r.check_out).slice(0, 5) : '—') + (r.review_note ? ' · ' + escapeHtml(r.review_note) : '') + '</div></div>' +
+                            '<span class="badge badge-' + badge + '">' + escapeHtml(r.status) + '</span></div></div>';
+                    }).join('');
+                }
+                container.innerHTML = html || '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No regularization requests</div>';
             } else {
                 showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load regularization requests');
             }
+        }
+
+        async function loadTeamAttendance() {
+            const month = document.getElementById('attMonth').value;
+            const year = document.getElementById('attYear').value;
+            const container = document.getElementById('attContainer');
+            container.innerHTML = '<div class="spinner" style="margin:0 auto;"></div>';
+            const data = await apiCall('/manager/attendance?month=' + month + '&year=' + year);
+            if (!data || !data.success) {
+                container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--danger);">Failed to load attendance</div>';
+                return;
+            }
+            const team = data.team || [];
+            if (team.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-secondary);">No team members yet.</div>';
+                return;
+            }
+            const attByEmp = {};
+            (data.attendance || []).forEach(a => {
+                const k = a.employee_id + '|' + (a.date || '').split('T')[0];
+                attByEmp[k] = a;
+            });
+            const holMap = {};
+            (data.holidays || []).forEach(h => { holMap[(h.date || '').split('T')[0]] = h.name; });
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            let html = '<div style="overflow-x:auto;"><table class="table" style="min-width:600px;font-size:0.78rem;"><thead><tr><th style="position:sticky;left:0;background:var(--bg-card);z-index:1;">Member</th>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dt = new Date(year, month - 1, d);
+                const dow = dt.getDay();
+                const isWE = dow === 0 || dow === 6;
+                html += '<th style="text-align:center;min-width:36px;' + (isWE ? 'background:var(--bg-light);' : '') + '">' + d + '</th>';
+            }
+            html += '<th>Present</th></tr></thead><tbody>';
+            team.forEach(m => {
+                let presentCount = 0;
+                html += '<tr><td style="position:sticky;left:0;background:var(--bg-card);font-weight:600;white-space:nowrap;">' + escapeHtml(m.first_name + ' ' + (m.last_name || '')) + '<br><span style="font-size:0.68rem;color:var(--text-secondary);">' + escapeHtml(m.employee_id) + '</span></td>';
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const key = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                    const k2 = m.id + '|' + key;
+                    const rec = attByEmp[k2];
+                    let cell = '-';
+                    let bg = '';
+                    if (holMap[key]) { cell = 'H'; bg = 'background:#E0E7FF;color:#3730A3;'; }
+                    else if (rec) {
+                        if (rec.status === 'present' || rec.status === 'wfh') { cell = 'P'; bg = 'background:#D1FAE5;color:#065F46;'; presentCount++; }
+                        else if (rec.status === 'late') { cell = 'L'; bg = 'background:#FEF3C7;color:#92400E;'; presentCount++; }
+                        else if (rec.status === 'half-day') { cell = 'HD'; bg = 'background:#FED7AA;color:#9A3412;'; }
+                        else if (rec.status === 'absent') { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; }
+                        else { cell = rec.status.charAt(0).toUpperCase(); }
+                    } else {
+                        const dow = new Date(year, month - 1, d).getDay();
+                        if (dow === 0 || dow === 6) { cell = 'WO'; bg = 'background:var(--bg-light);'; }
+                        else {
+                            const todayKey = new Date().toISOString().split('T')[0];
+                            if (key < todayKey && new Date(year, month - 1, 1) <= new Date()) { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; }
+                            else { cell = '-'; }
+                        }
+                    }
+                    html += '<td style="text-align:center;' + bg + '">' + cell + '</td>';
+                }
+                html += '<td style="text-align:center;font-weight:600;">' + presentCount + '</td></tr>';
+            });
+            html += '</tbody></table></div>';
+            html += '<div style="margin-top:10px;font-size:0.72rem;color:var(--text-secondary);">P=Present, L=Late, HD=Half Day, A=Absent, H=Holiday, WO=Week Off</div>';
+            container.innerHTML = html;
         }
 
         function renderCounts() {
@@ -398,11 +534,14 @@
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+            const btn = document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`);
+            if (btn) btn.classList.add('active');
+            else if (event && event.target) event.target.classList.add('active');
             document.getElementById('tabLeaves').style.display = tab === 'leaves' ? 'block' : 'none';
             document.getElementById('tabWfh').style.display = tab === 'wfh' ? 'block' : 'none';
             document.getElementById('tabTickets').style.display = tab === 'tickets' ? 'block' : 'none';
             document.getElementById('tabRegularization').style.display = tab === 'regularization' ? 'block' : 'none';
+            document.getElementById('tabAttendance').style.display = tab === 'attendance' ? 'block' : 'none';
         }
 
         let pendingDecision = null;
