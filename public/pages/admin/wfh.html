@@ -103,10 +103,10 @@
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr><th>Employee</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+                            <tr><th>Employee</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Approved By</th><th>Actions</th></tr>
                         </thead>
                         <tbody id="wfhTable">
-                            <tr><td colspan="7" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                            <tr><td colspan="8" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -170,7 +170,7 @@
                 document.getElementById('totalCount').textContent = data.wfhRequests.length;
 
                 if (data.wfhRequests.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-home"></i><h3>No WFH Requests</h3><p>No work from home requests found for this filter.</p></div></td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-home"></i><h3>No WFH Requests</h3><p>No work from home requests found for this filter.</p></div></td></tr>';
                     return;
                 }
 
@@ -190,6 +190,7 @@
                         <td>${escapeHtml(String(w.total_days))}</td>
                         <td><span class="truncate" style="max-width:150px;display:inline-block;" title="${escapeHtml(w.reason || '')}">${escapeHtml(w.reason || '-')}</span></td>
                         <td><span class="badge badge-${getStatusBadge(w.status)}">${escapeHtml(w.status)}</span></td>
+                        <td><small style="color:var(--text-secondary);">${w.status === 'pending' ? '-' : escapeHtml(w.approved_by_name || '-')}</small></td>
                         <td>
                             ${w.status === 'pending' ? `
                                 <div style="display:flex;gap:4px;">
@@ -201,7 +202,7 @@
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load WFH data.</p></div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load WFH data.</p></div></td></tr>';
             }
         }
 

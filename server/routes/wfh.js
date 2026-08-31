@@ -155,10 +155,12 @@ router.get('/all', verifyToken, isAdmin, async (req, res) => {
         const { status } = req.query;
         let sqlQuery = `SELECT wr.*,
             e.first_name || ' ' || e.last_name as employee_name,
-            e.employee_id as emp_id, d.name as department_name
+            e.employee_id as emp_id, d.name as department_name,
+            ap.first_name || ' ' || ap.last_name as approved_by_name
             FROM wfh_requests wr
             JOIN employees e ON wr.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN employees ap ON wr.approved_by = ap.id
             WHERE 1=1`;
         const params = [];
         let idx = 1;

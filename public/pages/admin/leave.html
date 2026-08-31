@@ -105,10 +105,10 @@
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr><th>Employee</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+                            <tr><th>Employee</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Approved By</th><th>Actions</th></tr>
                         </thead>
                         <tbody id="leavesTable">
-                            <tr><td colspan="8" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                            <tr><td colspan="9" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -182,7 +182,7 @@
                 document.getElementById('totalCount').textContent = data.leaves.length;
 
                 if (data.leaves.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-calendar-times"></i><h3>No Leave Requests</h3><p>No leave requests found for this filter.</p></div></td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-calendar-times"></i><h3>No Leave Requests</h3><p>No leave requests found for this filter.</p></div></td></tr>';
                     return;
                 }
 
@@ -203,18 +203,19 @@
                         <td>${escapeHtml(String(leave.total_days))}</td>
                         <td><span class="truncate" style="max-width:150px;display:inline-block;" title="${escapeHtml(leave.reason || '')}">${escapeHtml(leave.reason || '-')}</span></td>
                         <td><span class="badge badge-${getStatusBadge(leave.status)}">${escapeHtml(leave.status)}</span></td>
+                        <td><small style="color:var(--text-secondary);">${leave.status === 'pending' ? '-' : escapeHtml(leave.approved_by_name || '-')}</small></td>
                         <td>
                             ${leave.status === 'pending' ? `
                                 <div style="display:flex;gap:4px;">
                                     <button class="btn btn-sm btn-success" onclick="openRemarkModal(${leave.id}, 'approved')" title="Approve"><i class="fas fa-check"></i> Approve</button>
                                     <button class="btn btn-sm btn-danger" onclick="openRemarkModal(${leave.id}, 'rejected')" title="Reject"><i class="fas fa-times"></i> Reject</button>
                                 </div>
-                            ` : (leave.remarks ? `<small style="color:var(--text-secondary);" title="${escapeHtml(leave.remarks)}">${escapeHtml(leave.remarks.substring(0, 30))}${leave.remarks.length > 30 ? '...' : ''}</small>` : '-')}
+                            ` : (leave.approval_remarks ? `<small style="color:var(--text-secondary);" title="${escapeHtml(leave.approval_remarks)}">${escapeHtml(leave.approval_remarks.substring(0, 30))}${leave.approval_remarks.length > 30 ? '...' : ''}</small>` : '-')}
                         </td>
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load leave data.</p></div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Error</h3><p>Failed to load leave data.</p></div></td></tr>';
             }
         }
 

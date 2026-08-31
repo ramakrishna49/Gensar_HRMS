@@ -93,9 +93,11 @@ router.get('/pending', verifyToken, async (req, res) => {
         let rows;
         if (req.user.role === 'admin' || req.user.role === 'hr') {
             rows = await q(
-                `SELECT r.*, e.first_name, e.last_name, e.employee_id
+                `SELECT r.*, e.first_name, e.last_name, e.employee_id,
+                    rev.first_name || ' ' || rev.last_name as reviewed_by_name
                 FROM attendance_regularizations r
                 JOIN employees e ON e.id = r.employee_id
+                LEFT JOIN employees rev ON rev.id = r.reviewed_by
                 WHERE r.status = 'pending'
                 ORDER BY r.created_at ASC LIMIT 100`
             );
@@ -106,10 +108,12 @@ router.get('/pending', verifyToken, async (req, res) => {
                     UNION
                     SELECT e.id FROM employees e JOIN subtree s ON e.reporting_manager_id = s.id
                 )
-                SELECT r.*, e.first_name, e.last_name, e.employee_id
+                SELECT r.*, e.first_name, e.last_name, e.employee_id,
+                    rev.first_name || ' ' || rev.last_name as reviewed_by_name
                 FROM attendance_regularizations r
                 JOIN employees e ON e.id = r.employee_id
                 JOIN subtree st ON st.id = r.employee_id
+                LEFT JOIN employees rev ON rev.id = r.reviewed_by
                 WHERE r.status = 'pending'
                 ORDER BY r.created_at ASC LIMIT 100`,
                 [req.user.id]

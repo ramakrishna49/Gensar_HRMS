@@ -375,6 +375,10 @@
             const lastDay = new Date(year, month, 0).getDate();
             const lead = firstDay.getDay();
             const todayStr = getTodayIST();
+            const nowTmp = new Date();
+            const nowM2 = nowTmp.getMonth() + 1;
+            const nowY2 = nowTmp.getFullYear();
+            const isFutureMonthCal = year > nowY2 || (year === nowY2 && month > nowM2);
             const padStart = new Date(year, month - 1, -(lead) + 1);
 
             let html = '<div class="calendar-grid">';
@@ -393,9 +397,15 @@
                 const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
                 const rec = byDate[dateStr];
                 const isToday = dateStr === todayStr;
-                const isFuture = date > new Date();
+                const isFuture = isFutureMonthCal || date > new Date();
 
                 let cls = '', tag = '', tagColor = '', checkIn = '', checkOut = '', extra = '';
+                // Future month: no counting, just grey cells
+                if (isFutureMonthCal) {
+                    cls = 'future';
+                    html += '<div class="cal-cell ' + cls + (isToday ? ' today' : '') + '"><div class="cal-day">' + d + '</div></div>';
+                    continue;
+                }
                 // A declared holiday always wins over a stale auto-absent row.
                 if (rec && !(rec.status === 'absent' && holidayDates[dateStr])) {
                     const status = rec.status;

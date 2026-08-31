@@ -113,6 +113,7 @@
                     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
                         <select id="filterMonth" class="form-control" style="width:120px;" onchange="loadMatrix()"></select>
                         <select id="filterYear" class="form-control" style="width:110px;" onchange="loadMatrix()"></select>
+                        <select id="filterDesignation" class="form-control" style="width:170px;" onchange="renderMatrix(matrixData)"><option value="">All Designations</option></select>
                         <button class="btn btn-success" onclick="openMarkPresentModal()"><i class="fas fa-user-check"></i> Mark Present</button>
                         <button class="btn btn-danger" onclick="openMarkAbsentModal()"><i class="fas fa-user-times"></i> Mark Absent</button>
                     </div>
@@ -267,10 +268,25 @@
                 if (y === now.getFullYear()) o.selected = true;
                 ySel.appendChild(o);
             }
+            loadDesignationFilter();
             loadMatrix();
             loadRecentLogs();
             loadLateWarning();
         });
+
+        async function loadDesignationFilter() {
+            try {
+                const data = await apiCall('/designations');
+                const list = (data && data.success && data.designations) ? data.designations : (data && data.designations) ? data.designations : [];
+                const sel = document.getElementById('filterDesignation');
+                list.forEach(d => {
+                    const o = document.createElement('option');
+                    o.value = d.name;
+                    o.textContent = d.name;
+                    sel.appendChild(o);
+                });
+            } catch (e) { /* ignore */ }
+        }
 
         async function loadMatrix() {
             const month = document.getElementById('filterMonth').value;
@@ -337,10 +353,23 @@
             html += '<th style="font-size:0.65rem;">P* / L / HD / A / Lv</th><th style="font-size:0.65rem;">Total Days</th></tr></thead><tbody>';
 
             let grandPresent = 0, grandLate = 0, grandHalf = 0, grandAbsent = 0, grandWeekoff = 0, grandLeave = 0, grandHoliday = 0;
-
-            employees.forEach(emp => {
+            // Filter by designation if selected
+            const selDes = document.getElementById('filterDesignation') ? document.getElementById('filterDesignation').value : '';
+            let filteredEmployees = selDes ? employees.filter(e => (e.designation_name || '') === selDes) : employees.slice();
+            // Group by designation for ordered display (like admin expects: designation header then members)
+            const grouped = {};
+            filteredEmployees.forEach(emp => { const k = emp.designation_name || 'Unassigned'; (grouped[k] = grouped[k] || []).push(emp); });
+            const sortedGroups = Object.keys(grouped).sort();
+            // If no filter, render grouped; if filter, just one group
+            const renderOrder = selDes ? filteredEmployees.map(e => ({ isHeader: false, emp: e })) : (() => { const arr=[]; sortedGroups.forEach(g=>{ arr.push({isHeader:true, label:g}); grouped[g].forEach(emp=>arr.push({isHeader:false, emp})); }); return arr; })();
+            for (const item of renderOrder) {
+                if (item.isHeader) {
+                    html += '<tr><td class="emp-name" colspan="' + (days + 3) + '" style="background:var(--primary-50);font-weight:700;text-align:left;color:var(--primary);"><i class="fas fa-id-badge" style="margin-right:6px;"></i>' + escapeHtml(item.label) + ' <span style="font-weight:400;color:var(--text-secondary);">(' + grouped[item.label].length + ')</span></td></tr>';
+                    continue;
+                }
+                const emp = item.emp;
                 html += '<tr>';
-                html += '<td class="emp-name">' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '</td>';
+                html += '<td class="emp-name">' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '<br><span style="font-size:0.62rem;color:var(--text-secondary);">' + escapeHtml(emp.employee_id || '') + ' · ' + escapeHtml(emp.designation_name || '-') + '</span></td>';
                 let p = 0, l = 0, h = 0, a = 0, w = 0, u = 0, lv = 0, hv = 0;
                 for (let d = 1; d <= days; d++) {
                     const cell = matrix[emp.id] && matrix[emp.id][d] ? matrix[emp.id][d] : { status: 'absent', check_in: null, check_out: null };
@@ -369,7 +398,7 @@
                 html += '<td style="font-weight:600;font-size:0.7rem;text-align:center;white-space:nowrap;">' + (p + l) + ' / ' + l + ' / ' + h + ' / ' + a + ' / ' + lv + '</td>';
                 html += '<td style="font-weight:700;font-size:0.75rem;text-align:center;white-space:nowrap;color:var(--primary);">' + formatHalfDays(totalDays) + '</td>';
                 html += '</tr>';
-            });
+            }
 
             html += '</tbody></table>';
             container.innerHTML = html;

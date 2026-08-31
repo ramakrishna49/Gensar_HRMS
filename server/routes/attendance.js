@@ -467,10 +467,13 @@ router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
         const lastDay = new Date(year, month, 0).getDate();
 
         const employees = await query(
-            `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.department_id, d.name as department_name
+            `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.department_id, d.name as department_name,
+                    des.name as designation_name, e.designation_id
              FROM employees e
              LEFT JOIN departments d ON e.department_id = d.id
-             WHERE e.status = $1 AND e.role != 'admin' ORDER BY e.first_name`,
+             LEFT JOIN designations des ON e.designation_id = des.id
+             WHERE e.status = $1 AND e.role != 'admin'
+             ORDER BY des.name NULLS LAST, e.first_name`,
             ['active']
         );
 

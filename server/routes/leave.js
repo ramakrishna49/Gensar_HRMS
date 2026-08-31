@@ -108,7 +108,8 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
             return res.status(400).json({ success: false, message: 'You already have a WFH request that overlaps with these dates' });
         }
 
-        // Check leave balance (skip when the leave type has no annual limit).
+        // Check leave balance: 1 paid day per calendar month per leave type (yearly quota = days_per_year).
+        // Extra days in same month are LOP and not blocked.
         const ltRes = await query(
             'SELECT days_per_year FROM leave_types WHERE id = $1 AND is_active = 1',
             [leave_type_id]
@@ -116,15 +117,26 @@ router.post('/apply', verifyToken, validateLeave, async (req, res) => {
         if (ltRes.rows.length > 0 && ltRes.rows[0].days_per_year) {
             const year = new Date(start_date).getFullYear();
             const usedRes = await query(
-                `SELECT COALESCE(SUM(total_days), 0) as used FROM leave_applications
+                `SELECT COUNT(DISTINCT to_char(start_date, 'YYYY-MM')) as used_months FROM leave_applications
                 WHERE employee_id = $1 AND leave_type_id = $2
                 AND to_char(start_date, 'YYYY') = $3
                 AND status = 'approved'`,
                 [req.user.id, leave_type_id, String(year)]
             );
-            const used = parseFloat(usedRes.rows[0].used) || 0;
-            if (used + totalDays > ltRes.rows[0].days_per_year) {
-                const remaining = Math.max(0, ltRes.rows[0].days_per_year - used);
+            const usedMonths = parseInt(usedRes.rows[0].used_months) || 0;
+            const newMonthKey = start_date.substring(0, 7); // YYYY-MM
+            const sameMonthRes = await query(
+                `SELECT 1 FROM leave_applications
+                WHERE employee_id = $1 AND leave_type_id = $2
+                AND to_char(start_date, 'YYYY-MM') = $3
+                AND to_char(start_date, 'YYYY') = $4
+                AND status = 'approved' LIMIT 1`,
+                [req.user.id, leave_type_id, newMonthKey, String(year)]
+            );
+            const alreadyUsedThisMonth = sameMonthRes.rows.length > 0;
+            // Only block if this is a NEW paid month and quota exhausted (extra same-month leaves are LOP and allowed).
+            if (!alreadyUsedThisMonth && usedMonths >= ltRes.rows[0].days_per_year) {
+                const remaining = 0;
                 return res.status(400).json({
                     success: false,
                     message: `Insufficient leave balance. You have ${remaining} day(s) left for this leave type this year.`
@@ -182,11 +194,13 @@ router.get('/all', verifyToken, isAdmin, async (req, res) => {
         const { status } = req.query;
         let sqlQuery = `SELECT la.*, lt.name as leave_type_name, 
             e.first_name || ' ' || e.last_name as employee_name,
-            e.employee_id as emp_id, d.name as department_name
+            e.employee_id as emp_id, d.name as department_name,
+            ap.first_name || ' ' || ap.last_name as approved_by_name
             FROM leave_applications la
             LEFT JOIN leave_types lt ON la.leave_type_id = lt.id
             JOIN employees e ON la.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN employees ap ON la.approved_by = ap.id
             WHERE 1=1`;
         const params = [];
         let idx = 1;
@@ -356,7 +370,7 @@ router.get('/balance', verifyToken, async (req, res) => {
         
         const result = await query(
             `SELECT lt.id, lt.name, lt.days_per_year, lt.gender_eligibility,
-            COALESCE(SUM(CASE WHEN la.status = 'approved' THEN la.total_days ELSE 0 END), 0) as used_days,
+            COALESCE(COUNT(DISTINCT CASE WHEN la.status = 'approved' THEN to_char(la.start_date, 'YYYY-MM') END), 0) as used_days,
             COALESCE(SUM(CASE WHEN la.status = 'pending' THEN la.total_days ELSE 0 END), 0) as pending_days
             FROM leave_types lt
             LEFT JOIN leave_applications la ON lt.id = la.leave_type_id 
