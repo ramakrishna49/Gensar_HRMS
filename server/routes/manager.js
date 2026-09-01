@@ -56,7 +56,7 @@ router.get('/today', verifyToken, isManager, async (req, res) => {
         if (userRole === 'hr' || userRole === 'manager') {
             // HR/Manager: ALL active employees (except admin)
             rows = await query(
-                `SELECT e.id, e.employee_id, e.first_name, e.last_name,
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name, des.name as designation_name,
                     a.check_in::text AS check_in,
                     a.check_out::text AS check_out,
                     EXISTS (
@@ -71,14 +71,15 @@ router.get('/today', verifyToken, isManager, async (req, res) => {
                     ) AS on_wfh
                 FROM employees e
                 LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $1::date
+                LEFT JOIN designations des ON e.designation_id = des.id
                 WHERE e.status = 'active' AND e.role != 'admin'
-                ORDER BY e.first_name`,
+                ORDER BY des.name NULLS LAST, e.first_name`,
                 [today]
             );
         } else {
             // Team Lead: direct reports only
             rows = await query(
-                `SELECT e.id, e.employee_id, e.first_name, e.last_name,
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name, des.name as designation_name,
                     a.check_in::text AS check_in,
                     a.check_out::text AS check_out,
                     EXISTS (
@@ -93,8 +94,9 @@ router.get('/today', verifyToken, isManager, async (req, res) => {
                     ) AS on_wfh
                 FROM employees e
                 LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $2::date
+                LEFT JOIN designations des ON e.designation_id = des.id
                 WHERE e.reporting_manager_id = $1 AND e.status = 'active'
-                ORDER BY e.first_name`,
+                ORDER BY des.name NULLS LAST, e.first_name`,
                 [req.user.id, today]
             );
         }
@@ -110,6 +112,7 @@ router.get('/today', verifyToken, isManager, async (req, res) => {
                 employee_id: r.employee_id,
                 first_name: r.first_name,
                 last_name: r.last_name,
+                designation_name: r.designation_name || null,
                 check_in: r.check_in ? String(r.check_in).slice(0, 5) : null,
                 check_out: r.check_out ? String(r.check_out).slice(0, 5) : null,
                 status
@@ -400,12 +403,20 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
         if (userRole === 'hr' || userRole === 'manager') {
             // HR/Manager: ALL active employees (except admin)
             teamRes = await query(
-                `SELECT e.id, e.employee_id, e.first_name, e.last_name FROM employees e WHERE e.status = 'active' AND e.role != 'admin' ORDER BY e.first_name`
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name, des.name as designation_name
+                 FROM employees e
+                 LEFT JOIN designations des ON e.designation_id = des.id
+                 WHERE e.status = 'active' AND e.role != 'admin'
+                 ORDER BY des.name NULLS LAST, e.first_name`
             );
         } else {
             // Team Lead: direct reports only
             teamRes = await query(
-                `SELECT e.id, e.employee_id, e.first_name, e.last_name FROM employees e WHERE e.reporting_manager_id = $1 AND e.status = 'active' ORDER BY e.first_name`,
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name, des.name as designation_name
+                 FROM employees e
+                 LEFT JOIN designations des ON e.designation_id = des.id
+                 WHERE e.reporting_manager_id = $1 AND e.status = 'active'
+                 ORDER BY des.name NULLS LAST, e.first_name`,
                 [req.user.id]
             );
         }

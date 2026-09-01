@@ -152,7 +152,8 @@ router.get('/directory', verifyToken, async (req, res) => {
         if (!me) {
             rows = [];
             scope = 'team';
-        } else if (me.role === 'admin') {
+        } else if (me.role === 'admin' || me.role === 'hr' || me.role === 'manager') {
+            // Admin/HR/Manager see ALL active employees (excluding self)
             const result = await query(
                 `${DIRECTORY_COLUMNS}
                 WHERE e.status = 'active' AND e.id <> $1
@@ -161,7 +162,7 @@ router.get('/directory', verifyToken, async (req, res) => {
             );
             rows = result.rows;
             scope = 'company';
-        } else if (me.role === 'manager' || me.role === 'team_lead') {
+        } else if (me.role === 'team_lead') {
             // Direct reports (own card hidden).
             const result = await query(
                 `${DIRECTORY_COLUMNS}
