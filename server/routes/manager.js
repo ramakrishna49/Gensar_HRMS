@@ -468,26 +468,28 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
         const year = parseInt(req.query.year, 10);
         if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
 
+        const lastDay = new Date(year, month, 0).getDate();
+        const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
         const userRole = req.user.role;
         let teamRes;
         if (userRole === 'hr' || userRole === 'manager') {
-            // HR/Manager: ALL active employees (except admin)
             teamRes = await query(
                 `SELECT e.id, e.employee_id, e.first_name, e.last_name, des.name as designation_name
                  FROM employees e
                  LEFT JOIN designations des ON e.designation_id = des.id
-                 WHERE e.status = 'active' AND e.role != 'admin'
-                 ORDER BY des.name NULLS LAST, e.first_name`
+                 WHERE e.status = 'active' AND e.role != 'admin' AND e.joining_date <= $1
+                 ORDER BY des.name NULLS LAST, e.first_name`,
+                [monthEnd]
             );
         } else {
-            // Team Lead: direct reports only
             teamRes = await query(
                 `SELECT e.id, e.employee_id, e.first_name, e.last_name, des.name as designation_name
                  FROM employees e
                  LEFT JOIN designations des ON e.designation_id = des.id
-                 WHERE e.reporting_manager_id = $1 AND e.status = 'active'
+                 WHERE e.reporting_manager_id = $1 AND e.status = 'active' AND e.joining_date <= $2
                  ORDER BY des.name NULLS LAST, e.first_name`,
-                [req.user.id]
+                [req.user.id, monthEnd]
             );
         }
         const teamIds = teamRes.rows.map(r => r.id);
