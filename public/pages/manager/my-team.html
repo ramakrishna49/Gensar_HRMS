@@ -377,30 +377,48 @@
         }
 
         async function loadTickets() {
-            const data = await apiCall('/manager/tickets');
+            const [data, histData] = await Promise.all([apiCall('/manager/tickets'), apiCall('/manager/tickets/history')]);
             const container = document.getElementById('tabTickets');
             if (data && data.success) {
                 const tickets = data.tickets || [];
                 teamTickets = tickets;
                 openTicketCount = tickets.length;
                 renderCounts();
+                let html = '';
                 if (tickets.length === 0) {
-                    showEmptyState(container, 'fa-ticket-alt', 'No Open Queries', 'No queries from your team right now');
-                    return;
+                    html += '<div style="text-align:center;padding:20px;color:var(--text-secondary);"><i class="fas fa-ticket-alt" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>No open queries</div>';
+                } else {
+                    html += '<div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">Open (' + tickets.length + ')</div>';
+                    html += tickets.map(t =>
+                        '<div class="request-card">' +
+                            '<div class="req-top"><div><div class="req-emp">' + escapeHtml(t.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(t.emp_id) + '</span></div>' +
+                            '<div class="req-sub"><strong>' + escapeHtml(t.subject) + '</strong></div>' +
+                            '<div class="req-meta"><span class="badge badge-' + (t.priority === 'high' ? 'danger' : t.priority === 'low' ? 'secondary' : 'warning') + '" style="font-size:0.68rem;">' + escapeHtml(t.priority) + '</span> · ' + escapeHtml(t.category || 'Query') + '</div>' +
+                            (t.description ? '<div class="req-sub">' + escapeHtml(t.description) + '</div>' : '') +
+                            '</div>' +
+                            '<span class="badge badge-warning">' + escapeHtml(t.status) + '</span></div>' +
+                            '<div class="req-actions">' +
+                                '<button class="btn btn-sm btn-primary" onclick="openTicket(' + t.id + ')"><i class="fas fa-reply"></i> Respond</button>' +
+                            '</div>' +
+                        '</div>'
+                    ).join('');
                 }
-                container.innerHTML = tickets.map(t =>
-                    '<div class="request-card">' +
-                        '<div class="req-top"><div><div class="req-emp">' + escapeHtml(t.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(t.emp_id) + '</span></div>' +
-                        '<div class="req-sub"><strong>' + escapeHtml(t.subject) + '</strong></div>' +
-                        '<div class="req-meta"><span class="badge badge-' + (t.priority === 'high' ? 'danger' : t.priority === 'low' ? 'secondary' : 'warning') + '" style="font-size:0.68rem;">' + escapeHtml(t.priority) + '</span> · ' + escapeHtml(t.category || 'Query') + '</div>' +
-                        (t.description ? '<div class="req-sub">' + escapeHtml(t.description) + '</div>' : '') +
-                        '</div>' +
-                        '<span class="badge badge-warning">' + escapeHtml(t.status) + '</span></div>' +
-                        '<div class="req-actions">' +
-                            '<button class="btn btn-sm btn-primary" onclick="openTicket(' + t.id + ')"><i class="fas fa-reply"></i> Respond</button>' +
-                        '</div>' +
-                    '</div>'
-                ).join('');
+                const hist = (histData && histData.success && histData.tickets) ? histData.tickets.filter(x => !['open', 'in_progress'].includes(x.status)) : [];
+                if (hist.length > 0) {
+                    html += '<div style="border-top:1px solid var(--border-light);margin:18px 0;"></div>';
+                    html += '<div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">History (' + hist.length + ' past)</div>';
+                    html += hist.map(t => {
+                        const badge = t.status === 'resolved' ? 'success' : t.status === 'closed' ? 'secondary' : 'warning';
+                        return '<div class="request-card" style="opacity:0.95;">' +
+                            '<div class="req-top"><div><div class="req-emp">' + escapeHtml(t.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(t.emp_id) + '</span></div>' +
+                            '<div class="req-sub"><strong>' + escapeHtml(t.subject) + '</strong></div>' +
+                            '<div class="req-meta">' + escapeHtml(t.category || 'Query') + (t.responded_by_name ? ' · Responded by: ' + escapeHtml(t.responded_by_name) : '') + '</div>' +
+                            (t.admin_response ? '<div class="req-sub"><strong>Response:</strong> ' + escapeHtml(t.admin_response) + '</div>' : '') +
+                            '</div>' +
+                            '<span class="badge badge-' + badge + '">' + escapeHtml(t.status) + '</span></div></div>';
+                    }).join('');
+                }
+                container.innerHTML = html || '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No queries</div>';
             } else {
                 showEmptyState(container, 'fa-exclamation-triangle', 'Error', 'Failed to load queries');
             }

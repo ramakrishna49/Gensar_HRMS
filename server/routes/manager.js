@@ -389,6 +389,29 @@ router.get('/regularizations/history', verifyToken, isManager, async (req, res) 
     }
 });
 
+// @route   GET /api/manager/tickets/history
+// @desc    All tickets (any status) — multi-approver
+// @access  Private (Manager+)
+router.get('/tickets/history', verifyToken, isManager, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT st.*,
+            e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id,
+            e2.first_name || ' ' || e2.last_name as responded_by_name
+            FROM support_tickets st
+            JOIN employees e ON st.employee_id = e.id
+            LEFT JOIN employees e2 ON st.responded_by = e2.id
+            WHERE st.reporting_manager_id = $1 OR st.manager_id = $1 OR st.hr_id = $1
+            ORDER BY st.created_at DESC LIMIT 100`,
+            [req.user.id]
+        );
+        res.json({ success: true, tickets: result.rows });
+    } catch (error) {
+        console.error('Manager tickets history error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // @route   GET /api/manager/attendance
 // @desc    Team attendance for a month — TL: direct reports, HR/Manager: all employees
 // @access  Private (Manager+)
