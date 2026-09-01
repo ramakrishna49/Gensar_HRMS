@@ -351,8 +351,7 @@ INSERT INTO companies (name, address, phone, email, website) VALUES
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO leave_types (name, days_per_year, description, gender_eligibility) VALUES
-('Casual Leave', 0, 'For personal work or casual reasons (always available, no balance)', 'all'),
-('Sick Leave', 12, 'For medical reasons or health issues', 'all'),
+('Sick or Casual', 12, 'For medical or casual reasons (1 paid day per month, rest LOP)', 'all'),
 ('Maternity Leave', 0, 'Special leave for female employees during pregnancy (no balance deduction)', 'female'),
 ('Paternity Leave', 0, 'For male employees after childbirth', 'male'),
 ('Unpaid Leave', 0, 'Leave without pay', 'all')
@@ -438,9 +437,9 @@ UPDATE leave_types SET days_per_year = 0 WHERE name = 'Paternity Leave';
 -- Earned Leave removed from new requests (soft-disable) - history is preserved.
 UPDATE leave_types SET is_active = 0 WHERE name = 'Earned Leave';
 
--- Casual Leave: 0 days balance (always available, no balance tracking). Sick Leave: 12 days.
-UPDATE leave_types SET days_per_year = 0, is_active = 1 WHERE name = 'Casual Leave';
-UPDATE leave_types SET days_per_year = 12, is_active = 1 WHERE name = 'Sick Leave';
+-- Sick or Casual: 12 days/year, 1 paid per month, rest LOP.
+UPDATE leave_types SET days_per_year = 12, is_active = 1 WHERE name = 'Sick or Casual';
+UPDATE leave_types SET is_active = 0 WHERE name = 'Sick Leave';
 UPDATE leave_types SET is_active = 0
 WHERE name IN ('Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Earned Leave');
 

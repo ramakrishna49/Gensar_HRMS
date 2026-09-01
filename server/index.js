@@ -181,8 +181,8 @@ if (require.main === module) {
 // Auto-migration: runs on every server start (Vercel or local). Idempotent.
 async function runLeaveTypeMigration() {
     try {
-        await query(`UPDATE leave_types SET is_active = 1, days_per_year = 0 WHERE name = 'Casual Leave'`);
-        await query(`UPDATE leave_types SET is_active = 1, days_per_year = 12 WHERE name = 'Sick Leave'`);
+        await query(`UPDATE leave_types SET is_active = 1, days_per_year = 12 WHERE name = 'Sick or Casual'`);
+        await query(`UPDATE leave_types SET is_active = 0 WHERE name IN ('Sick Leave', 'Casual Leave')`);
         await query(`UPDATE leave_types SET is_active = 0 WHERE name IN ('Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Earned Leave')`);
         await query(`UPDATE leave_types SET days_per_year = 0 WHERE name IN ('Maternity Leave', 'Paternity Leave')`);
     } catch (e) { /* table may not exist yet */ }
