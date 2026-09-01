@@ -365,7 +365,12 @@
             for (const item of renderOrder) {
                 if (item.isHeader) {
                     const memberNames = grouped[item.label].map(e => e.first_name + ' ' + (e.last_name || '')).join(', ');
-                    html += '<tr><td class="emp-name" colspan="' + (days + 3) + '" data-members="' + escapeHtml(memberNames) + '" style="position:sticky;left:0;z-index:1;background:var(--primary-50);font-weight:700;text-align:left;color:var(--primary);cursor:default;"><i class="fas fa-id-badge" style="margin-right:6px;"></i>' + escapeHtml(item.label) + ' <span style="font-weight:400;color:var(--text-secondary);">(' + grouped[item.label].length + ')</span></td></tr>';
+                    const hdrStyle = 'background:var(--primary-50);font-weight:700;text-align:left;color:var(--primary);cursor:default;';
+                    html += '<tr><td class="emp-name" data-members="' + escapeHtml(memberNames) + '" style="position:sticky;left:0;z-index:1;' + hdrStyle + '"><i class="fas fa-id-badge" style="margin-right:6px;"></i>' + escapeHtml(item.label) + ' <span style="font-weight:400;color:var(--text-secondary);">(' + grouped[item.label].length + ')</span></td>';
+                    for (let i = 0; i < days + 2; i++) {
+                        html += '<td style="' + hdrStyle + '"></td>';
+                    }
+                    html += '</tr>';
                     continue;
                 }
                 const emp = item.emp;
