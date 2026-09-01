@@ -204,14 +204,4 @@ async function runMultiApproverMigration() {
 }
 runMultiApproverMigration();
 
-// Auto-migration: ensure joining_date column exists on employees table.
-async function runJoiningDateMigration() {
-    try {
-        await query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS joining_date DATE`);
-        await query(`UPDATE employees SET joining_date = created_at::date WHERE joining_date IS NULL`);
-        console.log('[Migration] joining_date column ensured.');
-    } catch (e) { /* table may not exist yet */ }
-}
-runJoiningDateMigration();
-
 module.exports = app;
