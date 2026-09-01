@@ -452,6 +452,14 @@ WHERE NOT EXISTS (SELECT 1 FROM holidays WHERE name = 'May Day' AND date = '2026
 ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_role_check;
 ALTER TABLE employees ADD CONSTRAINT employees_role_check CHECK (role IN ('admin', 'hr', 'manager', 'team_lead', 'employee'));
 
+-- Multi-approver: manager_id and hr_id on request tables (idempotent).
+ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE wfh_requests ADD COLUMN IF NOT EXISTS manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE wfh_requests ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS manager_id INT REFERENCES employees(id) ON DELETE SET NULL;
+ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL;
+
 -- ============================================
 -- SALARY STRUCTURE ON EMPLOYEES
 -- Mirrors the payroll columns so payslips can be auto-filled from the

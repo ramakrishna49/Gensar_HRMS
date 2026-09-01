@@ -190,4 +190,18 @@ async function runLeaveTypeMigration() {
 }
 runLeaveTypeMigration();
 
+// Auto-migration: add multi-approver columns to request tables.
+async function runMultiApproverMigration() {
+    try {
+        await query(`ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS manager_id INT REFERENCES employees(id) ON DELETE SET NULL`);
+        await query(`ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL`);
+        await query(`ALTER TABLE wfh_requests ADD COLUMN IF NOT EXISTS manager_id INT REFERENCES employees(id) ON DELETE SET NULL`);
+        await query(`ALTER TABLE wfh_requests ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL`);
+        await query(`ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS manager_id INT REFERENCES employees(id) ON DELETE SET NULL`);
+        await query(`ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL`);
+        console.log('[Migration] Multi-approver columns ensured.');
+    } catch (e) { /* table may not exist yet */ }
+}
+runMultiApproverMigration();
+
 module.exports = app;

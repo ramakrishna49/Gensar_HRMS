@@ -53,6 +53,15 @@ router.post('/apply', verifyToken, async (req, res) => {
         }
         const reporting_manager_id = needsManager ? emp.reporting_manager_id : null;
 
+        // Get manager and HR for multi-approver routing
+        const approverRes = await query(
+            `SELECT 
+                (SELECT id FROM employees WHERE role = 'manager' AND status = 'active' LIMIT 1) as manager_id,
+                (SELECT id FROM employees WHERE role = 'hr' AND status = 'active' LIMIT 1) as hr_id`
+        );
+        const managerId = approverRes.rows[0]?.manager_id || null;
+        const hrId = approverRes.rows[0]?.hr_id || null;
+
         // Overlap check: no approved/pending leave or WFH on same dates
         const overlapLeave = await query(
             `SELECT id FROM leave_applications WHERE employee_id = $1 AND status IN ('pending','approved') AND NOT (end_date < $2::date OR start_date > $3::date) LIMIT 1`,
@@ -70,9 +79,9 @@ router.post('/apply', verifyToken, async (req, res) => {
         const totalDays = calcBusinessDays(start_date, end_date, holidays);
 
         const result = await query(
-            `INSERT INTO wfh_requests (employee_id, reporting_manager_id, start_date, end_date, total_days, reason)
-            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [req.user.id, reporting_manager_id, start_date, end_date, totalDays, reason]
+            `INSERT INTO wfh_requests (employee_id, reporting_manager_id, manager_id, hr_id, start_date, end_date, total_days, reason)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [req.user.id, reporting_manager_id, managerId, hrId, start_date, end_date, totalDays, reason]
         );
 
         if (reporting_manager_id) {
@@ -83,6 +92,38 @@ router.post('/apply', verifyToken, async (req, res) => {
             const name = (applicant.rows[0] && applicant.rows[0].name) || req.user.employee_id;
             try {
                 await sendToUser(reporting_manager_id, {
+                    title: 'New WFH Request',
+                    body: `${name} requested work from home (${totalDays} day${totalDays > 1 ? 's' : ''})`,
+                    url: '/manager/my-team'
+                });
+            } catch (e) { console.error('Push notify error:', e.message); }
+        }
+
+        // Notify manager
+        if (managerId && managerId !== reporting_manager_id) {
+            const applicant = await query(
+                "SELECT first_name || ' ' || last_name as name FROM employees WHERE id = $1",
+                [req.user.id]
+            ).catch(() => ({ rows: [] }));
+            const name = (applicant.rows[0] && applicant.rows[0].name) || req.user.employee_id;
+            try {
+                await sendToUser(managerId, {
+                    title: 'New WFH Request',
+                    body: `${name} requested work from home (${totalDays} day${totalDays > 1 ? 's' : ''})`,
+                    url: '/manager/my-team'
+                });
+            } catch (e) { console.error('Push notify error:', e.message); }
+        }
+
+        // Notify HR
+        if (hrId && hrId !== reporting_manager_id && hrId !== managerId) {
+            const applicant = await query(
+                "SELECT first_name || ' ' || last_name as name FROM employees WHERE id = $1",
+                [req.user.id]
+            ).catch(() => ({ rows: [] }));
+            const name = (applicant.rows[0] && applicant.rows[0].name) || req.user.employee_id;
+            try {
+                await sendToUser(hrId, {
                     title: 'New WFH Request',
                     body: `${name} requested work from home (${totalDays} day${totalDays > 1 ? 's' : ''})`,
                     url: '/manager/my-team'

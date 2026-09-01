@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const { query } = require('../config/database');
-const { verifyToken, isAdmin } = require('../middleware/auth');
+const { verifyToken, isAdmin, isManager } = require('../middleware/auth');
 const { istDateString, istTimeString, istMonth, istYear } = require('../utils/date');
 const { buildReportWorkbook, sendWorkbook } = require('../utils/excel');
 const { logAudit } = require('../utils/audit');
@@ -287,7 +287,7 @@ router.post('/break-end', verifyToken, async (req, res) => {
     }
 });
 
-router.post('/mark-present', verifyToken, isAdmin, async (req, res) => {
+router.post('/mark-present', verifyToken, isManager, async (req, res) => {
     try {
         const { employee_id, date } = req.body;
         if (!employee_id || !date) {
@@ -326,7 +326,7 @@ router.post('/mark-present', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
-router.post('/mark-absent', verifyToken, isAdmin, async (req, res) => {
+router.post('/mark-absent', verifyToken, isManager, async (req, res) => {
     try {
         const { employee_id, date, remarks, status } = req.body;
         if (!employee_id || !date) {
@@ -460,7 +460,7 @@ router.get('/late-count', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
-router.get('/monthly', verifyToken, isAdmin, async (req, res) => {
+router.get('/monthly', verifyToken, isManager, async (req, res) => {
     try {
         const month = parseInt(req.query.month) || istMonth();
         const year = parseInt(req.query.year) || istYear();

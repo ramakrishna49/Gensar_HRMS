@@ -6,20 +6,37 @@ const { istDateString } = require('../utils/date');
 const { sendToUser } = require('../services/push');
 
 // @route   GET /api/manager/team
-// @desc    Get current user's direct reports
+// @desc    Get current user's direct reports (TL) or all employees (HR/Manager)
 // @access  Private (Manager+)
 router.get('/team', verifyToken, isManager, async (req, res) => {
     try {
-        const result = await query(
-            `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.role, e.status,
-            d.name as department_name, des.name as designation_name
-            FROM employees e
-            LEFT JOIN departments d ON e.department_id = d.id
-            LEFT JOIN designations des ON e.designation_id = des.id
-            WHERE e.reporting_manager_id = $1 AND e.status = 'active'
-            ORDER BY e.first_name`,
-            [req.user.id]
-        );
+        let result;
+        const userRole = req.user.role;
+        
+        if (userRole === 'hr' || userRole === 'manager') {
+            // HR/Manager: ALL active employees (except admin)
+            result = await query(
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.role, e.status,
+                d.name as department_name, des.name as designation_name
+                FROM employees e
+                LEFT JOIN departments d ON e.department_id = d.id
+                LEFT JOIN designations des ON e.designation_id = des.id
+                WHERE e.status = 'active' AND e.role != 'admin'
+                ORDER BY e.first_name`
+            );
+        } else {
+            // Team Lead: direct reports only
+            result = await query(
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.role, e.status,
+                d.name as department_name, des.name as designation_name
+                FROM employees e
+                LEFT JOIN departments d ON e.department_id = d.id
+                LEFT JOIN designations des ON e.designation_id = des.id
+                WHERE e.reporting_manager_id = $1 AND e.status = 'active'
+                ORDER BY e.first_name`,
+                [req.user.id]
+            );
+        }
         res.json({ success: true, team: result.rows });
     } catch (error) {
         console.error('Get team error:', error);
@@ -33,27 +50,54 @@ router.get('/team', verifyToken, isManager, async (req, res) => {
 router.get('/today', verifyToken, isManager, async (req, res) => {
     try {
         const today = istDateString();
+        const userRole = req.user.role;
 
-        const rows = await query(
-            `SELECT e.id, e.employee_id, e.first_name, e.last_name,
-                a.check_in::text AS check_in,
-                a.check_out::text AS check_out,
-                EXISTS (
-                    SELECT 1 FROM leave_applications la
-                    WHERE la.employee_id = e.id AND la.status = 'approved'
-                      AND la.start_date <= $2::date AND la.end_date >= $2::date
-                ) AS on_leave,
-                EXISTS (
-                    SELECT 1 FROM wfh_requests w
-                    WHERE w.employee_id = e.id AND w.status = 'approved'
-                      AND w.start_date <= $2::date AND w.end_date >= $2::date
-                ) AS on_wfh
-            FROM employees e
-            LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $2::date
-            WHERE e.reporting_manager_id = $1 AND e.status = 'active'
-            ORDER BY e.first_name`,
-            [req.user.id, today]
-        );
+        let rows;
+        if (userRole === 'hr' || userRole === 'manager') {
+            // HR/Manager: ALL active employees (except admin)
+            rows = await query(
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name,
+                    a.check_in::text AS check_in,
+                    a.check_out::text AS check_out,
+                    EXISTS (
+                        SELECT 1 FROM leave_applications la
+                        WHERE la.employee_id = e.id AND la.status = 'approved'
+                          AND la.start_date <= $1::date AND la.end_date >= $1::date
+                    ) AS on_leave,
+                    EXISTS (
+                        SELECT 1 FROM wfh_requests w
+                        WHERE w.employee_id = e.id AND w.status = 'approved'
+                          AND w.start_date <= $1::date AND w.end_date >= $1::date
+                    ) AS on_wfh
+                FROM employees e
+                LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $1::date
+                WHERE e.status = 'active' AND e.role != 'admin'
+                ORDER BY e.first_name`,
+                [today]
+            );
+        } else {
+            // Team Lead: direct reports only
+            rows = await query(
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name,
+                    a.check_in::text AS check_in,
+                    a.check_out::text AS check_out,
+                    EXISTS (
+                        SELECT 1 FROM leave_applications la
+                        WHERE la.employee_id = e.id AND la.status = 'approved'
+                          AND la.start_date <= $2::date AND la.end_date >= $2::date
+                    ) AS on_leave,
+                    EXISTS (
+                        SELECT 1 FROM wfh_requests w
+                        WHERE w.employee_id = e.id AND w.status = 'approved'
+                          AND w.start_date <= $2::date AND w.end_date >= $2::date
+                    ) AS on_wfh
+                FROM employees e
+                LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $2::date
+                WHERE e.reporting_manager_id = $1 AND e.status = 'active'
+                ORDER BY e.first_name`,
+                [req.user.id, today]
+            );
+        }
 
         const members = rows.rows.map(r => {
             let status;
@@ -80,7 +124,7 @@ router.get('/today', verifyToken, isManager, async (req, res) => {
 });
 
 // @route   GET /api/manager/leaves
-// @desc    Pending leave requests from direct reports
+// @desc    Pending leave requests (multi-approver: TL + Manager + HR)
 // @access  Private (Manager+)
 router.get('/leaves', verifyToken, isManager, async (req, res) => {
     try {
@@ -92,7 +136,7 @@ router.get('/leaves', verifyToken, isManager, async (req, res) => {
             LEFT JOIN leave_types lt ON la.leave_type_id = lt.id
             JOIN employees e ON la.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
-            WHERE la.status = 'pending' AND la.reporting_manager_id = $1
+            WHERE la.status = 'pending' AND (la.reporting_manager_id = $1 OR la.manager_id = $1 OR la.hr_id = $1)
             ORDER BY la.created_at DESC`,
             [req.user.id]
         );
@@ -104,7 +148,7 @@ router.get('/leaves', verifyToken, isManager, async (req, res) => {
 });
 
 // @route   GET /api/manager/wfh
-// @desc    Pending WFH requests from direct reports
+// @desc    Pending WFH requests (multi-approver: TL + Manager + HR)
 // @access  Private (Manager+)
 router.get('/wfh', verifyToken, isManager, async (req, res) => {
     try {
@@ -115,7 +159,7 @@ router.get('/wfh', verifyToken, isManager, async (req, res) => {
             FROM wfh_requests wr
             JOIN employees e ON wr.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
-            WHERE wr.status = 'pending' AND wr.reporting_manager_id = $1
+            WHERE wr.status = 'pending' AND (wr.reporting_manager_id = $1 OR wr.manager_id = $1 OR wr.hr_id = $1)
             ORDER BY wr.created_at DESC`,
             [req.user.id]
         );
@@ -127,7 +171,7 @@ router.get('/wfh', verifyToken, isManager, async (req, res) => {
 });
 
 // @route   GET /api/manager/tickets
-// @desc    Open/in-progress queries from direct reports
+// @desc    Open/in-progress queries (multi-approver: TL + Manager + HR)
 // @access  Private (Manager+)
 router.get('/tickets', verifyToken, isManager, async (req, res) => {
     try {
@@ -136,7 +180,7 @@ router.get('/tickets', verifyToken, isManager, async (req, res) => {
             e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
             FROM support_tickets st
             JOIN employees e ON st.employee_id = e.id
-            WHERE st.status IN ('open', 'in_progress') AND st.reporting_manager_id = $1
+            WHERE st.status IN ('open', 'in_progress') AND (st.reporting_manager_id = $1 OR st.manager_id = $1 OR st.hr_id = $1)
             ORDER BY st.created_at DESC`,
             [req.user.id]
         );
@@ -148,7 +192,7 @@ router.get('/tickets', verifyToken, isManager, async (req, res) => {
 });
 
 // @route   PUT /api/manager/leaves/:id
-// @desc    Approve or reject a leave request from a direct report (final decision)
+// @desc    Approve or reject a leave request (multi-approver: TL + Manager + HR)
 // @access  Private (Manager+)
 router.put('/leaves/:id', verifyToken, isManager, async (req, res) => {
     try {
@@ -158,7 +202,7 @@ router.put('/leaves/:id', verifyToken, isManager, async (req, res) => {
         }
 
         const appRes = await query(
-            `SELECT * FROM leave_applications WHERE id = $1 AND reporting_manager_id = $2 AND status = 'pending'`,
+            `SELECT * FROM leave_applications WHERE id = $1 AND (reporting_manager_id = $2 OR manager_id = $2 OR hr_id = $2) AND status = 'pending'`,
             [req.params.id, req.user.id]
         );
         if (appRes.rows.length === 0) {
@@ -220,7 +264,7 @@ router.put('/leaves/:id', verifyToken, isManager, async (req, res) => {
 });
 
 // @route   PUT /api/manager/wfh/:id
-// @desc    Approve or reject a WFH request from a direct report (final decision)
+// @desc    Approve or reject a WFH request (multi-approver: TL + Manager + HR)
 // @access  Private (Manager+)
 router.put('/wfh/:id', verifyToken, isManager, async (req, res) => {
     try {
@@ -230,7 +274,7 @@ router.put('/wfh/:id', verifyToken, isManager, async (req, res) => {
         }
 
         const appRes = await query(
-            `SELECT * FROM wfh_requests WHERE id = $1 AND reporting_manager_id = $2 AND status = 'pending'`,
+            `SELECT * FROM wfh_requests WHERE id = $1 AND (reporting_manager_id = $2 OR manager_id = $2 OR hr_id = $2) AND status = 'pending'`,
             [req.params.id, req.user.id]
         );
         if (appRes.rows.length === 0) {
@@ -261,7 +305,7 @@ router.put('/wfh/:id', verifyToken, isManager, async (req, res) => {
 });
 
 // @route   GET /api/manager/leaves/history
-// @desc    All leave requests (any status) from direct reports — for TL history view
+// @desc    All leave requests (any status) — multi-approver
 // @access  Private (Manager+)
 router.get('/leaves/history', verifyToken, isManager, async (req, res) => {
     try {
@@ -271,7 +315,7 @@ router.get('/leaves/history', verifyToken, isManager, async (req, res) => {
             FROM leave_applications la
             LEFT JOIN leave_types lt ON la.leave_type_id = lt.id
             JOIN employees e ON la.employee_id = e.id
-            WHERE la.reporting_manager_id = $1
+            WHERE la.reporting_manager_id = $1 OR la.manager_id = $1 OR la.hr_id = $1
             ORDER BY la.created_at DESC LIMIT 100`,
             [req.user.id]
         );
@@ -283,7 +327,7 @@ router.get('/leaves/history', verifyToken, isManager, async (req, res) => {
 });
 
 // @route   GET /api/manager/wfh/history
-// @desc    All WFH requests (any status) from direct reports
+// @desc    All WFH requests (any status) — multi-approver
 // @access  Private (Manager+)
 router.get('/wfh/history', verifyToken, isManager, async (req, res) => {
     try {
@@ -292,7 +336,7 @@ router.get('/wfh/history', verifyToken, isManager, async (req, res) => {
             e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
             FROM wfh_requests wr
             JOIN employees e ON wr.employee_id = e.id
-            WHERE wr.reporting_manager_id = $1
+            WHERE wr.reporting_manager_id = $1 OR wr.manager_id = $1 OR wr.hr_id = $1
             ORDER BY wr.created_at DESC LIMIT 100`,
             [req.user.id]
         );
@@ -343,7 +387,7 @@ router.get('/regularizations/history', verifyToken, isManager, async (req, res) 
 });
 
 // @route   GET /api/manager/attendance
-// @desc    Team attendance for a month (direct reports) — for TL history view
+// @desc    Team attendance for a month — TL: direct reports, HR/Manager: all employees
 // @access  Private (Manager+)
 router.get('/attendance', verifyToken, isManager, async (req, res) => {
     try {
@@ -351,10 +395,20 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
         const year = parseInt(req.query.year, 10);
         if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
 
-        const teamRes = await query(
-            `SELECT e.id, e.employee_id, e.first_name, e.last_name FROM employees e WHERE e.reporting_manager_id = $1 AND e.status = 'active' ORDER BY e.first_name`,
-            [req.user.id]
-        );
+        const userRole = req.user.role;
+        let teamRes;
+        if (userRole === 'hr' || userRole === 'manager') {
+            // HR/Manager: ALL active employees (except admin)
+            teamRes = await query(
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name FROM employees e WHERE e.status = 'active' AND e.role != 'admin' ORDER BY e.first_name`
+            );
+        } else {
+            // Team Lead: direct reports only
+            teamRes = await query(
+                `SELECT e.id, e.employee_id, e.first_name, e.last_name FROM employees e WHERE e.reporting_manager_id = $1 AND e.status = 'active' ORDER BY e.first_name`,
+                [req.user.id]
+            );
+        }
         const teamIds = teamRes.rows.map(r => r.id);
         if (teamIds.length === 0) return res.json({ success: true, team: [], attendance: [], holidays: [] });
 
@@ -384,7 +438,7 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
 });
 
 // @route   PUT /api/manager/tickets/:id
-// @desc    Respond to / resolve a query from a direct report
+// @desc    Respond to / resolve a query (multi-approver: TL + Manager + HR)
 // @access  Private (Manager+)
 router.put('/tickets/:id', verifyToken, isManager, async (req, res) => {
     try {
@@ -394,7 +448,7 @@ router.put('/tickets/:id', verifyToken, isManager, async (req, res) => {
         }
 
         const appRes = await query(
-            `SELECT * FROM support_tickets WHERE id = $1 AND reporting_manager_id = $2 AND status IN ('open', 'in_progress')`,
+            `SELECT * FROM support_tickets WHERE id = $1 AND (reporting_manager_id = $2 OR manager_id = $2 OR hr_id = $2) AND status IN ('open', 'in_progress')`,
             [req.params.id, req.user.id]
         );
         if (appRes.rows.length === 0) {

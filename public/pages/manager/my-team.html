@@ -194,7 +194,7 @@
             const user = getCurrentUser();
             // Admin also uses this page to review team requests
             // (regularizations have no other admin surface).
-            if (!['admin', 'manager', 'team_lead'].includes(user.role)) {
+            if (!['admin', 'manager', 'team_lead', 'hr'].includes(user.role)) {
                 location.href = '/employee/dashboard';
                 return;
             }

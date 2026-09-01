@@ -1,7 +1,7 @@
 ﻿const API_URL = '/api';
 
 function getLoginUrl(user) {
-    if (user && user.role === 'admin') return '/admin/';
+    if (user && ['admin', 'hr', 'manager'].includes(user.role)) return '/admin/';
     return '/';
 }
 
@@ -279,7 +279,7 @@ function checkAuth() {
 function requireAdmin() {
     if (!checkAuth()) return false;
     const user = getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !['admin', 'hr', 'manager'].includes(user.role)) {
         window.location.href = '/employee/dashboard';
         return false;
     }
@@ -337,11 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Show My Team link on every employee page for TL/manager (previously only directory.html did this).
+// Show My Team link on every employee page for TL/manager/HR (previously only directory.html did this).
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const u = getCurrentUser();
-        if (u && (u.role === 'manager' || u.role === 'team_lead')) {
+        if (u && (u.role === 'manager' || u.role === 'team_lead' || u.role === 'hr')) {
             const link = document.getElementById('myTeamLink');
             if (link) link.style.display = 'flex';
         }
