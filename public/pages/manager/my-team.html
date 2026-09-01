@@ -128,12 +128,6 @@
             </div>
 
             <div class="card" style="padding:20px;">
-                <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;"><i class="fas fa-user-friends" style="color:var(--secondary);margin-right:8px;"></i>My Team Members</div>
-                <div id="teamContainer" style="min-height:40px;">
-                    <div class="spinner" style="margin:0 auto;"></div>
-                </div>
-                <div style="border-top:1px solid var(--border-light);margin:18px 0;"></div>
-
                 <div class="tab-bar">
                     <button class="tab-btn active" onclick="switchTab('leaves')">Leave Requests <span class="tab-badge" id="leaveTabBadge" style="display:none;">0</span></button>
                     <button class="tab-btn" onclick="switchTab('wfh')">WFH Requests <span class="tab-badge" id="wfhTabBadge" style="display:none;">0</span></button>
@@ -206,7 +200,6 @@
                 location.href = '/employee/dashboard';
                 return;
             }
-            loadTeam();
             loadToday();
             loadLeaves();
             loadWfh();
@@ -293,25 +286,6 @@
         let openTicketCount = 0;
         let pendingRegCount = 0;
         let teamRegRequests = [];
-
-        async function loadTeam() {
-            const data = await apiCall('/manager/team');
-            const container = document.getElementById('teamContainer');
-            if (data && data.success) {
-                const team = data.team || [];
-                document.getElementById('teamCount').textContent = team.length;
-                if (team.length === 0) {
-                    container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:0.9rem;">No team members report to you yet.</div>';
-                    return;
-                }
-                container.innerHTML = team.map(m =>
-                    '<span class="team-chip"><span style="width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;flex-shrink:0;">' + escapeHtml(getInitials(m.first_name, m.last_name)) + '</span>' +
-                    '<span>' + escapeHtml(m.first_name + ' ' + (m.last_name || '')) + ' <span style="color:var(--text-secondary);font-size:0.75rem;">' + escapeHtml(m.employee_id) + ' · ' + escapeHtml(m.designation_name || m.role || '-') + '</span></span></span>'
-                ).join('');
-            } else {
-                container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--danger);font-size:0.9rem;">Failed to load team</div>';
-            }
-        }
 
         async function loadLeaves() {
             const [data, histData] = await Promise.all([apiCall('/manager/leaves'), apiCall('/manager/leaves/history')]);
