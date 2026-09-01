@@ -479,7 +479,9 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
                  FROM employees e
                  LEFT JOIN designations des ON e.designation_id = des.id
                  WHERE e.status = 'active' AND e.role != 'admin'
-                 ORDER BY des.name NULLS LAST, e.first_name`
+                   AND COALESCE(e.joining_date, e.created_at)::date <= $1
+                 ORDER BY des.name NULLS LAST, e.first_name`,
+                [monthEnd]
             );
         } else {
             teamRes = await query(
@@ -487,8 +489,9 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
                  FROM employees e
                  LEFT JOIN designations des ON e.designation_id = des.id
                  WHERE e.reporting_manager_id = $1 AND e.status = 'active'
+                   AND COALESCE(e.joining_date, e.created_at)::date <= $2
                  ORDER BY des.name NULLS LAST, e.first_name`,
-                [req.user.id]
+                [req.user.id, monthEnd]
             );
         }
         const teamIds = teamRes.rows.map(r => r.id);
