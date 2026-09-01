@@ -312,16 +312,31 @@ router.put('/wfh/:id', verifyToken, isManager, async (req, res) => {
 // @access  Private (Manager+)
 router.get('/leaves/history', verifyToken, isManager, async (req, res) => {
     try {
-        const result = await query(
-            `SELECT la.*, lt.name as leave_type_name,
-            e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
-            FROM leave_applications la
-            LEFT JOIN leave_types lt ON la.leave_type_id = lt.id
-            JOIN employees e ON la.employee_id = e.id
-            WHERE la.reporting_manager_id = $1 OR la.manager_id = $1 OR la.hr_id = $1
-            ORDER BY la.created_at DESC LIMIT 100`,
-            [req.user.id]
-        );
+        const userRole = req.user.role;
+        let result;
+        if (userRole === 'hr' || userRole === 'manager') {
+            // HR/Manager: ALL leave requests (they see all employees)
+            result = await query(
+                `SELECT la.*, lt.name as leave_type_name,
+                e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
+                FROM leave_applications la
+                LEFT JOIN leave_types lt ON la.leave_type_id = lt.id
+                JOIN employees e ON la.employee_id = e.id
+                ORDER BY la.created_at DESC LIMIT 100`
+            );
+        } else {
+            // Team Lead: requests where they are approver
+            result = await query(
+                `SELECT la.*, lt.name as leave_type_name,
+                e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
+                FROM leave_applications la
+                LEFT JOIN leave_types lt ON la.leave_type_id = lt.id
+                JOIN employees e ON la.employee_id = e.id
+                WHERE la.reporting_manager_id = $1 OR la.manager_id = $1 OR la.hr_id = $1
+                ORDER BY la.created_at DESC LIMIT 100`,
+                [req.user.id]
+            );
+        }
         res.json({ success: true, leaves: result.rows });
     } catch (error) {
         console.error('Manager leaves history error:', error);
@@ -334,15 +349,27 @@ router.get('/leaves/history', verifyToken, isManager, async (req, res) => {
 // @access  Private (Manager+)
 router.get('/wfh/history', verifyToken, isManager, async (req, res) => {
     try {
-        const result = await query(
-            `SELECT wr.*,
-            e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
-            FROM wfh_requests wr
-            JOIN employees e ON wr.employee_id = e.id
-            WHERE wr.reporting_manager_id = $1 OR wr.manager_id = $1 OR wr.hr_id = $1
-            ORDER BY wr.created_at DESC LIMIT 100`,
-            [req.user.id]
-        );
+        const userRole = req.user.role;
+        let result;
+        if (userRole === 'hr' || userRole === 'manager') {
+            result = await query(
+                `SELECT wr.*,
+                e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
+                FROM wfh_requests wr
+                JOIN employees e ON wr.employee_id = e.id
+                ORDER BY wr.created_at DESC LIMIT 100`
+            );
+        } else {
+            result = await query(
+                `SELECT wr.*,
+                e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id
+                FROM wfh_requests wr
+                JOIN employees e ON wr.employee_id = e.id
+                WHERE wr.reporting_manager_id = $1 OR wr.manager_id = $1 OR wr.hr_id = $1
+                ORDER BY wr.created_at DESC LIMIT 100`,
+                [req.user.id]
+            );
+        }
         res.json({ success: true, wfhRequests: result.rows });
     } catch (error) {
         console.error('Manager WFH history error:', error);
@@ -355,7 +382,7 @@ router.get('/wfh/history', verifyToken, isManager, async (req, res) => {
 // @access  Private (Manager+)
 router.get('/regularizations/history', verifyToken, isManager, async (req, res) => {
     try {
-        const isAdmin = req.user.role === 'admin' || req.user.role === 'hr';
+        const isAdmin = req.user.role === 'admin' || req.user.role === 'hr' || req.user.role === 'manager';
         let rows;
         if (isAdmin) {
             rows = await query(
@@ -394,17 +421,31 @@ router.get('/regularizations/history', verifyToken, isManager, async (req, res) 
 // @access  Private (Manager+)
 router.get('/tickets/history', verifyToken, isManager, async (req, res) => {
     try {
-        const result = await query(
-            `SELECT st.*,
-            e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id,
-            e2.first_name || ' ' || e2.last_name as responded_by_name
-            FROM support_tickets st
-            JOIN employees e ON st.employee_id = e.id
-            LEFT JOIN employees e2 ON st.responded_by = e2.id
-            WHERE st.reporting_manager_id = $1 OR st.manager_id = $1 OR st.hr_id = $1
-            ORDER BY st.created_at DESC LIMIT 100`,
-            [req.user.id]
-        );
+        const userRole = req.user.role;
+        let result;
+        if (userRole === 'hr' || userRole === 'manager') {
+            result = await query(
+                `SELECT st.*,
+                e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id,
+                e2.first_name || ' ' || e2.last_name as responded_by_name
+                FROM support_tickets st
+                JOIN employees e ON st.employee_id = e.id
+                LEFT JOIN employees e2 ON st.responded_by = e2.id
+                ORDER BY st.created_at DESC LIMIT 100`
+            );
+        } else {
+            result = await query(
+                `SELECT st.*,
+                e.first_name || ' ' || e.last_name as employee_name, e.employee_id as emp_id,
+                e2.first_name || ' ' || e2.last_name as responded_by_name
+                FROM support_tickets st
+                JOIN employees e ON st.employee_id = e.id
+                LEFT JOIN employees e2 ON st.responded_by = e2.id
+                WHERE st.reporting_manager_id = $1 OR st.manager_id = $1 OR st.hr_id = $1
+                ORDER BY st.created_at DESC LIMIT 100`,
+                [req.user.id]
+            );
+        }
         res.json({ success: true, tickets: result.rows });
     } catch (error) {
         console.error('Manager tickets history error:', error);
