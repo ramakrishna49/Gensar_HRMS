@@ -337,6 +337,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Show My Team link on every employee page for TL/manager (previously only directory.html did this).
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const u = getCurrentUser();
+        if (u && (u.role === 'manager' || u.role === 'team_lead')) {
+            const link = document.getElementById('myTeamLink');
+            if (link) link.style.display = 'flex';
+        }
+    } catch (e) {}
+});
+
 // ==================== PWA SUPPORT ====================
 
 const PWA_CAN_REGISTER = 'serviceWorker' in navigator &&

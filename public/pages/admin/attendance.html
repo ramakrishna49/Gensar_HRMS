@@ -364,7 +364,8 @@
             const renderOrder = selDes ? filteredEmployees.map(e => ({ isHeader: false, emp: e })) : (() => { const arr=[]; sortedGroups.forEach(g=>{ arr.push({isHeader:true, label:g}); grouped[g].forEach(emp=>arr.push({isHeader:false, emp})); }); return arr; })();
             for (const item of renderOrder) {
                 if (item.isHeader) {
-                    html += '<tr><td class="emp-name" colspan="' + (days + 3) + '" style="background:var(--primary-50);font-weight:700;text-align:left;color:var(--primary);"><i class="fas fa-id-badge" style="margin-right:6px;"></i>' + escapeHtml(item.label) + ' <span style="font-weight:400;color:var(--text-secondary);">(' + grouped[item.label].length + ')</span></td></tr>';
+                    const memberNames = grouped[item.label].map(e => e.first_name + ' ' + (e.last_name || '')).join(', ');
+                    html += '<tr><td class="emp-name" colspan="' + (days + 3) + '" data-members="' + escapeHtml(memberNames) + '" style="background:var(--primary-50);font-weight:700;text-align:left;color:var(--primary);cursor:default;"><i class="fas fa-id-badge" style="margin-right:6px;"></i>' + escapeHtml(item.label) + ' <span style="font-weight:400;color:var(--text-secondary);">(' + grouped[item.label].length + ')</span></td></tr>';
                     continue;
                 }
                 const emp = item.emp;
@@ -421,12 +422,22 @@
 
         function matrixCellMouseOver(e) {
             const td = e.target && e.target.closest ? e.target.closest('td[data-emp]') : null;
-            if (!td) return;
-            showTooltip(e, td.getAttribute('data-name'), td.getAttribute('data-day'), td.getAttribute('data-status'), td.getAttribute('data-in'), td.getAttribute('data-out'), td.getAttribute('data-loc'));
+            if (td) {
+                showTooltip(e, td.getAttribute('data-name'), td.getAttribute('data-day'), td.getAttribute('data-status'), td.getAttribute('data-in'), td.getAttribute('data-out'), td.getAttribute('data-loc'));
+                return;
+            }
+            const hdr = e.target && e.target.closest ? e.target.closest('td[data-members]') : null;
+            if (hdr) {
+                const tip = document.getElementById('cellTooltip');
+                tip.innerHTML = '<strong>Members:</strong> ' + escapeHtml(hdr.getAttribute('data-members'));
+                tip.style.display = 'block';
+                tip.style.left = (e.clientX + 12) + 'px';
+                tip.style.top = (e.clientY + 12) + 'px';
+            }
         }
 
         function matrixCellMouseOut(e) {
-            if (e.target && e.target.closest && e.target.closest('td[data-emp]')) hideTooltip();
+            if (e.target && e.target.closest && (e.target.closest('td[data-emp]') || e.target.closest('td[data-members]'))) hideTooltip();
         }
 
         function matrixCellClick(e) {

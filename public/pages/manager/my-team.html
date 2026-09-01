@@ -473,48 +473,93 @@
             });
             const holMap = {};
             (data.holidays || []).forEach(h => { holMap[(h.date || '').split('T')[0]] = h.name; });
+            // Leave classification: first approved day per employee per month = paid, rest = LOP
+            const leaveMap = {};
+            (data.leaves || []).forEach(l => {
+                if (l.status !== 'approved') return;
+                const s = (l.start_date || '').split('T')[0];
+                const e = (l.end_date || '').split('T')[0];
+                if (!s || !e) return;
+                const cur = new Date(s + 'T00:00:00Z');
+                const end = new Date(e + 'T00:00:00Z');
+                const empPaid = {};
+                while (cur <= end) {
+                    const dk = cur.toISOString().substring(0, 10);
+                    const mk = dk.substring(0, 7);
+                    if (!empPaid[mk]) { empPaid[mk] = 0; }
+                    const lk = l.employee_id + '|' + dk;
+                    leaveMap[lk] = empPaid[mk] < 1 ? 'paid' : 'lop';
+                    empPaid[mk]++;
+                    cur.setUTCDate(cur.getUTCDate() + 1);
+                }
+            });
             const daysInMonth = new Date(year, month, 0).getDate();
+            const todayKey = new Date().toISOString().split('T')[0];
             const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            let html = '<div style="overflow-x:auto;"><table class="table" style="min-width:600px;font-size:0.78rem;"><thead><tr><th style="position:sticky;left:0;background:var(--bg-card);z-index:1;">Member</th>';
+            const fullMonthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            // Grand totals
+            let gP = 0, gL = 0, gH = 0, gLv = 0, gA = 0, gW = 0, gHd = 0;
+            // Build table with per-row breakdown
+            let html = '<div style="overflow-x:auto;"><table class="table" style="min-width:700px;font-size:0.78rem;"><thead><tr><th style="position:sticky;left:0;background:var(--bg-card);z-index:1;">Member</th>';
             for (let d = 1; d <= daysInMonth; d++) {
                 const dt = new Date(year, month - 1, d);
                 const dow = dt.getDay();
                 const isWE = dow === 0 || dow === 6;
                 html += '<th style="text-align:center;min-width:36px;' + (isWE ? 'background:var(--bg-light);' : '') + '">' + d + '</th>';
             }
-            html += '<th>Present</th></tr></thead><tbody>';
+            html += '<th style="white-space:nowrap;">P/L/HD/Lv</th><th style="text-align:center;">Total</th></tr></thead><tbody>';
             team.forEach(m => {
-                let presentCount = 0;
+                let p = 0, l = 0, h = 0, lv = 0, a = 0, w = 0, hd = 0;
                 html += '<tr><td style="position:sticky;left:0;background:var(--bg-card);font-weight:600;white-space:nowrap;">' + escapeHtml(m.first_name + ' ' + (m.last_name || '')) + '<br><span style="font-size:0.68rem;color:var(--text-secondary);">' + escapeHtml(m.employee_id) + '</span></td>';
                 for (let d = 1; d <= daysInMonth; d++) {
                     const key = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
                     const k2 = m.id + '|' + key;
                     const rec = attByEmp[k2];
-                    let cell = '-';
-                    let bg = '';
-                    if (holMap[key]) { cell = 'H'; bg = 'background:#E0E7FF;color:#3730A3;'; }
-                    else if (rec) {
-                        if (rec.status === 'present' || rec.status === 'wfh') { cell = 'P'; bg = 'background:#D1FAE5;color:#065F46;'; presentCount++; }
-                        else if (rec.status === 'late') { cell = 'L'; bg = 'background:#FEF3C7;color:#92400E;'; presentCount++; }
-                        else if (rec.status === 'half-day') { cell = 'HD'; bg = 'background:#FED7AA;color:#9A3412;'; }
-                        else if (rec.status === 'absent') { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; }
+                    let cell = '-', bg = '';
+                    const isFuture = key > todayKey;
+                    if (!isFuture && holMap[key]) {
+                        cell = 'H'; bg = 'background:#E0E7FF;color:#3730A3;'; h++;
+                    } else if (rec) {
+                        if (rec.status === 'present' || rec.status === 'wfh') { cell = 'P'; bg = 'background:#D1FAE5;color:#065F46;'; p++; }
+                        else if (rec.status === 'late') { cell = 'L'; bg = 'background:#FEF3C7;color:#92400E;'; l++; }
+                        else if (rec.status === 'half-day') { cell = 'HD'; bg = 'background:#FED7AA;color:#9A3412;'; hd++; }
+                        else if (rec.status === 'absent' && leaveMap[k2]) {
+                            if (leaveMap[k2] === 'paid') { cell = 'Lv'; bg = 'background:#EDE9FE;color:#5B21B6;'; lv++; }
+                            else { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
+                        }
+                        else if (rec.status === 'absent') { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
                         else { cell = rec.status.charAt(0).toUpperCase(); }
+                    } else if (leaveMap[k2]) {
+                        if (leaveMap[k2] === 'paid') { cell = 'Lv'; bg = 'background:#EDE9FE;color:#5B21B6;'; lv++; }
+                        else { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
                     } else {
                         const dow = new Date(year, month - 1, d).getDay();
-                        if (dow === 0 || dow === 6) { cell = 'WO'; bg = 'background:var(--bg-light);'; }
-                        else {
-                            const todayKey = new Date().toISOString().split('T')[0];
-                            if (key < todayKey && new Date(year, month - 1, 1) <= new Date()) { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; }
-                            else { cell = '-'; }
-                        }
+                        if (dow === 0 || dow === 6) { cell = 'WO'; bg = 'background:var(--bg-light);'; w++; }
+                        else if (!isFuture) { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
                     }
                     html += '<td style="text-align:center;' + bg + '">' + cell + '</td>';
                 }
-                html += '<td style="text-align:center;font-weight:600;">' + presentCount + '</td></tr>';
+                const totalDays = p + l + hd + lv + w + h;
+                html += '<td style="text-align:center;font-size:0.68rem;white-space:nowrap;">' + p + '/' + l + '/' + hd + '/' + lv + '</td>';
+                html += '<td style="text-align:center;font-weight:700;color:var(--primary);">' + totalDays + '</td></tr>';
+                gP += p; gL += l; gHd += hd; gLv += lv; gA += a; gW += w; gH += h;
             });
             html += '</tbody></table></div>';
-            html += '<div style="margin-top:10px;font-size:0.72rem;color:var(--text-secondary);">P=Present, L=Late, HD=Half Day, A=Absent, H=Holiday, WO=Week Off</div>';
-            container.innerHTML = html;
+            html += '<div style="margin-top:10px;font-size:0.72rem;color:var(--text-secondary);">P=Present, L=Late, HD=Half Day, Lv=On Leave (Paid), A=Absent, H=Holiday, WO=Week Off</div>';
+            // Summary stats bar
+            const grandPresent = gP + gL + gHd + gLv + gW + gH;
+            const stat = (val, label, color, bg) => '<div class="stat-card" style="padding:8px 10px;border-left:4px solid ' + color + ';background:' + bg + ';"><div class="stat-info" style="text-align:center;"><h3 style="color:' + color + ';font-size:1rem;">' + val + '</h3><p style="font-size:0.68rem;margin:0;">' + label + '</p></div></div>';
+            let statsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px;">';
+            statsHtml += stat(grandPresent, 'Total Present', '#10B981', '#ECFDF5');
+            statsHtml += stat(gL, 'Late Logins', '#F59E0B', '#FFFBEB');
+            statsHtml += stat(gHd, 'Half Days', '#F97316', '#FFF7ED');
+            statsHtml += stat(gLv, 'On Leave', '#8B5CF6', '#F5F3FF');
+            statsHtml += stat(gA, 'Absent', '#EF4444', '#FEF2F2');
+            statsHtml += stat(gW, 'Week Offs', '#3B82F6', '#EFF6FF');
+            statsHtml += stat(gH, 'Holidays', '#D946EF', '#FDF4FF');
+            statsHtml += '</div>';
+            statsHtml += '<div style="margin-bottom:12px;font-size:0.85rem;color:var(--text-secondary);"><b style="color:var(--primary);">Total Present Days</b> (incl. late, half day, paid leaves, week offs &amp; holidays): <b>' + grandPresent + '</b> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</div>';
+            container.innerHTML = statsHtml + html;
         }
 
         function renderCounts() {

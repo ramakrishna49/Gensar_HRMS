@@ -367,7 +367,16 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
             `SELECT name, date::text as date FROM holidays WHERE EXTRACT(MONTH FROM date) = $1 AND EXTRACT(YEAR FROM date) = $2`,
             [month, year]
         );
-        res.json({ success: true, team: teamRes.rows, attendance: attRes.rows, holidays: holRes.rows });
+        const lvRes = await query(
+            `SELECT la.employee_id, la.start_date::text as start_date, la.end_date::text as end_date, la.status
+             FROM leave_applications la
+             WHERE la.employee_id = ANY($1) AND la.status = 'approved'
+               AND (EXTRACT(MONTH FROM la.start_date) = $2 AND EXTRACT(YEAR FROM la.start_date) = $3
+                    OR EXTRACT(MONTH FROM la.end_date) = $2 AND EXTRACT(YEAR FROM la.end_date) = $3)
+             ORDER BY la.start_date`,
+            [teamIds, month, year]
+        );
+        res.json({ success: true, team: teamRes.rows, attendance: attRes.rows, holidays: holRes.rows, leaves: lvRes.rows });
     } catch (error) {
         console.error('Manager attendance error:', error);
         res.status(500).json({ success: false, message: 'Server error' });

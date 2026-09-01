@@ -392,6 +392,7 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO holidays (name, date, description) VALUES
 ('Republic Day', '2026-01-26', 'National holiday'),
 ('Holi', '2026-03-10', 'Festival of colors'),
+('May Day', '2026-05-01', 'International Workers Day'),
 ('Independence Day', '2026-08-15', 'National holiday'),
 ('Gandhi Jayanti', '2026-10-02', 'National holiday'),
 ('Diwali', '2026-10-20', 'Festival of lights'),
@@ -444,6 +445,11 @@ UPDATE leave_types SET days_per_year = 12 WHERE name = 'Sick Leave';
 UPDATE leave_types SET is_active = 1 WHERE name IN ('Casual Leave', 'Sick Leave');
 UPDATE leave_types SET is_active = 0
 WHERE name IN ('Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Earned Leave');
+
+-- Add May Day holiday for 2026 (idempotent).
+INSERT INTO holidays (name, date, description)
+SELECT 'May Day', '2026-05-01', 'International Workers Day'
+WHERE NOT EXISTS (SELECT 1 FROM holidays WHERE name = 'May Day' AND date = '2026-05-01');
 
 -- Add team_lead role (idempotent: drop + recreate the role check constraint).
 ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_role_check;
