@@ -517,7 +517,11 @@
                     const rec = attByEmp[k2];
                     let cell = '-', bg = '';
                     const isFuture = key > todayKey;
-                    if (!isFuture && holMap[key]) {
+                    if (isFuture) {
+                        html += '<td style="text-align:center;background:var(--bg-light);color:var(--text-tertiary);">' + cell + '</td>';
+                        continue;
+                    }
+                    if (holMap[key]) {
                         cell = 'H'; bg = 'background:#E0E7FF;color:#3730A3;'; h++;
                     } else if (rec) {
                         if (rec.status === 'present' || rec.status === 'wfh') { cell = 'P'; bg = 'background:#D1FAE5;color:#065F46;'; p++; }
@@ -539,7 +543,7 @@
                     } else {
                         const dow = new Date(year, month - 1, d).getDay();
                         if (dow === 0 || dow === 6) { cell = 'WO'; bg = 'background:var(--bg-light);'; w++; }
-                        else if (!isFuture) { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
+                        else { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
                     }
                     html += '<td style="text-align:center;' + bg + '">' + cell + '</td>';
                 }
