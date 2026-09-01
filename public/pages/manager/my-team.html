@@ -274,10 +274,10 @@
                     return isIn ? 'background:#D1FAE5;color:#059669;' : 'background:#FEE2E2;color:#B91C1C;';
                 };
                 const chips = group.map(m =>
-                    '<span title="' + escapeHtml(m.employee_id || '') + (m.designation_name ? ' | ' + escapeHtml(m.designation_name) : '') + (m.check_in ? ' | In at ' + escapeHtml(m.check_in) : '') + '" style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;' + chipStyle(m) + 'border-radius:999px;padding:6px 12px;font-size:0.75rem;font-weight:600;margin:0 6px 6px 0;">' +
+                    '<span title="' + escapeHtml(m.employee_id || '') + (m.designation_name ? ' | ' + escapeHtml(m.designation_name) : '') + (m.check_in ? ' | In at ' + escapeHtml(m.check_in) : '') + '" style="display:inline-flex;align-items:center;gap:8px;' + chipStyle(m) + 'border-radius:999px;padding:6px 14px;font-size:0.75rem;font-weight:600;margin:0 6px 6px 0;">' +
                         '<span>' + escapeHtml((m.first_name || '') + ' ' + (m.last_name || '')) + '</span>' +
-                        (m.designation_name ? '<span style="font-size:0.65rem;font-weight:400;opacity:0.8;">' + escapeHtml(m.designation_name) + '</span>' : '') +
-                        (m.check_in ? '<span style="font-size:0.65rem;font-weight:400;">In ' + escapeHtml(m.check_in) + '</span>' : '') +
+                        (m.designation_name ? '<span style="font-size:0.68rem;font-weight:400;opacity:0.8;">· ' + escapeHtml(m.designation_name) + '</span>' : '') +
+                        (m.check_in ? '<span style="font-size:0.68rem;font-weight:400;opacity:0.8;">· In ' + escapeHtml(m.check_in) + '</span>' : '') +
                     '</span>'
                 ).join('');
                 return '<div style="margin-bottom:10px;">' +
