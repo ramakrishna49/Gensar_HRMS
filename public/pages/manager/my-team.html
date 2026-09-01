@@ -322,6 +322,7 @@
                         return '<div class="request-card" style="opacity:0.95;">' +
                             '<div class="req-top"><div><div class="req-emp">' + escapeHtml(l.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(l.emp_id) + '</span></div>' +
                             '<div class="req-meta">' + escapeHtml(l.leave_type_name || '-') + ' · ' + formatDate(l.start_date) + ' to ' + formatDate(l.end_date) + ' · ' + l.total_days + ' days</div>' +
+                            (l.approved_by_name ? '<div class="req-sub" style="font-size:0.78rem;"><i class="fas fa-user-check" style="margin-right:4px;color:var(--primary);"></i>Approved by ' + escapeHtml(l.approved_by_name) + '</div>' : '') +
                             (l.approval_remarks ? '<div class="req-sub">Remarks: ' + escapeHtml(l.approval_remarks) + '</div>' : '') + '</div>' +
                             '<span class="badge badge-' + badge + '">' + escapeHtml(l.status) + '</span></div></div>';
                     }).join('');
@@ -366,6 +367,7 @@
                         return '<div class="request-card" style="opacity:0.95;">' +
                             '<div class="req-top"><div><div class="req-emp">' + escapeHtml(w.employee_name) + ' <span class="badge badge-secondary" style="font-size:0.68rem;">' + escapeHtml(w.emp_id) + '</span></div>' +
                             '<div class="req-meta">' + formatDate(w.start_date) + ' to ' + formatDate(w.end_date) + ' · ' + w.total_days + ' days</div>' +
+                            (w.approved_by_name ? '<div class="req-sub" style="font-size:0.78rem;"><i class="fas fa-user-check" style="margin-right:4px;color:var(--primary);"></i>Approved by ' + escapeHtml(w.approved_by_name) + '</div>' : '') +
                             (w.approval_remarks ? '<div class="req-sub">Remarks: ' + escapeHtml(w.approval_remarks) + '</div>' : '') + '</div>' +
                             '<span class="badge badge-' + badge + '">' + escapeHtml(w.status) + '</span></div></div>';
                     }).join('');
