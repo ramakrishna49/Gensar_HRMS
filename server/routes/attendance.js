@@ -473,9 +473,8 @@ router.get('/monthly', verifyToken, isManager, async (req, res) => {
              LEFT JOIN departments d ON e.department_id = d.id
              LEFT JOIN designations des ON e.designation_id = des.id
              WHERE e.status = $1 AND e.role != 'admin'
-               AND (e.joining_date IS NULL OR e.joining_date <= $2)
              ORDER BY des.name NULLS LAST, e.first_name`,
-            ['active', monthEnd]
+            ['active']
         );
 
         const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
