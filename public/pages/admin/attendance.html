@@ -497,7 +497,7 @@
             }
             if (status === 'absent') {
                 showConfirmDialog('Mark Present', 'Remove absent mark for ' + dateStr + '?', 'Mark Present', 'btn-success', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr, status: 'present' }).then(() => loadMatrix());
+                    apiCall('/attendance/mark-present', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
                 });
                 return;
             }
