@@ -153,10 +153,10 @@ router.get('/directory', verifyToken, async (req, res) => {
             rows = [];
             scope = 'team';
         } else if (me.role === 'admin' || me.role === 'hr' || me.role === 'manager') {
-            // Admin/HR/Manager see ALL active employees (excluding self)
+            // Admin/HR/Manager see ALL active employees (excluding self and admin)
             const result = await query(
                 `${DIRECTORY_COLUMNS}
-                WHERE e.status = 'active' AND e.id <> $1
+                WHERE e.status = 'active' AND e.id <> $1 AND e.role != 'admin'
                 ORDER BY e.first_name, e.last_name`,
                 [req.user.id]
             );
@@ -179,7 +179,7 @@ router.get('/directory', verifyToken, async (req, res) => {
             if (!anchorId) {
                 const result = await query(
                     `${DIRECTORY_COLUMNS}
-                    WHERE e.status = 'active' AND e.id <> $1
+                    WHERE e.status = 'active' AND e.id <> $1 AND e.role != 'admin'
                     ORDER BY e.first_name, e.last_name`,
                     [req.user.id]
                 );
