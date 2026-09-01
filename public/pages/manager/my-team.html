@@ -527,7 +527,11 @@
                             if (leaveMap[k2] === 'paid') { cell = 'Lv'; bg = 'background:#EDE9FE;color:#5B21B6;'; lv++; }
                             else { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
                         }
-                        else if (rec.status === 'absent') { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
+                        else if (rec.status === 'absent') {
+                            const dow = new Date(year, month - 1, d).getDay();
+                            if (dow === 0 || dow === 6) { cell = 'WO'; bg = 'background:var(--bg-light);'; w++; }
+                            else { cell = 'A'; bg = 'background:#FEE2E2;color:#991B1B;'; a++; }
+                        }
                         else { cell = rec.status.charAt(0).toUpperCase(); }
                     } else if (leaveMap[k2]) {
                         if (leaveMap[k2] === 'paid') { cell = 'Lv'; bg = 'background:#EDE9FE;color:#5B21B6;'; lv++; }
@@ -547,7 +551,7 @@
             html += '</tbody></table></div>';
             html += '<div style="margin-top:10px;font-size:0.72rem;color:var(--text-secondary);">P=Present, L=Late, HD=Half Day, Lv=On Leave (Paid), A=Absent, H=Holiday, WO=Week Off</div>';
             // Summary stats bar
-            const grandPresent = gP + gL + gHd + gLv + gW + gH;
+            const grandPresent = gP + gL + gHd + gLv;
             const stat = (val, label, color, bg) => '<div class="stat-card" style="padding:8px 10px;border-left:4px solid ' + color + ';background:' + bg + ';"><div class="stat-info" style="text-align:center;"><h3 style="color:' + color + ';font-size:1rem;">' + val + '</h3><p style="font-size:0.68rem;margin:0;">' + label + '</p></div></div>';
             let statsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px;">';
             statsHtml += stat(grandPresent, 'Total Present', '#10B981', '#ECFDF5');
@@ -558,7 +562,7 @@
             statsHtml += stat(gW, 'Week Offs', '#3B82F6', '#EFF6FF');
             statsHtml += stat(gH, 'Holidays', '#D946EF', '#FDF4FF');
             statsHtml += '</div>';
-            statsHtml += '<div style="margin-bottom:12px;font-size:0.85rem;color:var(--text-secondary);"><b style="color:var(--primary);">Total Present Days</b> (incl. late, half day, paid leaves, week offs &amp; holidays): <b>' + grandPresent + '</b> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</div>';
+            statsHtml += '<div style="margin-bottom:12px;font-size:0.85rem;color:var(--text-secondary);"><b style="color:var(--primary);">Total Present Days</b> (incl. late, half day &amp; paid leaves): <b>' + grandPresent + '</b> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</div>';
             container.innerHTML = statsHtml + html;
         }
 

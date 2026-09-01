@@ -295,9 +295,9 @@
             }
             lastMonthCounts = counts;
 
-            const totalPresent = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday + counts.leave;
+            const totalPresent = counts.present + counts.late + counts['half-day'] + counts.leave;
             document.getElementById('attStatsBar').innerHTML = buildStatsCardsHtml(counts);
-            summaryEl.innerHTML = '<span style="font-weight:500;">Total Present Days (incl. late logins, half days, paid leaves, week offs &amp; holidays): <strong>' + totalPresent + '</strong> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
+            summaryEl.innerHTML = '<span style="font-weight:500;">Total Present Days (incl. late logins, half days &amp; paid leaves): <strong>' + totalPresent + '</strong> / ' + daysInMonth + ' total days in ' + fullMonthNames[month - 1] + ' ' + year + '</span>';
 
             if (records.length === 0) {
                 showEmptyState(container, 'fa-clock', 'No Records', 'No attendance records for this period');
@@ -473,7 +473,7 @@
                 holiday: ['#D946EF', '#FDF4FF']
             };
             const statCard = (val, label, c) => '<div class="stat-card" style="margin:0;border-left:4px solid ' + c[0] + ';background:' + c[1] + ';"><div class="stat-info" style="text-align:center;"><h3 style="color:' + c[0] + ';">' + val + '</h3><p>' + label + '</p></div></div>';
-            const presentTotal = counts.present + counts.late + counts['half-day'] + counts.weekoff + counts.holiday + counts.leave;
+            const presentTotal = counts.present + counts.late + counts['half-day'] + counts.leave;
             let html = '<div class="att-stats-grid">';
             html += statCard(presentTotal, 'Total Present Days', cardColors.present);
             html += statCard(counts.late, 'Late Logins', cardColors.late);
