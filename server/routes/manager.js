@@ -478,7 +478,8 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
                 `SELECT e.id, e.employee_id, e.first_name, e.last_name, des.name as designation_name
                  FROM employees e
                  LEFT JOIN designations des ON e.designation_id = des.id
-                 WHERE e.status = 'active' AND e.role != 'admin' AND e.joining_date <= $1
+                 WHERE e.status = 'active' AND e.role != 'admin'
+                   AND (e.joining_date IS NULL OR e.joining_date <= $1)
                  ORDER BY des.name NULLS LAST, e.first_name`,
                 [monthEnd]
             );
@@ -487,7 +488,8 @@ router.get('/attendance', verifyToken, isManager, async (req, res) => {
                 `SELECT e.id, e.employee_id, e.first_name, e.last_name, des.name as designation_name
                  FROM employees e
                  LEFT JOIN designations des ON e.designation_id = des.id
-                 WHERE e.reporting_manager_id = $1 AND e.status = 'active' AND e.joining_date <= $2
+                 WHERE e.reporting_manager_id = $1 AND e.status = 'active'
+                   AND (e.joining_date IS NULL OR e.joining_date <= $2)
                  ORDER BY des.name NULLS LAST, e.first_name`,
                 [req.user.id, monthEnd]
             );
