@@ -3,6 +3,7 @@ node_modules/
 
 # Environment variables
 .env
+!.env.example
 
 # Logs
 *.log
@@ -31,4 +32,3 @@ backups/
 session-history.json
 
 .vercel
-.env*
