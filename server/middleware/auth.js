@@ -132,6 +132,7 @@ module.exports = {
     verifyToken, 
     isAdmin, 
     isManager, 
+    isEmployee,
     generateToken,
     audienceForRole
 };
