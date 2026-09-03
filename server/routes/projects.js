@@ -4,6 +4,55 @@ const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 
 /**
+ * GET /api/projects/my
+ * Get projects assigned to the logged-in employee (no admin role required)
+ */
+router.get('/my', verifyToken, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT p.id, p.name, p.customer, p.description, p.status, p.created_at
+             FROM projects p
+             JOIN project_employees pe ON p.id = pe.project_id
+             WHERE pe.employee_id = $1 AND p.status = 'active'
+             ORDER BY p.name`,
+            [req.user.id]
+        );
+        res.json({ success: true, projects: result.rows });
+    } catch (error) {
+        console.error('Error fetching employee projects:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+/**
+ * GET /api/projects/my/:projectId/sets
+ * Get sets for a project the employee is assigned to (no admin role required)
+ */
+router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
+    try {
+        const empCheck = await query(
+            `SELECT id FROM project_employees WHERE project_id = $1 AND employee_id = $2`,
+            [req.params.projectId, req.user.id]
+        );
+        if (empCheck.rows.length === 0) {
+            return res.status(403).json({ success: false, message: 'You are not assigned to this project' });
+        }
+
+        const result = await query(
+            `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days
+             FROM project_sets ps
+             WHERE ps.project_id = $1 AND ps.status = 'active'
+             ORDER BY ps.name`,
+            [req.params.projectId]
+        );
+        res.json({ success: true, sets: result.rows });
+    } catch (error) {
+        console.error('Error fetching project sets:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+/**
  * GET /api/projects
  * Get all projects
  */

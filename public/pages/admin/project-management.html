@@ -21,7 +21,7 @@
         </div>
         <nav class="sidebar-nav">
             <div class="nav-section-title">Main</div>
-            <a href="/admin/dashboard" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/admin/dashboard" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
             <a href="/admin/projects" class="nav-item"><i class="fas fa-folder"></i><span class="nav-text">Projects</span></a>
             <a href="/admin/project-reports" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Project Reports</span></a>
             <div class="nav-section-title">Employee Management</div>
@@ -35,7 +35,7 @@
             <div class="nav-section-title">Finance</div>
             <a href="/admin/payroll" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
             <div class="nav-section-title">Projects</div>
-            <a href="/admin/project-management" class="nav-item"><i class="fas fa-project-diagram"></i><span class="nav-text">Projects</span></a>
+            <a href="/admin/project-management" class="nav-item active"><i class="fas fa-project-diagram"></i><span class="nav-text">Projects</span></a>
             <a href="/admin/project-sets" class="nav-item"><i class="fas fa-layer-group"></i><span class="nav-text">Project Sets</span></a>
             <a href="/admin/project-reports" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-text">Project Reports</span></a>
             <div class="nav-section-title">Support</div>
@@ -80,67 +80,183 @@
                 <p style="color:var(--text-secondary);">Manage projects, sets, and employee assignments</p>
             </div>
 
-            <!-- Create Project Button -->
-            <div class="mb-3">
+            <div class="mb-3" style="display:flex;gap:12px;align-items:center;">
                 <button class="btn btn-primary" onclick="openCreateProjectModal()">
-                    <i class="fas fa-plus"></i> + Create Project
+                    <i class="fas fa-plus"></i> Create Project
                 </button>
-            </div>
-
-            <!-- Projects Grid -->
-            <div id="projectsGrid" class="grid grid-2 mb-3" style="gap:16px;">
-                <div style="text-align:center;padding:40px;color:var(--text-secondary);">
-                    <i class="fas fa-folder-open"></i>
-                    <p>No projects found</p>
-                    <small>Create your first project to get started</small>
+                <div style="position:relative;flex:1;max-width:400px;">
+                    <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-tertiary);"></i>
+                    <input type="text" id="searchInput" class="form-control" style="padding-left:36px;" placeholder="Search projects..." oninput="filterProjects()">
                 </div>
             </div>
 
-            <!-- Modals will be injected here by JavaScript -->
+            <div id="projectsGrid" class="grid grid-2 mb-3" style="gap:16px;"></div>
             <div id="modalsContainer"></div>
         </div>
     </main>
 
+    <div class="modal" id="createProjectModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h2>Create Project</h2>
+                <button onclick="closeModal('createProjectModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createProjectForm" onsubmit="createProject(event)">
+                    <div class="form-group">
+                        <label>Project Name *</label>
+                        <input type="text" class="form-control" name="name" required placeholder="Enter project name">
+                    </div>
+                    <div class="form-group">
+                        <label>Customer *</label>
+                        <input type="text" class="form-control" name="customer" required placeholder="Enter customer name">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select class="form-control" name="status">
+                            <option value="active">Active</option>
+                            <option value="on_hold">On Hold</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea class="form-control" name="description" rows="3" placeholder="Optional description"></textarea>
+                    </div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('createProjectModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="createProjectBtn">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="editProjectModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h2>Edit Project</h2>
+                <button onclick="closeModal('editProjectModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editProjectForm" onsubmit="updateProject(event)">
+                    <input type="hidden" name="id" id="editProjectId">
+                    <div class="form-group">
+                        <label>Project Name *</label>
+                        <input type="text" class="form-control" name="name" id="editProjectName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Customer *</label>
+                        <input type="text" class="form-control" name="customer" id="editProjectCustomer" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select class="form-control" name="status" id="editProjectStatus">
+                            <option value="active">Active</option>
+                            <option value="on_hold">On Hold</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea class="form-control" name="description" id="editProjectDescription" rows="3"></textarea>
+                    </div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editProjectModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="editProjectBtn">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="createSetModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h2>Create Set</h2>
+                <button onclick="closeModal('createSetModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createSetForm" onsubmit="createSet(event)">
+                    <input type="hidden" name="projectId" id="setProjectId">
+                    <div class="form-group">
+                        <label>Set Name *</label>
+                        <input type="text" class="form-control" name="name" required placeholder="Enter set name">
+                    </div>
+                    <div style="display:flex;gap:12px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Start Date</label>
+                            <input type="date" class="form-control" name="start_date">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>End Date</label>
+                            <input type="date" class="form-control" name="end_date">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Total Target</label>
+                        <input type="number" class="form-control" name="total_target" min="0" placeholder="0">
+                    </div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('createSetModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="createSetBtn">Create Set</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="assignEmployeesModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h2>Assign Employees</h2>
+                <button onclick="closeModal('assignEmployeesModal')" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-secondary);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="assignEmployeesForm" onsubmit="assignEmployees(event)">
+                    <input type="hidden" name="projectId" id="assignProjectId">
+                    <div class="form-group">
+                        <label>Select Employees</label>
+                        <div style="position:relative;margin-bottom:8px;">
+                            <input type="text" class="form-control" id="empSearchInput" placeholder="Search employees..." oninput="filterEmployeeDropdown()">
+                        </div>
+                        <div id="employeeDropdownList" style="border:1px solid var(--border);border-radius:var(--radius);max-height:300px;overflow-y:auto;"></div>
+                    </div>
+                    <div id="selectedEmployeesChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:24px;"></div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('assignEmployeesModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="assignEmpBtn">Assign</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="../../js/auth.js"></script>
     <script>
-        // API helper
         const API_URL = '/api';
 
         async function apiCall(endpoint, method = 'GET', body = null) {
             const token = localStorage.getItem('token');
             const headers = { 'Content-Type': 'application/json' };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
+            if (token) headers['Authorization'] = `Bearer ${token}`;
             const options = { method, headers };
-            if (body) {
-                options.body = JSON.stringify(body);
-            }
-
+            if (body) options.body = JSON.stringify(body);
             try {
                 const response = await fetch(`${API_URL}${endpoint}`, options);
                 if (response.status === 401) {
-                    const user = getCurrentUser();
-                    const loginUrl = getLoginUrl(user);
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
-                    window.location.href = loginUrl;
+                    window.location.href = '/';
                     return null;
                 }
                 const text = await response.text();
                 let data;
-                try {
-                    data = JSON.parse(text);
-                } catch (e) {
-                    data = null;
-                }
-                if (!data) {
-                    return { success: false, message: 'Server error. Please try again.' };
-                }
-                if (!response.ok && !data.success) {
-                    return data;
-                }
+                try { data = JSON.parse(text); } catch (e) { data = null; }
+                if (!data) return { success: false, message: 'Server error.' };
+                if (!response.ok && !data.success) return data;
                 return data;
             } catch (error) {
                 console.error('API Error:', error);
@@ -149,33 +265,11 @@
             }
         }
 
-        function getLoginUrl(user) {
-            if (user && ['admin', 'hr', 'manager'].includes(user.role)) return '/admin/';
-            return '/';
-        }
-
         function getCurrentUser() {
-            try {
-                const user = localStorage.getItem('user');
-                return user ? JSON.parse(user) : null;
-            } catch (e) {
-                localStorage.removeItem('user');
-                return null;
-            }
+            try { const u = localStorage.getItem('user'); return u ? JSON.parse(u) : null; }
+            catch (e) { localStorage.removeItem('user'); return null; }
         }
 
-        function getProfilePhotoEl() {
-            return document.getElementById('profilePhoto');
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '';
-            const d = new Date(dateString);
-            if (isNaN(d.getTime())) return '';
-            return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
-        }
-
-        // Show toast
         function showToast(message, type = 'success') {
             let container = document.getElementById('toastContainer');
             if (!container) {
@@ -196,91 +290,515 @@
             }, 3000);
         }
 
-        // Toggle dark mode
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             const icon = document.getElementById('themeIcon');
             if (document.body.classList.contains('dark-mode')) {
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
+                icon.classList.remove('fa-moon'); icon.classList.add('fa-sun');
                 localStorage.setItem('theme', 'dark');
             } else {
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
+                icon.classList.remove('fa-sun'); icon.classList.add('fa-moon');
                 localStorage.setItem('theme', 'light');
             }
-            document.dispatchEvent(new CustomEvent('themechange', { detail: { dark: document.body.classList.contains('dark-mode') } }));
         }
 
-        // Toggle profile menu
         function toggleProfileMenu() {
             const menu = document.getElementById('profileMenu');
-            if (menu) {
-                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            if (window.innerWidth <= 1024) {
+                sidebar.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
             }
         }
 
-        // Logout
         function logout() {
             const token = localStorage.getItem('token');
             const user = getCurrentUser();
-            const loginUrl = getLoginUrl(user);
-            try {
-                if (token) fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-            } catch(e) {}
+            let loginUrl = '/';
+            if (user && ['admin', 'hr', 'manager'].includes(user.role)) loginUrl = '/admin/';
+            try { if (token) fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); } catch (e) {}
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = loginUrl;
         }
 
-        // Open create project modal
-        function openCreateProjectModal() {
-            openModal('createProjectModal', 'CREATE PROJECT');
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const d = new Date(dateString);
+            if (isNaN(d.getTime())) return '-';
+            return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
-        // Open modal
-        function openModal(modalId, title) {
-            // Hide all modals
+        function statusBadge(status) {
+            const map = {
+                active: 'badge-success', on_hold: 'badge-warning', completed: 'badge-info', cancelled: 'badge-danger',
+                planning: 'badge-secondary', 'in-progress': 'badge-primary'
+            };
+            const label = (status || 'active').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            return `<span class="badge ${map[status] || 'badge-secondary'}">${label}</span>`;
+        }
+
+        function openModal(modalId) {
             document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-            // Show target modal
             const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'flex';
-                modal.querySelector('.modal-header h2').textContent = title;
-            }
+            if (modal) modal.style.display = 'flex';
         }
 
-        // Close modal
         function closeModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) modal.style.display = 'none';
         }
 
-        // Close modals when clicking outside
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
-                e.target.style.display = 'none';
-            }
+            if (e.target.classList.contains('modal')) e.target.style.display = 'none';
         });
 
-        // Initialize on load
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (!checkAuth()) {
-                window.location.href = '/';
+        // ===================== PROJECTS =====================
+        let allProjects = [];
+
+        async function loadProjects() {
+            const grid = document.getElementById('projectsGrid');
+            grid.innerHTML = '<div style="text-align:center;padding:40px;grid-column:1/-1;"><div class="spinner" style="margin:0 auto;"></div></div>';
+            const data = await apiCall('/projects');
+            if (!data || !data.success) {
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p></div>';
                 return;
             }
+            allProjects = data.projects || data.data || data || [];
+            if (Array.isArray(allProjects)) {
+                renderProjects(allProjects);
+            } else {
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p></div>';
+            }
+        }
 
+        function renderProjects(projects) {
+            const grid = document.getElementById('projectsGrid');
+            if (!projects.length) {
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p></div>';
+                return;
+            }
+            grid.innerHTML = projects.map(p => `
+                <div class="card" style="padding:0;overflow:hidden;" id="project-card-${p.id}">
+                    <div style="padding:20px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                            <div style="flex:1;min-width:0;">
+                                <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:4px;word-break:break-word;">${esc(p.name)}</h3>
+                                <p style="color:var(--text-secondary);font-size:0.85rem;"><i class="fas fa-building" style="margin-right:4px;"></i>${esc(p.customer || 'N/A')}</p>
+                            </div>
+                            <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;">
+                                <button class="btn btn-secondary btn-sm" onclick="openEditProjectModal(${p.id})" title="Edit"><i class="fas fa-pen"></i></button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:12px;">${statusBadge(p.status)}</div>
+                        ${p.description ? `<p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:12px;line-height:1.5;">${esc(p.description)}</p>` : ''}
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                            <button class="btn btn-secondary btn-sm" onclick="toggleExpand(${p.id}, 'sets')">
+                                <i class="fas fa-layer-group"></i> Sets
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="toggleExpand(${p.id}, 'employees')">
+                                <i class="fas fa-users"></i> Employees
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="openCreateSetModal(${p.id})">
+                                <i class="fas fa-plus"></i> Add Set
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="openAssignEmployeesModal(${p.id})">
+                                <i class="fas fa-user-plus"></i> Assign
+                            </button>
+                        </div>
+                    </div>
+                    <div id="expand-sets-${p.id}" style="display:none;border-top:1px solid var(--border);padding:16px 20px;background:var(--bg-light);">
+                        <div id="sets-content-${p.id}"></div>
+                    </div>
+                    <div id="expand-employees-${p.id}" style="display:none;border-top:1px solid var(--border);padding:16px 20px;background:var(--bg-light);">
+                        <div id="employees-content-${p.id}"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterProjects() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allProjects.filter(p =>
+                (p.name || '').toLowerCase().includes(q) ||
+                (p.customer || '').toLowerCase().includes(q) ||
+                (p.status || '').toLowerCase().includes(q)
+            );
+            renderProjects(filtered);
+        }
+
+        function esc(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        // ===================== EXPAND / COLLAPSE =====================
+        let expandedSections = {};
+
+        async function toggleExpand(projectId, type) {
+            const section = document.getElementById(`expand-${type}-${projectId}`);
+            if (!section) return;
+            const key = `${projectId}-${type}`;
+            if (expandedSections[key]) {
+                section.style.display = 'none';
+                expandedSections[key] = false;
+                return;
+            }
+            section.style.display = 'block';
+            expandedSections[key] = true;
+            if (type === 'sets') await loadSets(projectId);
+            else await loadEmployeesForProject(projectId);
+        }
+
+        async function loadSets(projectId) {
+            const container = document.getElementById(`sets-content-${projectId}`);
+            container.innerHTML = '<div style="text-align:center;padding:12px;"><div class="spinner" style="margin:0 auto;width:20px;height:20px;"></div></div>';
+            const data = await apiCall(`/project-sets/${projectId}`);
+            if (!data || !data.success) {
+                container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">No sets found.</p>';
+                return;
+            }
+            const sets = data.sets || data.data || data || [];
+            if (!Array.isArray(sets) || !sets.length) {
+                container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">No sets found.</p>';
+                return;
+            }
+            container.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <h4 style="font-size:0.9rem;font-weight:600;">Sets (${sets.length})</h4>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    ${sets.map(s => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);">
+                            <div style="min-width:0;flex:1;">
+                                <span style="font-weight:500;font-size:0.85rem;">${esc(s.name)}</span>
+                                ${s.start_date || s.end_date ? `<span style="color:var(--text-tertiary);font-size:0.78rem;margin-left:8px;">${formatDate(s.start_date)}${s.end_date ? ' - ' + formatDate(s.end_date) : ''}</span>` : ''}
+                                ${s.total_target ? `<span style="color:var(--text-secondary);font-size:0.78rem;margin-left:8px;">Target: ${s.total_target}</span>` : ''}
+                            </div>
+                            <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;">
+                                <button class="btn btn-secondary btn-sm" onclick="deleteSet(${s.id}, ${projectId})" title="Delete"><i class="fas fa-trash" style="font-size:0.7rem;"></i></button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function loadEmployeesForProject(projectId) {
+            const container = document.getElementById(`employees-content-${projectId}`);
+            container.innerHTML = '<div style="text-align:center;padding:12px;"><div class="spinner" style="margin:0 auto;width:20px;height:20px;"></div></div>';
+            const data = await apiCall(`/projects/${projectId}/employees`);
+            if (!data || !data.success) {
+                container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">No employees assigned.</p>';
+                return;
+            }
+            const employees = data.employees || data.data || data || [];
+            if (!Array.isArray(employees) || !employees.length) {
+                container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">No employees assigned.</p>';
+                return;
+            }
+            container.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <h4 style="font-size:0.9rem;font-weight:600;">Assigned Employees (${employees.length})</h4>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    ${employees.map(e => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);">
+                            <div style="min-width:0;flex:1;">
+                                <span style="font-weight:500;font-size:0.85rem;">${esc(e.first_name || '')} ${esc(e.last_name || '')}</span>
+                                <span style="color:var(--text-tertiary);font-size:0.78rem;margin-left:8px;">${esc(e.employee_id || e.id || '')}</span>
+                                ${e.email ? `<span style="color:var(--text-secondary);font-size:0.78rem;margin-left:8px;">${esc(e.email)}</span>` : ''}
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="removeEmployeeFromProject(${projectId}, ${e.id || e.employee_id})" title="Remove">
+                                <i class="fas fa-times" style="font-size:0.7rem;"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // ===================== CREATE PROJECT =====================
+        function openCreateProjectModal() {
+            document.getElementById('createProjectForm').reset();
+            openModal('createProjectModal');
+        }
+
+        async function createProject(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = document.getElementById('createProjectBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            const body = {
+                name: form.name.value.trim(),
+                customer: form.customer.value.trim(),
+                status: form.status.value,
+                description: form.description.value.trim()
+            };
+            const data = await apiCall('/projects', 'POST', body);
+            btn.disabled = false;
+            btn.textContent = 'Create';
+            if (data && data.success) {
+                showToast('Project created successfully');
+                closeModal('createProjectModal');
+                loadProjects();
+            } else {
+                showToast(data?.message || 'Failed to create project', 'error');
+            }
+        }
+
+        // ===================== EDIT PROJECT =====================
+        function openEditProjectModal(id) {
+            const project = allProjects.find(p => p.id === id);
+            if (!project) return;
+            document.getElementById('editProjectId').value = project.id;
+            document.getElementById('editProjectName').value = project.name || '';
+            document.getElementById('editProjectCustomer').value = project.customer || '';
+            document.getElementById('editProjectStatus').value = project.status || 'active';
+            document.getElementById('editProjectDescription').value = project.description || '';
+            openModal('editProjectModal');
+        }
+
+        async function updateProject(e) {
+            e.preventDefault();
+            const form = e.target;
+            const id = form.id.value;
+            const btn = document.getElementById('editProjectBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            const body = {
+                name: form.name.value.trim(),
+                customer: form.customer.value.trim(),
+                status: form.status.value,
+                description: form.description.value.trim()
+            };
+            const data = await apiCall(`/projects/${id}`, 'PUT', body);
+            btn.disabled = false;
+            btn.textContent = 'Save Changes';
+            if (data && data.success) {
+                showToast('Project updated successfully');
+                closeModal('editProjectModal');
+                loadProjects();
+            } else {
+                showToast(data?.message || 'Failed to update project', 'error');
+            }
+        }
+
+        // ===================== DELETE PROJECT =====================
+        async function deleteProject(id) {
+            if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
+            const data = await apiCall(`/projects/${id}`, 'DELETE');
+            if (data && data.success) {
+                showToast('Project deleted successfully');
+                loadProjects();
+            } else {
+                showToast(data?.message || 'Failed to delete project', 'error');
+            }
+        }
+
+        // ===================== CREATE SET =====================
+        function openCreateSetModal(projectId) {
+            document.getElementById('createSetForm').reset();
+            document.getElementById('setProjectId').value = projectId;
+            openModal('createSetModal');
+        }
+
+        async function createSet(e) {
+            e.preventDefault();
+            const form = e.target;
+            const projectId = form.projectId.value;
+            const btn = document.getElementById('createSetBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            const body = {
+                name: form.name.value.trim(),
+                start_date: form.start_date.value || null,
+                end_date: form.end_date.value || null,
+                total_target: form.total_target.value ? Number(form.total_target.value) : null
+            };
+            const data = await apiCall(`/project-sets/${projectId}`, 'POST', body);
+            btn.disabled = false;
+            btn.textContent = 'Create Set';
+            if (data && data.success) {
+                showToast('Set created successfully');
+                closeModal('createSetModal');
+                loadProjects();
+                if (expandedSections[`${projectId}-sets`]) {
+                    loadSets(projectId);
+                }
+            } else {
+                showToast(data?.message || 'Failed to create set', 'error');
+            }
+        }
+
+        // ===================== DELETE SET =====================
+        async function deleteSet(setId, projectId) {
+            if (!confirm('Are you sure you want to delete this set?')) return;
+            const data = await apiCall(`/project-sets/${setId}`, 'DELETE');
+            if (data && data.success) {
+                showToast('Set deleted successfully');
+                loadSets(projectId);
+            } else {
+                showToast(data?.message || 'Failed to delete set', 'error');
+            }
+        }
+
+        // ===================== ASSIGN EMPLOYEES =====================
+        let allEmployees = [];
+        let selectedEmployeeIds = new Set();
+        let currentAssignProjectId = null;
+
+        async function openAssignEmployeesModal(projectId) {
+            currentAssignProjectId = projectId;
+            selectedEmployeeIds = new Set();
+            document.getElementById('assignProjectId').value = projectId;
+            document.getElementById('empSearchInput').value = '';
+            document.getElementById('selectedEmployeesChips').innerHTML = '';
+            openModal('assignEmployeesModal');
+            await loadAllEmployees();
+        }
+
+        async function loadAllEmployees() {
+            const container = document.getElementById('employeeDropdownList');
+            container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-secondary);">Loading employees...</div>';
+            const data = await apiCall('/employees');
+            if (!data || !data.success) {
+                container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-secondary);">Failed to load employees.</div>';
+                return;
+            }
+            allEmployees = data.employees || data.data || data || [];
+            if (!Array.isArray(allEmployees)) allEmployees = [];
+            renderEmployeeDropdown(allEmployees);
+        }
+
+        function renderEmployeeDropdown(employees) {
+            const container = document.getElementById('employeeDropdownList');
+            if (!employees.length) {
+                container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-secondary);">No employees found.</div>';
+                return;
+            }
+            container.innerHTML = employees.map(e => {
+                const id = e.id;
+                const name = `${esc(e.first_name || '')} ${esc(e.last_name || '')}`.trim() || 'Unknown';
+                const empId = e.employee_id || '';
+                const selected = selectedEmployeeIds.has(id);
+                return `
+                    <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light);${selected ? 'background:var(--primary-50);' : ''}" onmouseover="this.style.background='var(--bg-light)'" onmouseout="this.style.background='${selected ? 'var(--primary-50)' : ''}'">
+                        <input type="checkbox" ${selected ? 'checked' : ''} onchange="toggleEmployeeSelection(${id}, this)" style="accent-color:var(--primary);width:16px;height:16px;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:500;font-size:0.85rem;">${name}</div>
+                            <div style="font-size:0.75rem;color:var(--text-tertiary);">${esc(empId)}</div>
+                        </div>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function toggleEmployeeSelection(id, checkbox) {
+            if (checkbox.checked) selectedEmployeeIds.add(id);
+            else selectedEmployeeIds.delete(id);
+            renderSelectedChips();
+            const container = document.getElementById('employeeDropdownList');
+            container.querySelectorAll('label').forEach(label => {
+                const cb = label.querySelector('input[type="checkbox"]');
+                if (cb) {
+                    const empId = parseInt(cb.closest('label').querySelector('input[type="checkbox"]').getAttribute('onchange').match(/(\d+)/)[1]);
+                    label.style.background = selectedEmployeeIds.has(empId) ? 'var(--primary-50)' : '';
+                }
+            });
+        }
+
+        function renderSelectedChips() {
+            const container = document.getElementById('selectedEmployeesChips');
+            if (!selectedEmployeeIds.size) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = Array.from(selectedEmployeeIds).map(id => {
+                const emp = allEmployees.find(e => e.id === id);
+                const name = emp ? `${emp.first_name || ''} ${emp.last_name || ''}`.trim() : `ID: ${id}`;
+                return `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--primary-50);color:var(--primary-dark);border-radius:20px;font-size:0.78rem;font-weight:500;">${esc(name)} <button type="button" onclick="removeChip(${id})" style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:0.9rem;line-height:1;">&times;</button></span>`;
+            }).join('');
+        }
+
+        function removeChip(id) {
+            selectedEmployeeIds.delete(id);
+            renderSelectedChips();
+            const container = document.getElementById('employeeDropdownList');
+            container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                const empId = parseInt(cb.getAttribute('onchange').match(/(\d+)/)[1]);
+                if (empId === id) cb.checked = false;
+            });
+            renderEmployeeDropdown(allEmployees);
+        }
+
+        function filterEmployeeDropdown() {
+            const q = document.getElementById('empSearchInput').value.toLowerCase();
+            const filtered = allEmployees.filter(e =>
+                ((e.first_name || '') + ' ' + (e.last_name || '')).toLowerCase().includes(q) ||
+                (e.employee_id || '').toLowerCase().includes(q) ||
+                (e.email || '').toLowerCase().includes(q)
+            );
+            renderEmployeeDropdown(filtered);
+        }
+
+        async function assignEmployees(e) {
+            e.preventDefault();
+            if (!selectedEmployeeIds.size) {
+                showToast('Please select at least one employee', 'warning');
+                return;
+            }
+            const btn = document.getElementById('assignEmpBtn');
+            btn.disabled = true;
+            btn.textContent = 'Assigning...';
+            const body = { employeeIds: Array.from(selectedEmployeeIds) };
+            const data = await apiCall(`/projects/${currentAssignProjectId}/employees`, 'POST', body);
+            btn.disabled = false;
+            btn.textContent = 'Assign';
+            if (data && data.success) {
+                showToast('Employees assigned successfully');
+                closeModal('assignEmployeesModal');
+                if (expandedSections[`${currentAssignProjectId}-employees`]) {
+                    loadEmployeesForProject(currentAssignProjectId);
+                }
+            } else {
+                showToast(data?.message || 'Failed to assign employees', 'error');
+            }
+        }
+
+        // ===================== REMOVE EMPLOYEE =====================
+        async function removeEmployeeFromProject(projectId, empId) {
+            if (!confirm('Remove this employee from the project?')) return;
+            const data = await apiCall(`/projects/${projectId}/employees/${empId}`, 'DELETE');
+            if (data && data.success) {
+                showToast('Employee removed from project');
+                loadEmployeesForProject(projectId);
+            } else {
+                showToast(data?.message || 'Failed to remove employee', 'error');
+            }
+        }
+
+        // ===================== INIT =====================
+        document.addEventListener('DOMContentLoaded', () => {
             const user = getCurrentUser();
             if (user) {
-                document.getElementById('welcomeName').textContent = user.first_name || 'Employee';
                 const nameEl = document.getElementById('profileName');
-                if (nameEl) nameEl.textContent = user.first_name + ' ' + (user.last_name || '');
+                if (nameEl) nameEl.textContent = (user.first_name || '') + ' ' + (user.last_name || '');
                 const photoEl = document.getElementById('profilePhoto');
                 if (photoEl) {
-                    photoEl.innerHTML = `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:white;font-size:0.8rem;font-weight:600;flex-shrink:0;">${(user.first_name || user.last_name || 'U')[0].toUpperCase()}</div>`;
+                    photoEl.innerHTML = `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:white;font-size:0.8rem;font-weight:600;">${(user.first_name || user.last_name || 'U')[0].toUpperCase()}</div>`;
                 }
             }
-
             loadProjects();
         });
     </script>

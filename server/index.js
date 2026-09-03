@@ -206,6 +206,11 @@ async function runMigrations() {
         await query(`ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL`);
         console.log('[Migration] Multi-approver columns ensured.');
     } catch (e) { console.warn('[Migration] Multi-approver columns skipped:', e.message); }
+
+    try {
+        await query(`ALTER TABLE project_sets ADD COLUMN IF NOT EXISTS working_days INT DEFAULT 0`);
+        console.log('[Migration] project_sets.working_days column ensured.');
+    } catch (e) { console.warn('[Migration] working_days column skipped:', e.message); }
 }
 runMigrations();
 

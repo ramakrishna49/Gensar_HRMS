@@ -21,8 +21,8 @@
         </div>
         <nav class="sidebar-nav">
             <div class="nav-section-title">Main</div>
-            <a href="/employee/dashboard" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
-            <a href="/employee/my-projects" class="nav-item"><i class="fas fa-folder"></i><span class="nav-text">My Projects</span></a>
+            <a href="/employee/dashboard" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/employee/my-projects" class="nav-item active"><i class="fas fa-folder"></i><span class="nav-text">My Projects</span></a>
             <a href="/employee/attendance" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
             <a href="/employee/leave" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
             <a href="/employee/wfh" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
@@ -30,8 +30,6 @@
             <div class="nav-section-title">My Info</div>
             <a href="/employee/profile" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
             <a href="/employee/onboarding" class="nav-item"><i class="fas fa-user-plus"></i><span class="nav-text">My Onboarding</span></a>
-            <a href="/employee/my-projects" class="nav-item"><i class="fas fa-project-diagram"></i><span class="nav-text">My Projects</span></a>
-            <a href="/employee/leave" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Leave Balance</span></a>
             <div class="nav-section-title">Support</div>
             <a href="/employee/holidays" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
             <a href="/employee/directory" class="nav-item"><i class="fas fa-address-book"></i><span class="nav-text">Directory</span></a>
@@ -69,114 +67,78 @@
                 <p style="color:var(--text-secondary);">Projects and work assigned to you</p>
             </div>
 
-            <!-- Projects Grid -->
-            <div id="projectsGrid" class="grid grid-1 sm:grid-2 md:grid-3 lg:grid-4 xl:grid-5 gap-3" style="margin-bottom:24px;">
-                <div style="text-align:center;padding:40px;color:var(--text-secondary);min-height:200px;">
-                    <i class="fas fa-user-friends"></i>
-                    <p>No projects assigned</p>
-                    <small>Your manager will assign projects to you</small>
-                </div>
+            <!-- Loading State -->
+            <div id="loadingState" style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
+                <i class="fas fa-spinner fa-spin" style="font-size:2rem;margin-bottom:12px;"></i>
+                <p>Loading your projects...</p>
             </div>
 
-            <!-- Today Progress Card -->
-            <div id="todayProgressCard" class="card mb-3" style="display:none; margin-bottom:16px;">
-                <div class="card-header">
-                    <h3 style="font-weight:600;"><i class="fas fa-bolt"></i> Today's Progress</h3>
-                </div>
-                <div class="card-body">
-                    <div class="today-progress-row">
-                        <div>
-                            <div class="today-target">Target: <span id="todayTarget">0</span> FILES</div>
-                            <div class="today-completed">Completed: <span id="todayCompleted">0</span> FILES</div>
-                        </div>
-                        <div>
-                            <div class="today-remaining">Remaining: <span id="todayRemaining">0</span> FILES</div>
-                        </div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: 0%;"></div>
-                    </div>
-                    <div class="today-percentage" id="todayPercentage">0%</div>
-                </div>
+            <!-- Empty State -->
+            <div id="emptyState" style="display:none;text-align:center;padding:60px 20px;color:var(--text-secondary);">
+                <i class="fas fa-folder-open" style="font-size:3rem;margin-bottom:12px;opacity:0.4;"></i>
+                <h3 style="margin:0 0 8px;">No projects assigned</h3>
+                <p style="margin:0;">Your manager will assign projects to you.</p>
             </div>
 
-            <!-- Set Progress Card -->
-            <div id="setProgressCard" class="card mb-3" style="display:none;">
-                <div class="card-header">
-                    <h3 style="font-weight:600;"><i class="fas fa-list"></i> Set Progress</h3>
-                </div>
-                <div class="card-body">
-                    <div class="set-progress-row">
-                        <div>
-                            <div class="set-target">Set Target: <span id="setTarget">0</span> FILES</div>
-                            <div class="set-completed">Completed: <span id="setCompleted">0</span> FILES</div>
-                        </div>
-                        <div>
-                            <div class="set-remaining">Remaining: <span id="setRemaining">0</span> FILES</div>
-                        </div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: 0%;"></div>
-                    </div>
-                    <div class="set-percentage" id="setPercentage">0%</div>
-                </div>
-            </div>
+            <!-- Projects List -->
+            <div id="projectsList" style="display:none;"></div>
 
-            <!-- Daily Work Update Form -->
+            <!-- Daily Work Form (Modal-like Card) -->
             <div id="dailyWorkForm" class="card mb-3" style="display:none;">
-                <div class="card-header">
-                    <h3 style="font-weight:600;"><i class="fas fa-edit"></i> Daily Work Update</h3>
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <h3 style="font-weight:600;"><i class="fas fa-edit"></i> Submit Daily Work Count</h3>
+                    <button onclick="closeDailyWorkForm()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-secondary);"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="card-body">
                     <form id="dailyWorkFormInner">
                         <input type="hidden" id="formProjectId">
                         <input type="hidden" id="formSetId">
-                        <input type="hidden" id="formWorkDate">
-                        
-                        <div class="form-group">
-                            <label>Date</label>
-                            <div id="formWorkDateDisplay" readonly class="form-control" style="background: var(--bg-light); cursor:default;"></div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                            <div class="form-group">
+                                <label style="font-weight:500;margin-bottom:4px;display:block;color:var(--text-secondary);font-size:0.85rem;">Date</label>
+                                <div id="formWorkDateDisplay" readonly class="form-control" style="background:var(--bg-light);cursor:default;"></div>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight:500;margin-bottom:4px;display:block;color:var(--text-secondary);font-size:0.85rem;">Today's Target (per employee)</label>
+                                <input type="text" id="formTodayTarget" class="form-control" readonly style="background:var(--bg-light);">
+                            </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Project</label>
-                            <select id="formProjectSelect" class="form-control" disabled></select>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                            <div class="form-group">
+                                <label style="font-weight:500;margin-bottom:4px;display:block;color:var(--text-secondary);font-size:0.85rem;">Project</label>
+                                <input type="text" id="formProjectName" class="form-control" readonly style="background:var(--bg-light);">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight:500;margin-bottom:4px;display:block;color:var(--text-secondary);font-size:0.85rem;">Set</label>
+                                <input type="text" id="formSetName" class="form-control" readonly style="background:var(--bg-light);">
+                            </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Set</label>
-                            <select id="formSetSelect" class="form-control" disabled></select>
+
+                        <div class="form-group" style="margin-bottom:16px;">
+                            <label style="font-weight:600;display:block;margin-bottom:6px;">Files Completed Today <span style="color:var(--danger);">*</span></label>
+                            <input type="number" id="formTodayCount" class="form-control" min="0" required placeholder="Enter count" style="font-size:1.2rem;padding:12px;">
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Today's Target</label>
-                            <input type="number" id="formTodayTarget" class="form-control" readonly>
+
+                        <div id="formPreview" style="display:none;margin-bottom:16px;padding:16px;background:var(--bg-light);border-radius:8px;border:1px solid var(--border-light);">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:0.9rem;">
+                                <div><strong>Daily Target:</strong> <span id="previewTarget">0</span></div>
+                                <div><strong>Entered:</strong> <span id="previewEntered">0</span></div>
+                                <div><strong>Remaining Today:</strong> <span id="previewRemaining">0</span></div>
+                                <div><strong>Achievement:</strong> <span id="previewProgress">0%</span></div>
+                            </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Today's Count</label>
-                            <input type="number" id="formTodayCount" class="form-control" min="0" required>
-                        </div>
-                        
-                        <div id="formPreview" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-light);">
-                            <div><strong>Target:</strong> <span id="previewTarget">0</span> FILES</div>
-                            <div><strong>Entered:</strong> <span id="previewEntered">0</span> FILES</div>
-                            <div><strong>Remaining Today:</strong> <span id="previewRemaining">0</span> FILES</div>
-                            <div><strong>Remaining Set:</strong> <span id="previewSetRemaining">0</span> FILES</div>
-                            <div><strong>Progress:</strong> <span id="previewProgress">0%</span></div>
-                        </div>
-                        
-                        <div style="margin-top:20px;">
-                            <button type="submit" class="btn btn-primary" style="width:100%;">
-                                <i class="fas fa-paper-plane"></i> Submit Count
-                            </button>
-                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-weight:600;">
+                            <i class="fas fa-paper-plane"></i> Submit Count
+                        </button>
                     </form>
                 </div>
             </div>
 
             <!-- Daily Breakdown -->
-            <div id="dailyBreakdown" class="card mb-3" style="display:none;">
+            <div id="dailyBreakdownCard" class="card mb-3" style="display:none;">
                 <div class="card-header">
                     <h3 style="font-weight:600;"><i class="fas fa-chart-bar"></i> Daily Breakdown</h3>
                 </div>
@@ -186,42 +148,12 @@
                             <thead>
                                 <tr>
                                     <th>DATE</th>
-                                    <th>DAY</th>
-                                    <th>TARGET</th>
-                                    <th>ACTUAL</th>
-                                    <th>REMAINING</th>
-                                    <th>STATUS</th>
+                                    <th>PROJECT</th>
+                                    <th>SET</th>
+                                    <th>COUNT</th>
                                 </tr>
                             </thead>
                             <tbody id="dailyBreakdownTable">
-                                <!-- Will be populated by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Submissions -->
-            <div id="recentSubmissions" class="card">
-                <div class="card-header">
-                    <h3 style="font-weight:600;"><i class="fas fa-history"></i> Recent Submissions</h3>
-                </div>
-                <div class="card-body">
-                    <div style="overflow-x:auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>DATE</th>
-                                    <th>PROJECT</th>
-                                    <th>SET</th>
-                                    <th>TARGET</th>
-                                    <th>COUNT</th>
-                                    <th>ACHIEVEMENT</th>
-                                    <th>STATUS</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recentSubmissionsTable">
-                                <!-- Will be populated by JS -->
                             </tbody>
                         </table>
                     </div>
@@ -232,101 +164,22 @@
 
     <script src="../../js/auth.js"></script>
     <script>
-        // API helper
-        const API_URL = '/api';
-
-        async function apiCall(endpoint, method = 'GET', body = null) {
-            const token = localStorage.getItem('token');
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            const options = { method, headers };
-            if (body) {
-                options.body = JSON.stringify(body);
-            }
-
-            try {
-                const response = await fetch(`${API_URL}${endpoint}`, options);
-                if (response.status === 401) {
-                    const user = getCurrentUser();
-                    const loginUrl = getLoginUrl(user);
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    window.location.href = loginUrl;
-                    return null;
-                }
-                const text = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch (e) {
-                    data = null;
-                }
-                if (!data) {
-                    return { success: false, message: 'Server error. Please try again.' };
-                }
-                if (!response.ok && !data.success) {
-                    return data;
-                }
-                return data;
-            } catch (error) {
-                console.error('API Error:', error);
-                showToast('Network error. Please try again.', 'error');
-                return null;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            if (window.innerWidth <= 1024) {
+                sidebar.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
             }
         }
 
-        function getLoginUrl(user) {
-            if (user && ['admin', 'hr', 'manager'].includes(user.role)) return '/admin/';
-            return '/';
+        function toggleProfileMenu() {
+            const menu = document.getElementById('profileMenu');
+            if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
         }
 
-        function getCurrentUser() {
-            try {
-                const user = localStorage.getItem('user');
-                return user ? JSON.parse(user) : null;
-            } catch (e) {
-                localStorage.removeItem('user');
-                return null;
-            }
-        }
-
-        function getProfilePhotoEl() {
-            return document.getElementById('profilePhoto');
-        }
-
-        function formatDate(dateString, options = {}) {
-            if (!dateString) return '';
-            const d = new Date(dateString);
-            if (isNaN(d.getTime())) return '';
-            const defaults = { year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' };
-            return d.toLocaleDateString('en-IN', { ...defaults, ...options });
-        }
-
-        // Show toast
-        function showToast(message, type = 'success') {
-            let container = document.getElementById('toastContainer');
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'toastContainer';
-                container.className = 'toast-container';
-                document.body.appendChild(container);
-            }
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
-            toast.innerHTML = `<i class="fas fa-${icons[type] || 'info-circle'}"></i><span></span>`;
-            toast.querySelector('span').textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.animation = 'toastSlideIn 0.3s ease reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // Toggle dark mode
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             const icon = document.getElementById('themeIcon');
@@ -339,188 +192,232 @@
                 icon.classList.add('fa-moon');
                 localStorage.setItem('theme', 'light');
             }
-            document.dispatchEvent(new CustomEvent('themechange', { detail: { dark: document.body.classList.contains('dark-mode') } }));
         }
 
-        // Toggle profile menu
-        function toggleProfileMenu() {
-            const menu = document.getElementById('profileMenu');
-            if (menu) {
-                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        let allProjects = [];
+
+        async function loadMyProjectsData() {
+            const user = getCurrentUser();
+            if (!user) return;
+
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('projectsList').style.display = 'none';
+
+            const data = await apiCall('/projects/my');
+
+            document.getElementById('loadingState').style.display = 'none';
+
+            if (!data || !data.success || !data.projects || data.projects.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            allProjects = data.projects;
+            const container = document.getElementById('projectsList');
+            container.style.display = 'block';
+            container.innerHTML = '';
+
+            for (const project of data.projects) {
+                const setsData = await apiCall('/projects/my/' + project.id + '/sets');
+                const sets = (setsData && setsData.success) ? setsData.sets : [];
+
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                card.innerHTML = `
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                        <div>
+                            <h3 style="font-weight:600;margin:0;">${escapeHtml(project.name)}</h3>
+                            ${project.customer ? '<span style="font-size:0.85rem;color:var(--text-secondary);">' + escapeHtml(project.customer) + '</span>' : ''}
+                        </div>
+                        <span class="badge badge-success" style="background:#10b981;color:#fff;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;">Active</span>
+                    </div>
+                    <div class="card-body">
+                        ${sets.length === 0
+                            ? '<p style="color:var(--text-secondary);text-align:center;padding:20px 0;">No active sets for this project.</p>'
+                            : '<div style="display:flex;flex-direction:column;gap:12px;">' + sets.map(set => renderSetRow(project, set)).join('') + '</div>'
+                        }
+                    </div>
+                `;
+                container.appendChild(card);
             }
         }
 
-        // Logout
-        function logout() {
-            const token = localStorage.getItem('token');
-            const user = getCurrentUser();
-            const loginUrl = getLoginUrl(user);
-            try {
-                if (token) fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-            } catch(e) {}
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = loginUrl;
+        function renderSetRow(project, set) {
+            const today = getTodayIST();
+            const start = new Date(set.start_date);
+            const end = new Date(set.end_date);
+            const now = new Date();
+            const isActive = now >= start && now <= end;
+            const isFuture = now < start;
+            const isPast = now > end;
+
+            const empCount = set.project_employee_count || 1;
+            const workingDays = set.working_days || 1;
+            const dailyTargetPerEmployee = set.total_target / empCount / workingDays;
+
+            let statusBadge = '';
+            if (isFuture) {
+                statusBadge = '<span style="background:#f59e0b;color:#fff;padding:3px 10px;border-radius:12px;font-size:0.7rem;font-weight:600;">Upcoming</span>';
+            } else if (isPast) {
+                statusBadge = '<span style="background:#6b7280;color:#fff;padding:3px 10px;border-radius:12px;font-size:0.7rem;font-weight:600;">Completed</span>';
+            } else if (isActive) {
+                statusBadge = '<span style="background:#10b981;color:#fff;padding:3px 10px;border-radius:12px;font-size:0.7rem;font-weight:600;">In Progress</span>';
+            }
+
+            const submitBtnDisabled = !isActive ? 'disabled' : '';
+            const submitBtnOpacity = !isActive ? 'opacity:0.5;cursor:not-allowed;' : 'cursor:pointer;';
+
+            return `
+                <div style="padding:16px;background:var(--bg-light);border-radius:8px;border:1px solid var(--border-light);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                        <div>
+                            <div style="font-weight:600;font-size:1rem;margin-bottom:4px;">${escapeHtml(set.name)}</div>
+                            <div style="font-size:0.8rem;color:var(--text-secondary);">
+                                ${formatDate(set.start_date, { weekday: undefined })} - ${formatDate(set.end_date, { weekday: undefined })} &middot; ${workingDays} working days
+                            </div>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:12px;">
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Total Target</div>
+                            <div style="font-size:1.1rem;font-weight:700;">${set.total_target.toLocaleString()}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Daily Target (You)</div>
+                            <div style="font-size:1.1rem;font-weight:700;">${Math.ceil(dailyTargetPerEmployee)}</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary submit-set-btn" ${submitBtnDisabled}
+                        data-project-id="${project.id}" data-set-id="${set.id}"
+                        data-project-name="${escapeHtml(project.name)}" data-set-name="${escapeHtml(set.name)}"
+                        data-total-target="${set.total_target}" data-emp-count="${empCount}" data-working-days="${workingDays}"
+                        style="padding:8px 20px;font-size:0.85rem;font-weight:600;border-radius:6px;${submitBtnOpacity}">
+                        <i class="fas fa-edit"></i> Submit Work Count
+                    </button>
+                </div>
+            `;
         }
 
-        // Open daily work form
-        function openDailyWorkForm(projectId, setId, workDate, projectName, setName) {
+        function openDailyWorkForm(projectId, setId, projectName, setName, totalTarget, empCount, workingDays) {
+            const today = getTodayIST();
+            const dailyTargetPerEmployee = totalTarget / empCount / workingDays;
+
             document.getElementById('dailyWorkForm').style.display = 'block';
             document.getElementById('formProjectId').value = projectId;
             document.getElementById('formSetId').value = setId;
-            document.getElementById('formWorkDate').value = workDate;
-            
-            // Format date display
-            const dateEl = document.getElementById('formWorkDateDisplay');
-            if (dateEl) {
-                dateEl.textContent = formatDate(workDate, { weekday: 'short', month: 'short', day: 'numeric' });
-            }
-            
-            // Populate project select
-            const projectSelect = document.getElementById('formProjectSelect');
-            if (projectSelect) {
-                projectSelect.innerHTML = '<option value="">Loading projects...</option>';
-                loadProjectsForSelect(projectSelect, projectId);
-            }
-            
-            // Populate set select
-            const setSelect = document.getElementById('formSetSelect');
-            if (setSelect) {
-                setSelect.innerHTML = '<option value="">Loading sets...</option>';
-                loadSetsForSelect(setSelect, setId, projectId);
-            }
-            
-            // Calculate and show preview
-            calculatePreview();
+            document.getElementById('formWorkDateDisplay').textContent = formatDate(today, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            document.getElementById('formProjectName').value = projectName;
+            document.getElementById('formSetName').value = setName;
+            document.getElementById('formTodayTarget').value = Math.ceil(dailyTargetPerEmployee) + ' files';
+            document.getElementById('formTodayCount').value = '';
+
+            document.getElementById('formTodayCount').setAttribute('data-daily-target', dailyTargetPerEmployee);
+            document.getElementById('formTodayCount').setAttribute('data-total-target', totalTarget);
+
+            document.getElementById('formPreview').style.display = 'none';
+            document.getElementById('dailyWorkForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            document.getElementById('formTodayCount').focus();
         }
 
-        // Load projects for select
-        async function loadProjectsForSelect(selectElement, selectedProjectId = null) {
-            try {
-                const data = await apiCall('/api/projects');
-                if (data && data.success && data.projects) {
-                    let html = '<option value="">Select Project</option>';
-                    data.projects.forEach(project => {
-                        const selected = project.id === selectedProjectId ? 'selected' : '';
-                        html += `<option value="${project.id}" ${selected}>${project.name} ${project.customer ? `- ${project.customer}` : ''}</option>`;
-                    });
-                    selectElement.innerHTML = html;
-                }
-            } catch (e) {
-                selectElement.innerHTML = '<option value="">Error loading projects</option>';
-            }
-        }
-
-        // Load sets for select based on project
-        async function loadSetsForSelect(selectElement, selectedSetId = null, projectId = null) {
-            try {
-                const data = await apiCall(`/api/projects/${projectId}/sets`);
-                if (data && data.success && data.sets) {
-                    let html = '<option value="">Select Set</option>';
-                    data.sets.forEach(set => {
-                        const selected = set.id === selectedSetId ? 'selected' : '';
-                        html += `<option value="${set.id}" ${selected}>${set.name} - ${set.total_target} FILES</option>`;
-                    });
-                    selectElement.innerHTML = html;
-                }
-            } catch (e) {
-                selectElement.innerHTML = '<option value="">Error loading sets</option>';
-            }
-        }
-
-        // Calculate preview values
-        function calculatePreview() {
-            const projectId = document.getElementById('formProjectId').value;
-            const setId = document.getElementById('formSetId').value;
-            const todayCount = parseInt(document.getElementById('formTodayCount').value) || 0;
-            
-            if (!projectId || !setId) {
-                document.getElementById('formPreview').style.display = 'none';
-                return;
-            }
-            
-            // Get set details from API
-            apiCall(`/api/project-sets/${setId}`).then(data => {
-                if (!data || !data.success || !data.set) return;
-                
-                const setData = data.set;
-                const projectEmployeeCount = setData.project_employee_count || 1;
-                const workingDays = setData.working_days || 1;
-                const totalTarget = setData.total_target || 0;
-                
-                // Calculate targets
-                const targetPerEmployee = totalTarget / projectEmployeeCount;
-                const dailyTargetPerEmployee = targetPerEmployee / workingDays;
-                const dailyTeamTarget = dailyTargetPerEmployee * projectEmployeeCount;
-                
-                // Get today's actual count for this employee
-                const todayActual = todayCount;
-                
-                // Calculate achievements
-                const achievement = dailyTargetPerEmployee > 0 ? (todayActual / dailyTargetPerEmployee * 100) : 0;
-                const remainingToday = Math.max(dailyTargetPerEmployee - todayActual, 0);
-                const remainingSet = Math.max(totalTarget - todayActual, 0);
-                const progressPercentage = dailyTargetPerEmployee > 0 ? (todayActual / dailyTargetPerEmployee * 100) : 0;
-                
-                // Update preview
-                document.getElementById('previewTarget').textContent = dailyTargetPerEmployee.toFixed(0);
-                document.getElementById('previewEntered').textContent = todayActual.toFixed(0);
-                document.getElementById('previewRemaining').textContent = remainingToday.toFixed(0);
-                document.getElementById('previewSetRemaining').textContent = remainingSet.toFixed(0);
-                
-                // Update progress bar
-                const progressBar = document.querySelector('#formPreview + .progress-container .progress-bar');
-                if (progressBar) {
-                    progressBar.style.width = `${Math.min(progressPercentage, 100)}%`;
-                }
-                
-                // Update percentage text
-                const percentageEl = document.getElementById('previewProgress');
-                if (percentageEl) {
-                    percentageEl.textContent = `${progressPercentage.toFixed(1)}%`;
-                }
-                
-                // Show the preview
-                document.getElementById('formPreview').style.display = 'block';
-            });
-        }
-
-        // Handle form submit
-        document.getElementById('dailyWorkFormInner')?.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const projectId = document.getElementById('formProjectId').value;
-            const setId = document.getElementById('formSetId').value;
-            const todayCount = parseInt(document.getElementById('formTodayCount').value) || 0;
-            
-            if (!projectId || !setId) {
-                showToast('Please select project and set', 'error');
-                return;
-            }
-            
-            const result = await apiCall('/api/daily-work-counts', 'POST', {
-                projectId,
-                setId,
-                workDate: document.getElementById('formWorkDate').value,
-                dailyCount: todayCount
-            });
-            
-            if (result && result.success) {
-                showToast(result.created ? 'Daily count submitted successfully' : 'Daily count updated successfully', 'success');
-                closeDailyWorkForm();
-                loadMyProjectsData();
-            } else {
-                showToast(result?.message || 'Failed to save daily count', 'error');
-            }
-        });
-
-        // Close daily work form
         function closeDailyWorkForm() {
             document.getElementById('dailyWorkForm').style.display = 'none';
             document.getElementById('formTodayCount').value = '';
         }
 
-        // Initialize on load
+        document.getElementById('formTodayCount').addEventListener('input', function() {
+            const count = parseInt(this.value) || 0;
+            const dailyTarget = parseFloat(this.getAttribute('data-daily-target')) || 1;
+            const totalTarget = parseFloat(this.getAttribute('data-total-target')) || 1;
+
+            if (count > 0) {
+                const remaining = Math.max(dailyTarget - count, 0);
+                const achievement = Math.min((count / dailyTarget * 100), 100);
+
+                document.getElementById('previewTarget').textContent = Math.ceil(dailyTarget);
+                document.getElementById('previewEntered').textContent = count;
+                document.getElementById('previewRemaining').textContent = Math.ceil(remaining);
+                document.getElementById('previewProgress').textContent = achievement.toFixed(1) + '%';
+                document.getElementById('formPreview').style.display = 'block';
+            } else {
+                document.getElementById('formPreview').style.display = 'none';
+            }
+        });
+
+        document.getElementById('dailyWorkFormInner').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const user = getCurrentUser();
+            const projectId = document.getElementById('formProjectId').value;
+            const setId = document.getElementById('formSetId').value;
+            const count = parseInt(document.getElementById('formTodayCount').value);
+            const today = getTodayIST();
+
+            if (!projectId || !setId) {
+                showToast('Invalid project or set', 'error');
+                return;
+            }
+
+            if (isNaN(count) || count < 0) {
+                showToast('Please enter a valid count', 'error');
+                return;
+            }
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalContent = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            submitBtn.disabled = true;
+
+            const result = await apiCall('/daily-work-counts', 'POST', {
+                projectId: parseInt(projectId),
+                setId: parseInt(setId),
+                workDate: today,
+                dailyCount: count
+            });
+
+            submitBtn.innerHTML = originalContent;
+            submitBtn.disabled = false;
+
+            if (result && result.success) {
+                showToast(result.created ? 'Work count submitted!' : 'Work count updated!', 'success');
+                closeDailyWorkForm();
+                loadRecentSubmissions();
+            } else {
+                showToast(result?.message || 'Failed to submit work count', 'error');
+            }
+        });
+
+        async function loadRecentSubmissions() {
+            const user = getCurrentUser();
+            if (!user) return;
+
+            const data = await apiCall('/daily-work-counts/employee/' + user.id);
+            const card = document.getElementById('dailyBreakdownCard');
+            const tbody = document.getElementById('dailyBreakdownTable');
+
+            if (!data || !data.success || !data.counts || data.counts.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+            tbody.innerHTML = '';
+
+            const recent = data.counts.slice(0, 20);
+            recent.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${formatDate(c.work_date)}</td>
+                    <td>${escapeHtml(c.project_name)}</td>
+                    <td>${escapeHtml(c.set_name)}</td>
+                    <td><strong>${c.daily_count}</strong></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             if (!checkAuth()) {
                 window.location.href = '/';
@@ -529,17 +426,38 @@
 
             const user = getCurrentUser();
             if (user) {
-                document.getElementById('welcomeName').textContent = user.first_name || 'Employee';
                 const nameEl = document.getElementById('profileName');
-                if (nameEl) nameEl.textContent = user.first_name + ' ' + (user.last_name || '');
+                if (nameEl) nameEl.textContent = (user.first_name || '') + ' ' + (user.last_name || '');
                 const photoEl = document.getElementById('profilePhoto');
                 if (photoEl) {
-                    photoEl.innerHTML = `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:white;font-size:0.8rem;font-weight:600;flex-shrink:0;">${(user.first_name || user.last_name || 'U')[0].toUpperCase()}</div>`;
+                    const initial = (user.first_name || user.last_name || 'U')[0].toUpperCase();
+                    photoEl.innerHTML = '<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:white;font-size:0.8rem;font-weight:600;flex-shrink:0;">' + initial + '</div>';
                 }
             }
 
-            // Load employee's projects and data
             loadMyProjectsData();
+            loadRecentSubmissions();
+        });
+
+        document.addEventListener('click', function(e) {
+            const profileBtn = document.querySelector('.profile-btn');
+            const profileMenu = document.getElementById('profileMenu');
+            if (profileBtn && profileMenu && !profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
+                profileMenu.style.display = 'none';
+            }
+
+            const submitBtn = e.target.closest('.submit-set-btn');
+            if (submitBtn) {
+                openDailyWorkForm(
+                    submitBtn.dataset.projectId,
+                    submitBtn.dataset.setId,
+                    submitBtn.dataset.projectName,
+                    submitBtn.dataset.setName,
+                    parseFloat(submitBtn.dataset.totalTarget),
+                    parseInt(submitBtn.dataset.empCount),
+                    parseInt(submitBtn.dataset.workingDays)
+                );
+            }
         });
     </script>
 </body>
