@@ -1,0 +1,473 @@
+/* ============================================
+   WORK REPORT MODULE STYLES
+   ============================================ */
+
+/* Report scroll container */
+.report-scroll-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 70vh;
+    border: 1px solid var(--border-light, #e5e7eb);
+    border-radius: var(--radius, 12px);
+    background: var(--bg-card, #fff);
+}
+
+/* Report table */
+.wr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    min-width: 900px;
+}
+
+.wr-table th,
+.wr-table td {
+    padding: 8px 10px;
+    border: 1px solid var(--border-light, #e5e7eb);
+    white-space: nowrap;
+    text-align: left;
+}
+
+.wr-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--primary, #4F46E5);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: center;
+}
+
+/* Sticky name column (col 1) */
+.wr-table th.wr-col-project,
+.wr-table td.wr-col-project {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    min-width: 100px;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Sticky name column (col 2) */
+.wr-table th.wr-col-name,
+.wr-table td.wr-col-name {
+    position: sticky;
+    left: 140px;
+    z-index: 3;
+    min-width: 160px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wr-table th.wr-col-project,
+.wr-table th.wr-col-name {
+    z-index: 5;
+}
+
+/* Target columns */
+.wr-table .wr-target {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary, #6B7280);
+    font-size: 0.75rem;
+}
+
+/* Date columns */
+.wr-table th.wr-date-col {
+    min-width: 65px;
+    text-align: center;
+    font-size: 0.7rem;
+    line-height: 1.3;
+}
+
+.wr-table td.wr-date-col {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    min-width: 65px;
+}
+
+/* Count values */
+.wr-count {
+    font-weight: 500;
+}
+
+.wr-count-zero {
+    color: #D1D5DB;
+}
+
+.wr-count-present {
+    color: var(--text-primary, #111827);
+}
+
+/* Sunday column highlight */
+.wr-table th.wr-sunday,
+.wr-table td.wr-sunday {
+    background: #F3F4F6 !important;
+    color: #9CA3AF !important;
+}
+
+.wr-table thead th.wr-sunday {
+    background: #6B7280 !important;
+    color: #fff !important;
+}
+
+/* Holiday column highlight */
+.wr-table th.wr-holiday,
+.wr-table td.wr-holiday {
+    background: #FEF3C7 !important;
+    color: #B45309 !important;
+}
+
+.wr-table thead.wr-holiday {
+    background: #D97706 !important;
+    color: #fff !important;
+}
+
+/* Project header row */
+.wr-table tr.wr-project-header td {
+    background: var(--primary-50, #EEF2FF);
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--primary, #4F46E5);
+    border-left: 4px solid var(--primary, #4F46E5);
+    padding: 10px;
+}
+
+/* Project total row (green) */
+.wr-table tr.wr-project-total td {
+    background: #D1FAE5 !important;
+    font-weight: 700;
+    color: #065F46;
+    border-top: 2px solid #10B981;
+}
+
+/* Grand total row (yellow highlight) */
+.wr-table tr.wr-grand-total td {
+    background: #FEF3C7 !important;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #92400E;
+    border-top: 3px solid #F59E0B;
+}
+
+/* Employee row alternating */
+.wr-table tr.wr-employee-row:nth-child(even) td {
+    background: #FAFAFA;
+}
+
+.wr-table tr.wr-employee-row:hover td {
+    background: #EEF2FF;
+}
+
+/* Project section separator */
+.wr-table tr.wr-project-first td {
+    border-top: 3px solid var(--primary, #4F46E5);
+}
+
+/* Total column */
+.wr-table th.wr-total-col,
+.wr-table td.wr-total-col {
+    background: #F0FDF4 !important;
+    font-weight: 600;
+    text-align: right;
+    border-left: 2px solid #10B981;
+}
+
+.wr-table thead th.wr-total-col {
+    background: #059669 !important;
+    color: #fff;
+}
+
+/* ============================================
+   FILTER BAR
+   ============================================ */
+.wr-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-light, #e5e7eb);
+    border-radius: var(--radius, 12px);
+}
+
+.wr-filter-bar select,
+.wr-filter-bar input[type="date"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border-light, #e5e7eb);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    background: var(--bg-light, #fff);
+    color: var(--text-primary, #111827);
+}
+
+.wr-filter-bar select:focus,
+.wr-filter-bar input:focus {
+    outline: none;
+    border-color: var(--primary, #4F46E5);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+
+/* View toggle buttons */
+.wr-view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-light, #e5e7eb);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.wr-view-toggle button {
+    padding: 6px 14px;
+    border: none;
+    background: var(--bg-light, #F9FAFB);
+    color: var(--text-secondary, #6B7280);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.wr-view-toggle button.active {
+    background: var(--primary, #4F46E5);
+    color: #fff;
+}
+
+.wr-view-toggle button:hover:not(.active) {
+    background: var(--primary-50, #EEF2FF);
+    color: var(--primary, #4F46E5);
+}
+
+/* Export buttons */
+.wr-export-btns {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.wr-export-btns .btn {
+    font-size: 0.78rem;
+    padding: 6px 12px;
+}
+
+/* ============================================
+   DATE NAVIGATION
+   ============================================ */
+.wr-date-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.wr-date-nav .wr-week-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary, #111827);
+    min-width: 200px;
+    text-align: center;
+}
+
+.wr-date-nav button {
+    padding: 4px 10px;
+    border: 1px solid var(--border-light, #e5e7eb);
+    border-radius: 6px;
+    background: var(--bg-light, #fff);
+    color: var(--text-primary, #111827);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.wr-date-nav button:hover {
+    background: var(--primary-50, #EEF2FF);
+    border-color: var(--primary, #4F46E5);
+    color: var(--primary, #4F46E5);
+}
+
+/* ============================================
+   EMPLOYEE WORK UPDATE PAGE
+   ============================================ */
+.wr-project-card {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-light, #e5e7eb);
+    border-radius: var(--radius, 12px);
+    padding: 18px;
+    margin-bottom: 14px;
+    transition: box-shadow 0.2s;
+}
+
+.wr-project-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.wr-project-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary, #4F46E5);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wr-project-card h3 i {
+    font-size: 0.9rem;
+}
+
+.wr-target-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.wr-target-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wr-target-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary, #6B7280);
+    font-weight: 600;
+}
+
+.wr-target-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary, #111827);
+    font-variant-numeric: tabular-nums;
+}
+
+.wr-count-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wr-count-input-row input {
+    width: 140px;
+    padding: 8px 12px;
+    border: 2px solid var(--border-light, #e5e7eb);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.2s;
+}
+
+.wr-count-input-row input:focus {
+    outline: none;
+    border-color: var(--primary, #4F46E5);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.wr-count-input-row .btn {
+    min-width: 100px;
+}
+
+/* Submitted indicator */
+.wr-submitted-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #D1FAE5;
+    color: #065F46;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Weekly summary mini table */
+.wr-week-summary {
+    margin-top: 24px;
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-light, #e5e7eb);
+    border-radius: var(--radius, 12px);
+    padding: 16px;
+}
+
+.wr-week-summary h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary, #111827);
+}
+
+.wr-week-mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.wr-week-mini-table th,
+.wr-week-mini-table td {
+    padding: 8px;
+    border: 1px solid var(--border-light, #e5e7eb);
+    text-align: center;
+}
+
+.wr-week-mini-table th {
+    background: var(--primary-50, #EEF2FF);
+    font-weight: 600;
+    color: var(--primary, #4F46E5);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+}
+
+.wr-week-mini-table td.wr-today {
+    background: #EEF2FF;
+    font-weight: 700;
+}
+
+.wr-week-mini-table td.wr-sunday-cell {
+    background: #F3F4F6;
+    color: #9CA3AF;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .wr-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .wr-export-btns {
+        margin-left: 0;
+        justify-content: flex-end;
+    }
+
+    .wr-date-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .wr-target-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .wr-count-input-row {
+        flex-wrap: wrap;
+    }
+
+    .wr-count-input-row input {
+        flex: 1;
+        min-width: 100px;
+    }
+}

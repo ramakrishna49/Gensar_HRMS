@@ -59,6 +59,9 @@ app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/manager', require('./routes/manager'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/cron', require('./routes/cron'));
+app.use('/api/projects', require('./routes/projects'));
+app.use('/api/work-count', require('./routes/workCount'));
+app.use('/api/work-reports', require('./routes/workReports'));
 
 // Serve pages
 app.get('/', (req, res) => {
@@ -91,6 +94,15 @@ app.get('/login', (req, res) => {
 });
 app.get('/manager/my-team', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/pages/manager/my-team.html'));
+});
+app.get('/admin/projects', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/pages/admin/projects.html'));
+});
+app.get('/admin/work-report', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/pages/admin/work-report.html'));
+});
+app.get('/employee/work-update', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/pages/employee/work-update.html'));
 });
 app.get('/employee/:page', servePortalPage('employee'));
 app.get('/admin/:page', servePortalPage('admin'));

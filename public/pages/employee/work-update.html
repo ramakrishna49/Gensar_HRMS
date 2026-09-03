@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Daily Work Update - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/work-report.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-app employee-app">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">My Dashboard</div>
+            <a href="/employee/dashboard" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">My Work</div>
+            <a href="/employee/work-update" class="nav-item active"><i class="fas fa-edit"></i><span class="nav-text">Daily Work</span></a>
+            <div class="nav-section-title">My HR</div>
+            <a href="/employee/attendance" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/employee/leave" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/employee/wfh" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/employee/payroll" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
+            <a href="/employee/documents" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <a href="/employee/tickets" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Support</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">Daily Work Update</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-body">
+            <!-- Today Info -->
+            <div class="grid grid-3" style="margin-bottom:20px;">
+                <div class="stat-card slide-up stagger-1">
+                    <div class="stat-icon blue"><i class="fas fa-calendar-day"></i></div>
+                    <div class="stat-info"><h3 id="todayDate">--</h3><p>Today</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-2">
+                    <div class="stat-icon green"><i class="fas fa-project-diagram"></i></div>
+                    <div class="stat-info"><h3 id="myProjectsCount">--</h3><p>My Projects</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-3">
+                    <div class="stat-icon purple"><i class="fas fa-check-double"></i></div>
+                    <div class="stat-info"><h3 id="myTodayTotal">--</h3><p>Today's Total</p></div>
+                </div>
+            </div>
+
+            <div id="noProjectsMsg" style="display:none;text-align:center;padding:40px;background:var(--bg-card,#fff);border-radius:12px;border:1px solid var(--border-light,#e5e7eb);margin-bottom:20px;">
+                <i class="fas fa-folder-open" style="font-size:2rem;color:var(--text-secondary,#6B7280);margin-bottom:10px;display:block;"></i>
+                <h3 style="color:var(--text-secondary,#6B7280);margin-bottom:6px;">No Projects Assigned</h3>
+                <p style="color:var(--text-secondary,#6B7280);font-size:.85rem;">You are not currently assigned to any projects. Contact your admin.</p>
+            </div>
+
+            <!-- Project Cards for input -->
+            <div id="projectCards"></div>
+
+            <!-- Weekly Summary -->
+            <div class="wr-week-summary slide-up" id="weeklySummary" style="display:none;">
+                <h3 style="font-weight:600;margin-bottom:14px;"><i class="fas fa-calendar-week" style="color:var(--primary);margin-right:8px;"></i>This Week's Summary</h3>
+                <div id="weeklyTableWrap"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/work-report.js"></script>
+    <script>
+        let myProjects = [];
+        let todayCountsMap = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) throw new Error('Not authenticated');
+            document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' });
+            loadMyProjects();
+            loadMyWeek();
+        });
+
+        function todayIST() {
+            return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        }
+
+        async function loadMyProjects() {
+            const d = await apiCall('/work-count/my-projects');
+            const cards = document.getElementById('projectCards');
+            if (d && d.success) {
+                myProjects = d.projects || [];
+                document.getElementById('myProjectsCount').textContent = myProjects.length;
+
+                if (myProjects.length === 0) {
+                    document.getElementById('noProjectsMsg').style.display = 'block';
+                    cards.innerHTML = '';
+                    return;
+                }
+
+                // Fetch today's submitted counts
+                const t = await apiCall('/work-count/my?date=' + todayIST());
+                todayCountsMap = {};
+                if (t && t.success) {
+                    (t.counts || []).forEach(c => { todayCountsMap[c.project_id] = Number(c.daily_count); });
+                }
+
+                let totalToday = 0;
+                let html = '';
+                myProjects.forEach(p => {
+                    const todayCount = todayCountsMap[p.id] || 0;
+                    totalToday += todayCount;
+                    html += '<div class="wr-project-card slide-up">' +
+                        '<h3><i class="fas fa-folder-open" style="color:var(--primary);"></i> ' + escapeHtml(p.name) +
+                        (p.customer_name ? ' <span style="font-weight:400;font-size:.78rem;color:var(--text-secondary);">&mdash; ' + escapeHtml(p.customer_name) + '</span>' : '') +
+                        '</h3>' +
+                        '<div class="wr-target-row">' +
+                        '<div class="wr-target-item"><span class="wr-target-label">Weekly Target</span><span class="wr-target-value">' + Number(p.weekly_target_per_employee).toLocaleString('en-IN') + '</span></div>' +
+                        '<div class="wr-target-item"><span class="wr-target-label">Daily Target</span><span class="wr-target-value">' + Number(p.daily_target).toLocaleString('en-IN', { minimumFractionDigits: 2 }) + '</span></div>' +
+                        '<div class="wr-target-item"><span class="wr-target-label">Working Days</span><span class="wr-target-value">' + p.working_days + '</span></div>' +
+                        '</div>' +
+                        '<div class="wr-count-input-row">' +
+                        '<label style="font-size:.82rem;font-weight:500;color:var(--text-secondary);">Today\'s Count:</label>' +
+                        '<input type="number" id="count_' + p.id + '" value="' + (todayCount || '') + '" min="0" step="1" placeholder="Enter count">' +
+                        (todayCount > 0 ? '<span class="wr-submitted-badge"><i class="fas fa-check-circle"></i> Submitted (' + todayCount.toLocaleString('en-IN') + ')</span>' : '') +
+                        '<button class="btn btn-primary btn-sm" onclick="submitCount(' + p.id + ')"><i class="fas fa-save"></i> Save</button>' +
+                        '</div>' +
+                        '</div>';
+                });
+                cards.innerHTML = html;
+                document.getElementById('myTodayTotal').textContent = totalToday.toLocaleString('en-IN');
+            } else {
+                cards.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);">Failed to load projects</div>';
+            }
+        }
+
+        async function submitCount(projectId) {
+            const input = document.getElementById('count_' + projectId);
+            const val = parseFloat(input.value);
+            if (isNaN(val) || val <= 0) {
+                showToast('Enter a count greater than 0', 'error');
+                return;
+            }
+
+            const d = await apiCall('/work-count', 'POST', {
+                project_id: projectId,
+                work_date: todayIST(),
+                daily_count: val
+            });
+
+            if (d && d.success) {
+                showToast(d.message || 'Count saved!', 'success');
+                loadMyProjects();
+                loadMyWeek();
+            } else {
+                showToast(d.message || 'Failed to save', 'error');
+            }
+        }
+
+        async function loadMyWeek() {
+            const start = getWeekStart(new Date());
+            const end = new Date(start);
+            end.setDate(end.getDate() + 6);
+            const d = await apiCall('/work-count/my-week?start=' + toISODate(start) + '&end=' + toISODate(end));
+            if (!d || !d.success) return;
+
+            const projectNameMap = {};
+            myProjects.forEach(p => { projectNameMap[p.id] = p.name; });
+
+            const counts = d.counts || [];
+            if (counts.length === 0) {
+                document.getElementById('weeklySummary').style.display = 'none';
+                return;
+            }
+            document.getElementById('weeklySummary').style.display = 'block';
+
+            // Build per-project day totals across the week
+            const projAgg = {};
+            counts.forEach(c => {
+                if (!projAgg[c.project_id]) projAgg[c.project_id] = { name: c.project_name || projectNameMap[c.project_id] || 'Project', total: 0 };
+                projAgg[c.project_id].total += Number(c.daily_count) || 0;
+            });
+
+            let bodyHtml = '<tr><th>Project</th><th>This Week Total</th></tr>';
+            let grand = 0;
+            Object.keys(projAgg).forEach(pid => {
+                bodyHtml += '<tr><td>' + escapeHtml(projAgg[pid].name) + '</td><td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums;">' + Number(projAgg[pid].total).toLocaleString('en-IN') + '</td></tr>';
+                grand += projAgg[pid].total;
+            });
+            bodyHtml += '<tr style="background:var(--primary-50,#EEF2FF);font-weight:700;"><td>Total</td><td style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">' + Number(grand).toLocaleString('en-IN') + '</td></tr>';
+
+            document.getElementById('weeklyTableWrap').innerHTML =
+                '<div class="report-scroll-container"><table class="wr-week-mini-table">' + bodyHtml + '</table></div>';
+        }
+    </script>
+</body>
+</html>

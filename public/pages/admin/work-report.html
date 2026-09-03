@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Work Reports - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/work-report.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-app">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/admin/dashboard" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <div class="nav-section-title">Employee Management</div>
+            <a href="/admin/employees" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
+            <a href="/admin/departments" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
+            <a href="/admin/designations" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
+            <a href="/admin/onboarding" class="nav-item"><i class="fas fa-user-plus"></i><span class="nav-text">Onboarding</span></a>
+            <div class="nav-section-title">Time & Leave</div>
+            <a href="/admin/attendance" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/admin/leave" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/admin/wfh" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/admin/holidays" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <div class="nav-section-title">Work Management</div>
+            <a href="/admin/projects" class="nav-item"><i class="fas fa-folder-open"></i><span class="nav-text">Projects</span></a>
+            <a href="/admin/work-report" class="nav-item active"><i class="fas fa-table"></i><span class="nav-text">Work Reports</span></a>
+            <div class="nav-section-title">Finance</div>
+            <a href="/admin/payroll" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/admin/tickets" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
+            <div class="nav-section-title">Communication</div>
+            <a href="/admin/announcements" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/admin/documents" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <div class="nav-section-title">Analytics</div>
+            <a href="/admin/reports" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/admin/audit-logs" class="nav-item"><i class="fas fa-clipboard-list"></i><span class="nav-text">Audit Logs</span></a>
+            <a href="/admin/settings" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">Work Reports</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/admin/settings" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-body">
+            <!-- Summary Cards -->
+            <div class="grid grid-4" style="margin-bottom:20px;">
+                <div class="stat-card slide-up stagger-1">
+                    <div class="stat-icon blue"><i class="fas fa-folder-open"></i></div>
+                    <div class="stat-info"><h3 id="sumProjects">--</h3><p>Active Projects</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-2">
+                    <div class="stat-icon green"><i class="fas fa-users"></i></div>
+                    <div class="stat-info"><h3 id="sumEmployees">--</h3><p>Employees Assigned</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-3">
+                    <div class="stat-icon purple"><i class="fas fa-calendar-day"></i></div>
+                    <div class="stat-info"><h3 id="sumTodayTotal">--</h3><p>Today's Total Count</p></div>
+                </div>
+                <div class="stat-card slide-up stagger-4">
+                    <div class="stat-icon orange"><i class="fas fa-calendar-week"></i></div>
+                    <div class="stat-info"><h3 id="sumWeekTotal">--</h3><p>Week Total</p></div>
+                </div>
+            </div>
+
+            <!-- Week Navigation -->
+            <div class="card slide-up stagger-2" style="margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                    <div class="wr-date-nav">
+                        <button onclick="changeWeek(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <span class="wr-week-label" id="weekLabel">--</span>
+                        <button onclick="changeWeek(1)"><i class="fas fa-chevron-right"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="goToday()" style="margin-left:6px;">Today</button>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <select id="filterProject" class="form-control" style="padding:5px 10px;font-size:.82rem;min-width:140px;" onchange="loadReport()">
+                            <option value="">All Projects</option>
+                        </select>
+                        <div class="wr-view-toggle">
+                            <button class="active" id="viewWeek" onclick="setView('weekly')">Weekly</button>
+                            <button id="viewDaily" onclick="setView('daily')">Daily</button>
+                        </div>
+                        <div class="wr-export-btns">
+                            <button class="btn btn-secondary btn-sm" onclick="exportPDF()" id="btnPDF"><i class="fas fa-file-pdf"></i> PDF</button>
+                            <button class="btn btn-secondary btn-sm" onclick="exportExcel()" id="btnExcel"><i class="fas fa-file-excel"></i> Excel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Table -->
+            <div class="card slide-up stagger-3">
+                <div class="report-scroll-container" id="reportContainer">
+                    <table class="wr-table" id="reportTable">
+                        <thead id="reportHead"></thead>
+                        <tbody id="reportBody">
+                            <tr><td colspan="20" style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/work-report.js"></script>
+    <script>
+        if (!requireAdmin()) throw new Error('Not authenticated');
+
+        let currentWeekStart = null;
+        let currentView = 'weekly';
+        let allProjectsCache = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            currentWeekStart = getWeekStart(new Date());
+            document.getElementById('weekLabel').textContent = formatWeekLabel(currentWeekStart);
+            loadProjectsDropdown();
+            loadSummary();
+            loadReport();
+
+            const params = new URLSearchParams(window.location.search);
+            const projectId = params.get('project');
+            if (projectId) {
+                setTimeout(() => {
+                    document.getElementById('filterProject').value = projectId;
+                    loadReport();
+                }, 400);
+            }
+        });
+
+        function getWeekStart(d) {
+            const date = new Date(d);
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            date.setDate(diff);
+            date.setHours(0, 0, 0, 0);
+            return date;
+        }
+
+        function weekEndDate(start) {
+            const date = new Date(start);
+            date.setDate(date.getDate() + 6);
+            return date;
+        }
+
+        function formatWeekLabel(start) {
+            return start.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' — ' +
+                weekEndDate(start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function changeWeek(dir) {
+            currentWeekStart.setDate(currentWeekStart.getDate() + (dir * 7));
+            currentWeekStart = getWeekStart(currentWeekStart);
+            document.getElementById('weekLabel').textContent = formatWeekLabel(currentWeekStart);
+            loadReport();
+        }
+
+        function goToday() {
+            currentWeekStart = getWeekStart(new Date());
+            document.getElementById('weekLabel').textContent = formatWeekLabel(currentWeekStart);
+            loadReport();
+        }
+
+        function setView(v) {
+            currentView = v;
+            document.getElementById('viewWeek').classList.toggle('active', v === 'weekly');
+            document.getElementById('viewDaily').classList.toggle('active', v === 'daily');
+            loadReport();
+        }
+
+        async function loadProjectsDropdown() {
+            const d = await apiCall('/projects');
+            if (d && d.success) {
+                allProjectsCache = d.projects || [];
+                const sel = document.getElementById('filterProject');
+                allProjectsCache.forEach(p => {
+                    const o = document.createElement('option');
+                    o.value = p.id;
+                    o.textContent = p.name;
+                    sel.appendChild(o);
+                });
+            }
+        }
+
+        async function loadSummary() {
+            const d = await apiCall('/work-reports/summary');
+            if (d && d.success) {
+                const s = d.summary;
+                document.getElementById('sumProjects').textContent = s.total_projects;
+                document.getElementById('sumEmployees').textContent = s.total_employees;
+                document.getElementById('sumTodayTotal').textContent = Number(s.today_count).toLocaleString('en-IN');
+                document.getElementById('sumWeekTotal').textContent = Number(s.weekly_count).toLocaleString('en-IN');
+            }
+        }
+
+        async function loadReport() {
+            const projectId = document.getElementById('filterProject').value;
+            document.getElementById('reportBody').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;"><div class="spinner" style="margin:0 auto;"></div></td></tr>';
+            if (currentView === 'weekly') {
+                await loadWeeklyReport(projectId);
+            } else {
+                await loadDailyReport(projectId);
+            }
+        }
+
+        async function loadWeeklyReport(projectId) {
+            const params = new URLSearchParams();
+            params.set('start', toISODate(currentWeekStart));
+            if (projectId) params.set('project_id', projectId);
+
+            const d = await apiCall('/work-reports/weekly?' + params.toString());
+            if (!d || !d.success) {
+                document.getElementById('reportBody').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text-secondary);">Failed to load report</td></tr>';
+                return;
+            }
+
+            const dates = (d.dateRange && d.dateRange.dates) || [];
+            const projects = d.projects || [];
+
+            if (projects.length === 0) {
+                document.getElementById('reportHead').innerHTML = '';
+                document.getElementById('reportBody').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:40px;"><div class="empty-state"><i class="fas fa-table"></i><h3>No Data</h3><p>No projects or work counts found for this week.</p></div></td></tr>';
+                return;
+            }
+
+            const result = buildWeeklyReportTable(d);
+            document.getElementById('reportHead').innerHTML = result.theadHtml;
+            document.getElementById('reportBody').innerHTML = result.tbodyHtml;
+        }
+
+        async function loadDailyReport(projectId) {
+            const params = new URLSearchParams();
+            params.set('start', toISODate(currentWeekStart));
+            params.set('end', toISODate(weekEndDate(currentWeekStart)));
+            if (projectId) params.set('project_id', projectId);
+
+            const d = await apiCall('/work-count/admin/all?' + params.toString());
+            if (!d || !d.success) {
+                document.getElementById('reportBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-secondary);">Failed to load report</td></tr>';
+                return;
+            }
+
+            document.getElementById('reportHead').innerHTML = '<tr><th>Date</th><th>Project</th><th>Employee</th><th>Emp ID</th><th style="text-align:right;">Count</th></tr>';
+            const counts = d.counts || [];
+            if (counts.length === 0) {
+                document.getElementById('reportBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;"><div class="empty-state"><i class="fas fa-table"></i><h3>No Data</h3><p>No work counts submitted in this range.</p></div></td></tr>';
+                return;
+            }
+
+            let bodyHtml = '';
+            let total = 0;
+            counts.forEach(c => {
+                bodyHtml += '<tr><td style="font-size:.75rem;color:var(--text-secondary);">' + formatDate(new Date(c.work_date + 'T00:00:00'), { day: '2-digit', month: 'short' }) + '</td>' +
+                    '<td>' + escapeHtml(c.project_name) + '</td>' +
+                    '<td>' + escapeHtml((c.first_name || '') + ' ' + (c.last_name || '')) + '</td>' +
+                    '<td style="font-size:.75rem;color:var(--text-secondary);">' + escapeHtml(c.emp_code || '') + '</td>' +
+                    '<td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums;">' + Number(c.daily_count).toLocaleString('en-IN') + '</td></tr>';
+                total += Number(c.daily_count) || 0;
+            });
+            bodyHtml += '<tr style="background:var(--primary-50,#EEF2FF);font-weight:700;"><td colspan="4">Total</td><td style="text-align:right;font-weight:700;">' + Number(total).toLocaleString('en-IN') + '</td></tr>';
+            document.getElementById('reportBody').innerHTML = bodyHtml;
+        }
+
+        function exportExcel() {
+            const params = new URLSearchParams();
+            params.set('start', toISODate(currentWeekStart));
+            window.location.href = '/api/work-reports/excel?' + params.toString();
+        }
+
+        function exportPDF() {
+            const params = new URLSearchParams();
+            params.set('start', toISODate(currentWeekStart));
+            window.location.href = '/api/work-reports/pdf?' + params.toString();
+        }
+    </script>
+</body>
+</html>

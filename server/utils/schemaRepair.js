@@ -117,6 +117,58 @@ const ENSURE_TABLE_DDL = {
             created_at TIMESTAMP DEFAULT NOW()
         )`,
         `CREATE INDEX IF NOT EXISTS idx_process_tasks_process ON process_tasks(process_id)`
+    ],
+    // Daily & Weekly Work Count module
+    work_projects: [
+        `CREATE TABLE IF NOT EXISTS work_projects (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            customer_name VARCHAR(255),
+            weekly_target_per_employee DECIMAL(10,2) DEFAULT 0,
+            working_days INT DEFAULT 6 CHECK (working_days BETWEEN 1 AND 7),
+            status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_work_projects_status ON work_projects(status)`
+    ],
+    project_employees: [
+        `CREATE TABLE IF NOT EXISTS project_employees (
+            id SERIAL PRIMARY KEY,
+            project_id INT NOT NULL REFERENCES work_projects(id) ON DELETE CASCADE,
+            employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+            status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'removed')),
+            assigned_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(project_id, employee_id)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_proj_emp_project ON project_employees(project_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_proj_emp_employee ON project_employees(employee_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_proj_emp_status ON project_employees(status)`
+    ],
+    daily_work_counts: [
+        `CREATE TABLE IF NOT EXISTS daily_work_counts (
+            id SERIAL PRIMARY KEY,
+            project_id INT NOT NULL REFERENCES work_projects(id) ON DELETE CASCADE,
+            employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+            work_date DATE NOT NULL,
+            daily_count DECIMAL(10,2) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(project_id, employee_id, work_date)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_count_project ON daily_work_counts(project_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_count_employee ON daily_work_counts(employee_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_count_date ON daily_work_counts(work_date)`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_count_lookup ON daily_work_counts(project_id, employee_id, work_date)`
+    ],
+    work_holidays: [
+        `CREATE TABLE IF NOT EXISTS work_holidays (
+            id SERIAL PRIMARY KEY,
+            holiday_date DATE NOT NULL UNIQUE,
+            holiday_name VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_work_holidays_date ON work_holidays(holiday_date)`
     ]
 };
 
