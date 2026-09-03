@@ -88,6 +88,18 @@ const isManager = (req, res, next) => {
     next();
 };
 
+// Check if user is Employee
+const isEmployee = (req, res, next) => {
+    const allowedRoles = ['employee'];
+    if (!allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Access denied. Employee role required.' 
+        });
+    }
+    next();
+};
+
 // Generate JWT Token
 const generateToken = (user) => {
     return jwt.sign(

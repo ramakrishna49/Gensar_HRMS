@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Reports - Gensar HRMS</title>
+    <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-app">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><i class="fas fa-building" style="color:var(--primary-light);font-size:1.5rem;"></i><span style="font-size:1rem;font-weight:700;">Gensar HRMS</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+            <a href="/admin/dashboard" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/admin/projects" class="nav-item"><i class="fas fa-folder"></i><span class="nav-text">Projects</span></a>
+            <a href="/admin/project-sets" class="nav-item"><i class="fas fa-tags"></i><span class="nav-text">Project Sets</span></a>
+            <a href="/admin/project-reports" class="nav-item active"><i class="fas fa-chart-bar"></i><span class="nav-text">Project Reports</span></a>
+            <div class="nav-section-title">Employee Management</div>
+            <a href="/admin/employees" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Employees</span></a>
+            <a href="/admin/departments" class="nav-item"><i class="fas fa-building"></i><span class="nav-text">Departments</span></a>
+            <a href="/admin/designations" class="nav-item"><i class="fas fa-id-badge"></i><span class="nav-text">Designations</span></a>
+            <div class="nav-section-title">Time & Leave</div>
+            <a href="/admin/attendance" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/admin/leave" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/admin/wfh" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <div class="nav-section-title">Finance</div>
+            <a href="/admin/payroll" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payroll</span></a>
+            <div class="nav-section-title">Support</div>
+            <a href="/admin/tickets" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">Queries</span></a>
+            <div class="nav-section-title">Communication</div>
+            <a href="/admin/announcements" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
+            <a href="/admin/documents" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <div class="nav-section-title">Analytics</div>
+            <a href="/admin/reports" class="nav-item"><i class="fas fa-chart-bar"></i><span class="nav-text">Reports</span></a>
+            <a href="/admin/audit-logs" class="nav-item"><i class="fas fa-clipboard-list"></i><span class="nav-text">Audit Logs</span></a>
+            <a href="/admin/settings" class="nav-item"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2 style="font-size:1.25rem;font-weight:600;">Project Reports</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" class="notification-btn" title="Notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notifBadge" style="display:none;"></span></button>
+                <button class="notification-btn" onclick="toggleDarkMode()" title="Toggle dark mode"><i class="fas fa-moon" id="themeIcon"></i></button>
+                <div style="position:relative">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        <span class="profile-photo" id="profilePhoto" style="display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;font-size:0.8rem;font-weight:600;"></span>
+                        <span id="profileName" style="margin-left:8px;font-weight:500;"></span>
+                        <i class="fas fa-chevron-down" style="margin-left:4px;font-size:0.7rem;"></i>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" style="display:none;">
+                        <a href="/admin/settings" class="profile-menu-item"><i class="fas fa-cog"></i> Settings</a>
+                        <div class="profile-menu-divider"></div>
+                        <a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-body">
+            <div class="mb-3">
+                <h1 style="font-size:1.75rem;font-weight:700;">Project Reports</h1>
+                <p style="color:var(--text-secondary);">View daily, weekly, and monthly work counts and achievements</p>
+            </div>
+
+            <!-- Report Filters -->
+            <div class="card mb-3" style="margin-bottom:20px; padding:20px;">
+                <div class="card-header">
+                    <h3 style="font-weight:600;"><i class="fas fa-filter"></i> Report Filters</h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-2 md:grid-3 lg:grid-4 gap-3" style="flex-wrap:wrap;">
+                        
+                        <!-- View Dropdown -->
+                        <div>
+                            <label style="font-weight:500; font-size:0.85rem; display:block margin-bottom:6px;">View</label>
+                            <select id="reportView" class="form-control" style="width:100%; padding:10px 12px; font-size:0.85rem;">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Project Dropdown -->
+                        <div>
+                            <label style="font-weight:500; font-size:0.85rem; display:block margin-bottom:6px;">Project</label>
+                            <select id="reportProject" class="form-control" style="width:100%; padding:10px 12px; font-size:0.85rem;">
+                                <option value="all">All Projects</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Set Dropdown -->
+                        <div>
+                            <label style="font-weight:500; font-size:0.85rem; display:block margin-bottom:6px;">Set</label>
+                            <select id="reportSet" class="form-control" style="width:100%; padding:10px 12px; font-size:0.85rem;">
+                                <option value="all">All Sets</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Employee Dropdown -->
+                        <div>
+                            <label style="font-weight:500; font-size:0.85rem; display:block margin-bottom:6px;">Employee</label>
+                            <select id="reportEmployee" class="form-control" style="width:100%; padding:10px 12px; font-size:0.85rem;">
+                                <option value="all">All Employees</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Customer Dropdown -->
+                        <div>
+                            <label style="font-weight:500; font-size:0.85rem; display:block margin-bottom:6px;">Customer</label>
+                            <select id="reportCustomer" class="form-control" style="width:100%; padding:10px 12px; font-size:0.85rem;">
+                                <option value="all">All Customers</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Date Period -->
+                        <div style="order:1;">
+                            <label style="font-weight:500; font-size:0.85rem; display:block margin-bottom:6px;">Date/Period</label>
+                            <div id="datePeriodSection" style="width:100%; padding:10px 12px; font-size:0.85rem; background: var(--bg-light); border-radius: var(--radius); margin-top:8px;">
+                                <input type="text" id="dateRangeInput" class="form-control" readonly placeholder="Select date period">
+                                <input type="hidden" id="dateRangeStart">
+                                <input type="hidden" id="dateRangeEnd">
+                            </div>
+                        </div>
+                        
+                        <!-- Search Button -->
+                        <div style="order:2; width:100px;">
+                            <button onclick="applyReportFilters()" class="btn btn-primary" style="padding:8px 16px; font-size:0.85rem;">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Area -->
+            <div id="reportsArea">
+                <div style="text-align:center;padding:60px;color:var(--text-secondary);min-height:400px;">
+                    <i class="fas fa-folder"></i>
+                    <p>No report data found</p>
+                    <p style="margin-top:16px;">Apply filters above to view reports</p>
+                </div>
+            </div>
+
+            <!-- Excel Export Button -->
+            <div style="margin-top:24px; text-align:center;">
+                <button onclick="exportReportExcel()" class="btn btn-success" style="padding:12px 24px; font-size:1rem;">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script src="../../js/auth.js"></script>
+    <script>
+        // API helper
+        const API_URL = '/api';
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const token = localStorage.getItem('token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const options = { method, headers };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, options);
+                if (response.status === 401) {
+                    const user = getCurrentUser();
+                    const loginUrl = getLoginUrl(user);
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = loginUrl;
+                    return null;
+                }
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    data = null;
+                }
+                if (!data) {
+                    return { success: false, message: 'Server error. Please try again.' };
+                }
+                if (!response.ok && !data.success) {
+                    return data;
+                }
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Network error. Please try again.', 'error');
+                return null;
+            }
+        }
+
+        function getLoginUrl(user) {
+            if (user && ['admin', 'hr', 'manager'].includes(user.role)) return '/admin/';
+            return '/';
+        }
+
+        function getCurrentUser() {
+            try {
+                const user = localStorage.getItem('user');
+                return user ? JSON.parse(user) : null;
+            } catch (e) {
+                localStorage.removeItem('user');
+                return null;
+            }
+        }
+
+        function getProfilePhotoEl() {
+            return document.getElementById('profilePhoto');
+        }
+
+        function formatDate(dateString, options = {}) {
+            if (!dateString) return '';
+            const d = new Date(dateString);
+            if (isNaN(d.getTime())) return '';
+            const defaults = { year: 'numeric', month: 'short', day: 'numeric' };
+            return d.toLocaleDateString('en-IN', { ...defaults, ...options });
+        }
+
+        function formatDateRange(start, end) {
+            if (!start || !end) return '';
+            return `${formatDate(start)} - ${formatDate(end)}`;
+        }
+
+        // Show toast
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
+            toast.innerHTML = `<i class="fas fa-${icons[type] || 'info-circle'}"></i><span></span>`;
+            toast.querySelector('span').textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'toastSlideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Toggle dark mode
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.getElementById('themeIcon');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                localStorage.setItem('theme', 'light');
+            }
+            document.dispatchEvent(new CustomEvent('themechange', { detail: { dark: document.body.classList.contains('dark-mode') } }));
+        }
+
+        // Toggle profile menu
+        function toggleProfileMenu() {
+            const menu = document.getElementById('profileMenu');
+            if (menu) {
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // Logout
+        function logout() {
+            const token = localStorage.getItem('token');
+            const user = getCurrentUser();
+            const loginUrl = getLoginUrl(user);
+            try {
+                if (token) fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            } catch(e) {}
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = loginUrl;
+        }
+
+        // Apply report filters
+        function applyReportFilters() {
+            const view = document.getElementById('reportView').value;
+            const projectId = document.getElementById('reportProject').value;
+            const setId = document.getElementById('reportSet').value;
+            const employeeId = document.getElementById('reportEmployee').value;
+            const customer = document.getElementById('reportCustomer').value;
+            
+            // Get date range
+            const startDate = document.getElementById('dateRangeStart').value;
+            const endDate = document.getElementById('dateRangeEnd').value;
+            
+            loadReports(view, projectId, setId, employeeId, startDate, endDate);
+        }
+
+        // Load reports
+        async function loadReports(view, projectId, setId, employeeId, startDate, endDate) {
+            const reportsArea = document.getElementById('reportsArea');
+            if (!reportsArea) return;
+            
+            // Show loading state
+            reportsArea.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-secondary);">
+                <div class="spinner" style="margin:0 auto;"></div>
+                <p>Loading reports...</p>
+            </div>`;
+            
+            try {
+                const data = await apiCall('/api/project-reports', 'GET', {
+                    view,
+                    projectId: projectId === 'all' ? null : projectId,
+                    setId: setId === 'all' ? null : setId,
+                    employeeId: employeeId === 'all' ? null : employeeId,
+                    customer: customer === 'all' ? null : customer,
+                    startDate,
+                    endDate
+                });
+                
+                if (data && data.success) {
+                    renderReports(data, view);
+                } else {
+                    reportsArea.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error loading reports: ${data?.message || 'Unknown error'}</p>
+                    </div>`;
+                }
+            } catch (error) {
+                reportsArea.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger);">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Network error. Please try again.</p>
+                </div>`;
+            }
+        }
+
+        // Render reports
+        function renderReports(data, view) {
+            const reportsArea = document.getElementById('reportsArea');
+            if (!reportsArea) return;
+            
+            if (!data || !data.projects || data.projects.length === 0) {
+                reportsArea.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text-secondary);min-height:400px;">
+                    <i class="fas fa-folder"></i>
+                    <p>No report data found for the selected filters</p>
+                    <p style="margin-top:16px;">Try adjusting your filters</p>
+                </div>`;
+                return;
+            }
+            
+            let html = '';
+            
+            data.projects.forEach(projectData => {
+                const { project, sets, summary } = projectData;
+                
+                // Project header
+                html += `
+                    <div class="card mb-3" style="margin-bottom:20px;">
+                        <div class="card-header" style="display:flex;align-items:center;gap:10px;">
+                            <div style="flex:1;">
+                                <h4 style="font-weight:600; font-size:1rem; color:var(--text-primary);">
+                                    ${project.name}
+                                    ${project.customer ? ` - ${project.customer}` : ''}
+                                </h4>
+                                <p style="font-size:0.8rem; color:var(--text-secondary); margin:4px 0 0 0;">
+                                    Status: ${project.status || 'Active'}
+                                </p>
+                            </div>
+                            <div style="min-width:120px; text-align:right;">
+                                <span style="background: var(--primary-50); color: var(--primary); padding: 4px 8px; border-radius: var(--radius-sm); font-size: 0.7rem; font-weight: 500;">
+                                    ${summary?.totalActual || 0} / ${summary?.totalTarget || 0}
+                                </span>
+                            </div>
+                        </div>
+                `;
+                
+                // Set summary card
+                if (summary) {
+                    html += `
+                        <div class="card-footer" style="padding:12px; background: var(--bg-light); border-radius: 0 0 var(--radius) var(--radius);">
+                            <div class="grid grid-2" style="gap:12px;">
+                                <div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Set Target</div>
+                                    <div style="font-weight:600; font-size:1.2rem;">${summary.totalTarget || 0} FILES</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Working Days</div>
+                                    <div style="font-weight:600; font-size:1.2rem;">${summary.workingDays || 0} DAYS</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Target/Employee</div>
+                                    <div style="font-weight:600; font-size:1.2rem;">${summary.targetPerEmployee || 0} FILES</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Daily/Employee</div>
+                                    <div style="font-weight:600; font-size:1.2rem;">${summary.dailyTargetPerEmployee || 0} FILES/DAY</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Daily Team</div>
+                                    <div style="font-weight:600; font-size:1.2rem;">${summary.dailyTeamTarget || 0} FILES/DAY</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Employee rows
+                if (sets && sets.length > 0) {
+                    html += `
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:30%;">Employee</th>
+                                        <th style="width:15%;">Target</th>
+                                        <th style="width:15%;">Daily Target</th>
+                                    </th>
+                        `;
+                    
+                    // Add date columns based on view
+                    if (view === 'daily') {
+                        // Would need specific date columns
+                        html += `<th style="width:15%; text-align:center;">Today</th>`;
+                    } else if (view === 'weekly') {
+                        html += `<th style="width:60%; text-align:center;">Weekdays</th>`;
+                    } else if (view === 'monthly') {
+                        html += `<th style="width:80%; text-align:center;">Days</th>`;
+                    }
+                    
+                    html += `</tr></thead><tbody>`;
+                    
+                    sets.forEach(setData => {
+                        const { set, employees } = setData;
+                        
+                        employees.forEach(emp => {
+                            const { employee, actualCounts, achievement, status } = emp;
+                            
+                            html += `
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:500;">${employee.first_name} ${employee.last_name || ''}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-secondary);">${employee.employee_id || ''}</div>
+                                    </td>
+                                    <td style="text-align:center; font-weight:600;">${set.targetPerEmployee || 0}</td>
+                                    <td style="text-align:center; font-weight:600;">${set.dailyTargetPerEmployee || 0}</td>
+                            `;
+                            
+                            // Add actual counts based on view
+                            if (view === 'daily') {
+                                const todayActual = actualCounts?.today || 0;
+                                html += `<td style="text-align:center;">${todayActual > 0 ? todayActual : '—'}</td>`;
+                            } else if (view === 'weekly') {
+                                const weeklyActual = actualCounts?.weekly || 0;
+                                html += `<td style="text-align:center;">${weeklyActual > 0 ? weeklyActual : '—'}</td>`;
+                            } else if (view === 'monthly') {
+                                const monthlyActual = actualCounts?.monthly || 0;
+                                html += `<td style="text-align:center;">${monthlyActual > 0 ? monthlyActual : '—'}</td>`;
+                            }
+                            
+                            html += `
+                                    <td style="text-align:center; color:${achievement >= 100 ? 'var(--success)' : 'var(--warning)'}; font-weight:600;">
+                                        ${(achievement || 0).toFixed(1)}%
+                                    </td>
+                                    <td style="text-align:center; color:${status === 'achieved' ? 'var(--success)' : status === 'below' ? 'var(--warning)' : 'var(--info)'}">
+                                        ${status || '—'}
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    });
+                    
+                    // Add total row
+                    html += `
+                        <tfoot>
+                            <tr style="background: var(--primary-50);">
+                                <td style="font-weight:600;">TEAM TOTAL</td>
+                                <td style="text-align:center; font-weight:600;">${data.grandTotal?.targetPerEmployee || 0}</td>
+                                <td style="text-align:center; font-weight:600;">${data.grandTotal?.dailyTargetPerEmployee || 0}</td>
+                    `;
+                    
+                    if (view === 'daily') {
+                        html += `<td style="text-align:center; font-weight:600;">${data.grandTotal?.todayActual || 0}</td>`;
+                    } else if (view === 'weekly') {
+                        html += `<td style="text-align:center; font-weight:600;">${data.grandTotal?.weeklyActual || 0}</td>`;
+                    } else if (view === 'monthly') {
+                        html += `<td style="text-align:center; font-weight:600;">${data.grandTotal?.monthlyActual || 0}</td>`;
+                    }
+                    
+                    html += `
+                                        <td style="text-align:center; font-weight:600; color:var(--primary);">${data.grandTotal?.overallAchievement || 0}%</td>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        `;
+                        
+                    html += `</tbody></table></div>`;
+                }
+                
+                html += `</div>`;
+            });
+            
+            // Add grand total at the end
+            if (data.grandTotal) {
+                html += `
+                    <div class="card" style="margin-top:30px; border-top: 4px solid var(--primary);">
+                        <div style="padding:16px; background: var(--bg-light); border-radius: var(--radius) var(--radius) 0 0;">
+                            <div class="grid grid-3" style="gap:12px;">
+                                <div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">GRAND TOTAL</div>
+                                    <div style="font-weight:700; font-size:1.2rem; color:var(--primary);">${data.grandTotal?.totalTarget || 0} FILES</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Grand Actual</div>
+                                    <div style="font-weight:700; font-size:1.2rem; color:var(--success);">${data.grandTotal?.totalActual || 0} FILES</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Overall Achievement</div>
+                                    <div style="font-weight:700; font-size:1.2rem; color:var(--primary);">${data.grandTotal?.overallAchievement || 0}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            reportsArea.innerHTML = html;
+        }
+
+        // Export to Excel
+        function exportReportExcel() {
+            const view = document.getElementById('reportView').value;
+            const projectId = document.getElementById('reportProject').value;
+            const setId = document.getElementById('reportSet').value;
+            const employeeId = document.getElementById('reportEmployee').value;
+            const customer = document.getElementById('reportCustomer').value;
+            
+            const startDate = document.getElementById('dateRangeStart').value;
+            const endDate = document.getElementById('dateRangeEnd').value;
+            
+            if (!projectId || projectId === 'all') {
+                showToast('Please select a project first', 'error');
+                return;
+            }
+            
+            showToast('Generating Excel report...', 'info');
+            
+            apiCall(`/api/project-reports/export?view=${view}&projectId=${projectId}&setId=${setId}&employeeId=${employeeId}&customer=${customer}&startDate=${startDate}&endDate=${endDate}`, 'GET').then(data => {
+                if (data && data.success && data.filename) {
+                    const link = document.createElement('a');
+                    link.href = `/api/files/${data.filename}`;
+                    link.download = data.filename || 'project-report.xlsx';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showToast('Excel report exported successfully', 'success');
+                } else {
+                    showToast(data?.message || 'Failed to export Excel report', 'error');
+                }
+            });
+        }
+
+        // Initialize date range picker (simple implementation)
+        function initDatePicker() {
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            document.getElementById('dateRangeInput').value = formatDate(yesterday) + ' - ' + formatDate(today);
+            document.getElementById('dateRangeStart').value = yesterday.toISOString().split('T')[0];
+            document.getElementById('dateRangeEnd').value = today.toISOString().split('T')[0];
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!checkAuth()) {
+                window.location.href = '/';
+                return;
+            }
+
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('welcomeName').textContent = user.first_name || 'Employee';
+                const nameEl = document.getElementById('profileName');
+                if (nameEl) nameEl.textContent = user.first_name + ' ' + (user.last_name || '');
+                const photoEl = document.getElementById('profilePhoto');
+                if (photoEl) {
+                    photoEl.innerHTML = `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:white;font-size:0.8rem;font-weight:600;flex-shrink:0;">${(user.first_name || user.last_name || 'U')[0].toUpperCase()}</div>`;
+                }
+            }
+            
+            initDatePicker();
+            
+            // Load projects for filter
+            try {
+                const projData = await apiCall('/api/projects');
+                if (projData && projData.success && projData.projects) {
+                    const projectSelect = document.getElementById('reportProject');
+                    if (projectSelect) {
+                        let html = '<option value="all">All Projects</option>';
+                        projData.projects.forEach(project => {
+                            html += `<option value="${project.id}">${project.name} ${project.customer ? `- ${project.customer}` : ''}</option>`;
+                        });
+                        projectSelect.innerHTML = html;
+                    }
+                }
+            } catch (e) {}
+            
+            // Apply default filters
+            applyReportFilters();
+        });
+    </script>
+</body>
+</html>

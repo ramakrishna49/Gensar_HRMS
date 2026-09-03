@@ -624,3 +624,137 @@ ALTER TABLE attendance ADD CONSTRAINT attendance_status_check CHECK (status IN (
 ALTER TABLE announcements ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
 
 CREATE INDEX IF NOT EXISTS idx_announcements_expires_at ON announcements(expires_at);
+
+-- ============================================================
+-- 20. PROJECTS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    customer VARCHAR(255),
+    description TEXT,
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'paused', 'terminated')),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- 21. PROJECT EMPLOYEES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS project_employees (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+    employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(20) DEFAULT 'active',
+    UNIQUE(project_id, employee_id)
+);
+
+-- ============================================================
+-- 22. PROJECT SETS / BATCHES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS project_sets (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    total_target INT NOT NULL DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- 23. DAILY WORK COUNTS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS daily_work_counts (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+    set_id INT REFERENCES project_sets(id) ON DELETE CASCADE,
+    employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+    work_date DATE NOT NULL,
+    daily_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(project_id, set_id, employee_id, work_date)
+);
+
+-- ============================================================
+-- INDEXES
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_project_employees_project ON project_employees(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_employees_employee ON project_employees(employee_id);
+CREATE INDEX IF NOT EXISTS idx_project_sets_project ON project_sets(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_sets_status ON project_sets(status);
+CREATE INDEX IF NOT EXISTS idx_daily_work_counts_project ON daily_work_counts(project_id);
+CREATE INDEX IF NOT EXISTS idx_daily_work_counts_set ON daily_work_counts(set_id);
+CREATE INDEX IF NOT EXISTS idx_daily_work_counts_employee ON daily_work_counts(employee_id);
+CREATE INDEX IF NOT EXISTS idx_daily_work_counts_date ON daily_work_counts(work_date);
+CREATE INDEX IF NOT EXISTS idx_daily_work_counts_unique ON daily_work_counts(project_id, set_id, employee_id, work_date);
+
+-- ============================================================
+-- 24. PROJECT SETTINGS (for holiday config, etc.)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS project_settings (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+    setting_key VARCHAR(100) NOT NULL,
+    setting_value TEXT,
+    description TEXT,
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(project_id, setting_key)
+);
+
+-- ============================================================
+-- SEED DATA for projects (optional - admin can add later)
+-- ============================================================
+
+-- Default project entries can be added via admin UI
+INSERT INTO projects (name, customer, description, status) VALUES
+('Travel Management', 'US', 'Travel management system', 'active'),
+('Medical Billing', 'US', 'Medical billing processing', 'active'),
+('KYC', 'US', 'Know Your Customer verification', 'active')
+ON CONFLICT (name) DO NOTHING;
+
+-- Default project employee assignments (idempotent - only adds if not exist)
+INSERT INTO project_employees (project_id, employee_id)
+SELECT p.id, e.id FROM projects p, employees e
+WHERE p.name = 'Travel Management' AND e.role != 'admin'
+ON CONFLICT (project_id, employee_id) DO NOTHING;
+
+INSERT INTO project_employees (project_id, employee_id)
+SELECT p.id, e.id FROM projects p, employees e
+WHERE p.name = 'Medical Billing' AND e.role != 'admin'
+ON CONFLICT (project_id, employee_id) DO NOTHING;
+
+INSERT INTO project_employees (project_id, employee_id)
+SELECT p.id, e.id FROM projects p, employees e
+WHERE p.name = 'KYC' AND e.role != 'admin'
+ON CONFLICT (project_id, employee_id) DO NOTHING;
+
+-- Default project sets with automatic target calculations
+-- Set 1 for Travel Management: 1000 files, 2 working days, 5 employees
+INSERT INTO project_sets (project_id, name, start_date, end_date, total_target)
+SELECT p.id, 'Batch_1', '2026-09-03', '2026-09-04', 1000
+FROM projects p WHERE p.name = 'Travel Management'
+ON CONFLICT DO NOTHING;
+
+-- Set 2 for Travel Management: 1500 files, 3 working days, 5 employees
+INSERT INTO project_sets (project_id, name, start_date, end_date, total_target)
+SELECT p.id, 'Batch_2', '2026-09-05', '2026-09-07', 1500
+FROM projects p WHERE p.name = 'Travel Management'
+ON CONFLICT DO NOTHING;
+
+-- Set 1 for Medical Billing: 800 files, 2 working days, 3 employees
+INSERT INTO project_sets (project_id, name, start_date, end_date, total_target)
+SELECT p.id, 'Batch_1', '2026-09-03', '2026-09-04', 800
+FROM projects p WHERE p.name = 'Medical Billing'
+ON CONFLICT DO NOTHING;
+
+-- Set 1 for KYC: 500 files, 1 working day, 2 employees
+INSERT INTO project_sets (project_id, name, start_date, end_date, total_target)
+SELECT p.id, 'Batch_1', '2026-09-03', '2026-09-03', 500
+FROM projects p WHERE p.name = 'KYC'
+ON CONFLICT DO NOTHING;

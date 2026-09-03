@@ -59,6 +59,9 @@ app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/manager', require('./routes/manager'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/cron', require('./routes/cron'));
+app.use('/api/projects', require('./routes/projects'));
+app.use('/api/project-sets', require('./routes/project-sets'));
+app.use('/api/daily-work-counts', require('./routes/daily-work-counts'));
 
 // Serve pages
 app.get('/', (req, res) => {
