@@ -8,7 +8,8 @@ function getStorageClient() {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_KEY;
     if (!url || !key) {
-        throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY are required for file storage');
+        console.warn('[Storage] SUPABASE_URL and SUPABASE_SERVICE_KEY not set – file storage disabled.');
+        return null;
     }
     supabase = createClient(url, key, {
         auth: { persistSession: false }
@@ -18,6 +19,7 @@ function getStorageClient() {
 
 async function ensureBucket(bucket, opts = {}) {
     const sb = getStorageClient();
+    if (!sb) return;
     const publicAccess = opts.public !== false;
     const { data, error } = await sb.storage.getBucket(bucket);
     if (error && error.message && /not found/i.test(error.message)) {
@@ -29,6 +31,7 @@ async function ensureBucket(bucket, opts = {}) {
 
 async function uploadBuffer(bucket, fileName, buffer, contentType, opts = {}) {
     const sb = getStorageClient();
+    if (!sb) throw new Error('File storage not configured');
     await ensureBucket(bucket, opts);
     const { error } = await sb.storage.from(bucket).upload(fileName, buffer, {
         contentType,
@@ -43,6 +46,7 @@ async function uploadBuffer(bucket, fileName, buffer, contentType, opts = {}) {
 async function deleteFile(bucket, fileName) {
     if (!fileName) return;
     const sb = getStorageClient();
+    if (!sb) return;
     const { error } = await sb.storage.from(bucket).remove([fileName]);
     if (error && !/not found/i.test(error.message)) {
         console.error('Storage delete error:', error.message);

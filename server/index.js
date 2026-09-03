@@ -181,20 +181,22 @@ if (require.main === module) {
     });
 }
 
-// Auto-migration: runs on every server start (Vercel or local). Idempotent.
-async function runLeaveTypeMigration() {
+// Auto-migrations: only run when DATABASE_URL is available.
+// On Vercel cold-start these run once; if the DB is unreachable they log
+// a warning instead of crashing the entire serverless function.
+async function runMigrations() {
+    if (!process.env.DATABASE_URL) {
+        console.warn('[Migration] DATABASE_URL not set – skipping migrations.');
+        return;
+    }
     try {
         await query(`INSERT INTO leave_types (name, days_per_year, description, gender_eligibility) VALUES ('Sick or Casual', 12, 'For medical or casual reasons (1 paid day per month, rest LOP)', 'all') ON CONFLICT (name) DO NOTHING`);
         await query(`UPDATE leave_types SET is_active = 1, days_per_year = 12 WHERE name = 'Sick or Casual'`);
         await query(`UPDATE leave_types SET is_active = 0 WHERE name IN ('Sick Leave', 'Casual Leave')`);
         await query(`UPDATE leave_types SET is_active = 0 WHERE name IN ('Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Earned Leave')`);
         await query(`UPDATE leave_types SET days_per_year = 0 WHERE name IN ('Maternity Leave', 'Paternity Leave')`);
-    } catch (e) { /* table may not exist yet */ }
-}
-runLeaveTypeMigration();
+    } catch (e) { console.warn('[Migration] Leave types migration skipped:', e.message); }
 
-// Auto-migration: add multi-approver columns to request tables.
-async function runMultiApproverMigration() {
     try {
         await query(`ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS manager_id INT REFERENCES employees(id) ON DELETE SET NULL`);
         await query(`ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL`);
@@ -203,8 +205,8 @@ async function runMultiApproverMigration() {
         await query(`ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS manager_id INT REFERENCES employees(id) ON DELETE SET NULL`);
         await query(`ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS hr_id INT REFERENCES employees(id) ON DELETE SET NULL`);
         console.log('[Migration] Multi-approver columns ensured.');
-    } catch (e) { /* table may not exist yet */ }
+    } catch (e) { console.warn('[Migration] Multi-approver columns skipped:', e.message); }
 }
-runMultiApproverMigration();
+runMigrations();
 
 module.exports = app;

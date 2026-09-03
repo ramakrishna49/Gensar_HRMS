@@ -7,7 +7,8 @@ function getPool() {
 
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
-        throw new Error('DATABASE_URL is not set. Configure it in .env (local) or Vercel environment variables.');
+        console.error('[DB] DATABASE_URL is not set. Configure it in .env (local) or Vercel environment variables.');
+        return null;
     }
 
     // Use Supabase pooler for serverless (port 6543) or direct connection
@@ -38,7 +39,11 @@ function getPool() {
 // emulated RETURNING + $N placeholders. pg supports all of these natively, so this
 // is just a thin wrapper that keeps the old result shape ({ rows, changes }).
 async function query(sql, params = []) {
-    const result = await getPool().query(sql, params);
+    const p = getPool();
+    if (!p) {
+        throw new Error('Database not configured. Set DATABASE_URL environment variable.');
+    }
+    const result = await p.query(sql, params);
     return {
         rows: result.rows || [],
         changes: result.rowCount != null ? result.rowCount : 0,
@@ -54,7 +59,7 @@ async function getClient() {
 
 const poolLike = {
     query: (sql, params) => query(sql, params),
-    end: () => getPool().end()
+    end: () => { const p = getPool(); return p ? p.end() : Promise.resolve(); }
 };
 
 module.exports = { query, pool: poolLike, getPool, getClient };
