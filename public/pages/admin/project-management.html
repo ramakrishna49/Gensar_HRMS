@@ -432,14 +432,25 @@
         async function loadProjects() {
             const grid = document.getElementById('projectsGrid');
             grid.innerHTML = '<div style="text-align:center;padding:40px;grid-column:1/-1;"><div class="spinner" style="margin:0 auto;"></div></div>';
-            const data = await apiCall('/projects');
-            if (data) {
-                const n = Array.isArray(data.projects) ? data.projects.length : (Array.isArray(data.data) ? data.data.length : -1);
-                console.log('GET /projects response: success=' + data.success, 'projects length=' + n);
-                if (Array.isArray(data.projects) && data.projects[0]) console.log('first project fields:', JSON.stringify(data.projects[0]));
+            let data;
+            try {
+                data = await apiCall('/projects');
+            } catch (e) {
+                console.error('loadProjects exception:', e);
+                data = null;
             }
-            if (!data || !data.success) {
-                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p></div>';
+            const dbg = (() => {
+                if (!data) return 'Request failed (no response)';
+                const keys = Object.keys(data).join(',');
+                const isArr = Array.isArray(data.projects ? data.projects : data.data ? data.data : null);
+                const n = Array.isArray(data.projects) ? data.projects.length
+                    : Array.isArray(data.data) ? data.data.length : -1;
+                const first = Array.isArray(data.projects) ? (data.projects[0] && JSON.stringify(data.projects[0])) : (Array.isArray(data.data) ? (data.data[0] && JSON.stringify(data.data[0])) : 'none');
+                return 'success=' + data.success + ' keys=[' + keys + '] projects length=' + n + ' first=' + first;
+            })();
+            console.log('GET /projects response:', dbg);
+            if (data && (!data.success || !Array.isArray(data.projects || data.data) || ((data.projects || data.data).length === 0))) {
+                grid.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p><p style="font-size:0.7rem;margin-top:8px;background:var(--bg-light);padding:8px;border-radius:var(--radius);word-break:break-all;color:var(--text-tertiary);">${esc(dbg)}</p></div>`;
                 return;
             }
             allProjects = (data.projects || data.data || []);
