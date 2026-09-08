@@ -67,7 +67,8 @@ router.get('/employee/:employeeId', verifyToken, async (req, res) => {
     try {
         const result = await q(
             `SELECT pc.id, pc.project_id, pc.set_id, pc.work_date, pc.daily_count,
-             p.name as project_name, s.name as set_name
+             p.name as project_name, s.name as set_name, s.total_target, s.working_days,
+             (SELECT COUNT(DISTINCT pe2.employee_id) FROM project_employees pe2 WHERE pe2.project_id = pc.project_id) as emp_count
              FROM daily_work_counts pc
              JOIN projects p ON pc.project_id = p.id
              JOIN project_sets s ON pc.set_id = s.id
@@ -252,7 +253,7 @@ router.get('/summary/:projectId/:setId', verifyToken, isAdmin, async (req, res) 
     
         // Get set details
         const setResult = await q(
-            `SELECT ps.*, p.name as project_name, p.customer as project_customer,
+            `SELECT ps.*, p.name as project_name, COALESCE(p.client, p.customer) as project_client,
              pe.count as project_employee_count
              FROM project_sets ps
              JOIN projects p ON ps.project_id = p.id
@@ -320,7 +321,7 @@ router.get('/summary/:projectId/:setId', verifyToken, isAdmin, async (req, res) 
                 id: setData.id,
                 name: setData.name,
                 projectName: setData.project_name,
-                projectCustomer: setData.project_customer,
+                projectClient: setData.project_client,
                 totalTarget: setData.total_target,
                 workingDays: setData.working_days,
                 projectEmployeeCount: setData.project_employee_count || 0,

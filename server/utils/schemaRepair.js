@@ -58,6 +58,7 @@ const EMPLOYEE_ALTER_COLUMNS = {
 const PROJECT_ALTER_COLUMNS = {
     status: "VARCHAR(20) DEFAULT 'active'",
     customer: 'VARCHAR(255)',
+    client: 'VARCHAR(255)',
     description: 'TEXT',
     created_at: 'TIMESTAMP DEFAULT NOW()',
     updated_at: 'TIMESTAMP DEFAULT NOW()'
@@ -165,6 +166,7 @@ const ENSURE_TABLE_DDL = {
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             customer VARCHAR(255),
+            client VARCHAR(255),
             description TEXT,
             status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'paused', 'terminated', 'on_hold', 'completed', 'cancelled')),
             created_at TIMESTAMP DEFAULT NOW(),

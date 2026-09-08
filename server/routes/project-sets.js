@@ -15,7 +15,7 @@ const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
 router.get('/single/:id', verifyToken, async (req, res) => {
     try {
         const result = await q(
-            `SELECT ps.*, p.name as project_name, p.customer as project_customer,
+            `SELECT ps.*, p.name as project_name, COALESCE(p.client, p.customer) as project_client,
              (
                  SELECT COUNT(*) FROM employees e
                  JOIN project_employees pe ON e.id = pe.employee_id

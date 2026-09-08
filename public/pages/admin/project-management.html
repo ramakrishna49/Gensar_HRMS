@@ -107,8 +107,8 @@
                         <input type="text" class="form-control" name="name" required placeholder="Enter project name">
                     </div>
                     <div class="form-group">
-                        <label>Customer *</label>
-                        <input type="text" class="form-control" name="customer" required placeholder="Enter customer name">
+                        <label>Client *</label>
+                        <input type="text" class="form-control" name="client" required placeholder="Enter client name">
                     </div>
                     <div class="form-group">
                         <label>Status</label>
@@ -146,8 +146,8 @@
                         <input type="text" class="form-control" name="name" id="editProjectName" required>
                     </div>
                     <div class="form-group">
-                        <label>Customer *</label>
-                        <input type="text" class="form-control" name="customer" id="editProjectCustomer" required>
+                        <label>Client *</label>
+                        <input type="text" class="form-control" name="client" id="editProjectClient" required>
                     </div>
                     <div class="form-group">
                         <label>Status</label>
@@ -510,7 +510,7 @@
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
                             <div style="flex:1;min-width:0;">
                                 <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:4px;word-break:break-word;">${esc(p.name)}</h3>
-                                <p style="color:var(--text-secondary);font-size:0.85rem;"><i class="fas fa-building" style="margin-right:4px;"></i>${esc(p.customer || 'N/A')}</p>
+                                <p style="color:var(--text-secondary);font-size:0.85rem;"><i class="fas fa-building" style="margin-right:4px;"></i>${esc(p.client || 'N/A')}</p>
                             </div>
                             <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;">
                                 <button class="btn btn-secondary btn-sm" onclick="openEditProjectModal(${p.id})" title="Edit"><i class="fas fa-pen"></i></button>
@@ -589,7 +589,7 @@
             const q = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allProjects.filter(p =>
                 (p.name || '').toLowerCase().includes(q) ||
-                (p.customer || '').toLowerCase().includes(q) ||
+                (p.client || '').toLowerCase().includes(q) ||
                 (p.status || '').toLowerCase().includes(q)
             );
             renderProjects(filtered);
@@ -768,7 +768,7 @@
             btn.textContent = 'Creating...';
             const body = {
                 name: form.name.value.trim(),
-                customer: form.customer.value.trim(),
+                client: form.client.value.trim(),
                 status: form.status.value,
                 description: form.description.value.trim()
             };
@@ -792,7 +792,7 @@
             if (!project) return;
             document.getElementById('editProjectId').value = project.id;
             document.getElementById('editProjectName').value = project.name || '';
-            document.getElementById('editProjectCustomer').value = project.customer || '';
+            document.getElementById('editProjectClient').value = project.client || '';
             document.getElementById('editProjectStatus').value = project.status || 'active';
             document.getElementById('editProjectDescription').value = project.description || '';
             openModal('editProjectModal');
@@ -807,7 +807,7 @@
             btn.textContent = 'Saving...';
             const body = {
                 name: form.name.value.trim(),
-                customer: form.customer.value.trim(),
+                client: form.client.value.trim(),
                 status: form.status.value,
                 description: form.description.value.trim()
             };

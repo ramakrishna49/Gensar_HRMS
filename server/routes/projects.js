@@ -17,7 +17,7 @@ const ALLOWED_STATUSES = ['active', 'inactive', 'on_hold', 'completed', 'cancell
 router.get('/my', verifyToken, async (req, res) => {
     try {
         const result = await q(
-            `SELECT p.id, p.name, p.customer, p.description, p.status, p.created_at
+            `SELECT p.id, p.name, COALESCE(p.client, p.customer) as client, p.description, p.status, p.created_at
              FROM projects p
              JOIN project_employees pe ON p.id = pe.project_id
              WHERE pe.employee_id = $1 AND p.status = 'active'
@@ -69,7 +69,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
         const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
         const result = await q(
-            `SELECT p.id, p.name, p.customer, p.description, p.status, p.created_at,
+            `SELECT p.id, p.name, COALESCE(p.client, p.customer) as client, p.description, p.status, p.created_at,
              (SELECT COUNT(*) FROM project_sets s WHERE s.project_id = p.id ${hasDeletedAt ? 'AND s.deleted_at IS NULL' : ''}) as sets_count,
              (SELECT COUNT(*) FROM project_employees pe WHERE pe.project_id = p.id) as employees_count
              FROM projects p
@@ -118,17 +118,17 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
  */
 router.post('/', verifyToken, isAdmin, async (req, res) => {
     try {
-        const { name, customer, description, status } = req.body;
+        const { name, client, description, status } = req.body;
         if (!name) {
             return res.status(400).json({ success: false, message: 'Project name is required' });
         }
         const finalStatus = ALLOWED_STATUSES.includes(status) ? status : 'active';
 
         const result = await q(
-            `INSERT INTO projects (name, customer, description, status) 
+            `INSERT INTO projects (name, client, description, status) 
              VALUES ($1, $2, $3, $4) 
-             RETURNING id, name, customer, description, status, created_at`,
-            [name, customer || null, description || null, finalStatus]
+             RETURNING id, name, client, description, status, created_at`,
+            [name, client || null, description || null, finalStatus]
         );
         const created = result.rows[0];
         created.employees_count = 0;
@@ -148,7 +148,7 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
 router.get('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
         const result = await q(
-            `SELECT id, name, customer, description, status, created_at, updated_at 
+            `SELECT id, name, COALESCE(client, customer) as client, description, status, created_at, updated_at 
              FROM projects WHERE id = $1`,
             [req.params.id]
         );
@@ -167,13 +167,13 @@ router.get('/:id', verifyToken, isAdmin, async (req, res) => {
  */
 router.put('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        const { name, customer, description, status } = req.body;
+        const { name, client, description, status } = req.body;
         const finalStatus = ALLOWED_STATUSES.includes(status) ? status : 'active';
         const result = await q(
-            `UPDATE projects SET name = $1, customer = $2, description = $3, status = $4, updated_at = NOW() 
+            `UPDATE projects SET name = $1, client = $2, description = $3, status = $4, updated_at = NOW() 
              WHERE id = $5 
-             RETURNING id, name, customer, description, status, created_at, updated_at`,
-            [name, customer || null, description || null, finalStatus, req.params.id]
+             RETURNING id, name, client, description, status, created_at, updated_at`,
+            [name, client || null, description || null, finalStatus, req.params.id]
         );
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Project not found' });

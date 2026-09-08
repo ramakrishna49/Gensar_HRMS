@@ -59,6 +59,7 @@ app.use('/api/cron', require('./routes/cron'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/project-sets', require('./routes/project-sets'));
 app.use('/api/daily-work-counts', require('./routes/daily-work-counts'));
+app.use('/api/project-reports', require('./routes/project-reports'));
 
 // Static files (mounted after API routes so API paths always take precedence)
 app.use(express.static(path.join(__dirname, '../public')));
@@ -221,6 +222,7 @@ async function runMigrations() {
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             customer VARCHAR(255),
+            client VARCHAR(255),
             description TEXT,
             status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'paused', 'terminated', 'on_hold', 'completed', 'cancelled')),
             created_at TIMESTAMP DEFAULT NOW(),
@@ -263,9 +265,19 @@ async function runMigrations() {
         // columns won't get them from CREATE TABLE IF NOT EXISTS, so add them
         // explicitly (idempotent) to avoid 42703 on the sets/count queries.
         await query(`ALTER TABLE daily_work_counts ADD COLUMN IF NOT EXISTS set_id INT REFERENCES project_sets(id) ON DELETE CASCADE`);
+        await query(`ALTER TABLE daily_work_counts ADD COLUMN IF NOT EXISTS daily_count INT NOT NULL DEFAULT 0`);
         await query(`ALTER TABLE project_sets ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
         console.log('[Migration] Projects module tables ensured.');
     } catch (e) { console.warn('[Migration] Projects module tables skipped:', e.message); }
+
+    // Rename customer → client: add the new column, copy existing data,
+    // then use `client` everywhere. The old `customer` column is kept for
+    // backward compatibility but is no longer the primary field.
+    try {
+        await query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
+        await query(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
+        console.log('[Migration] projects.client column ensured, data copied from customer.');
+    } catch (e) { console.warn('[Migration] projects.client column skipped:', e.message); }
 
     // The admin UI offers on_hold/completed/cancelled project statuses, but the
     // original CHECK constraint only allowed active/inactive/paused/terminated.
