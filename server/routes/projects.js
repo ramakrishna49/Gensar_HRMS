@@ -67,7 +67,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
         const result = await q(
             `SELECT p.id, p.name, p.customer, p.description, p.status, p.created_at,
-             (SELECT COUNT(*) FROM project_sets s WHERE s.project_id = p.id AND s.deleted_at IS NULL) as sets_count,
+             (SELECT COUNT(*) FROM project_sets s WHERE s.project_id = p.id) as sets_count,
              (SELECT COUNT(*) FROM project_employees pe WHERE pe.project_id = p.id) as employees_count
              FROM projects p
              ORDER BY p.name`
@@ -76,7 +76,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error fetching projects:', error);
         const r = pgErrorResponse(error);
-        res.status(r.status).json({ success: false, message: r.message });
+        res.status(r.status).json({ success: false, message: (error && error.message) || r.message });
     }
 });
 
@@ -89,7 +89,7 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
         const result = await q(
             `SELECT
              (SELECT COUNT(*) FROM projects) as projects,
-             (SELECT COUNT(*) FROM project_sets WHERE deleted_at IS NULL) as sets,
+             (SELECT COUNT(*) FROM project_sets) as sets,
              (SELECT COUNT(DISTINCT employee_id) FROM project_employees) as assigned_employees,
              (SELECT COUNT(*) FROM daily_work_counts) as submissions`
         );

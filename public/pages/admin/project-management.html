@@ -441,12 +441,14 @@
             }
             const dbg = (() => {
                 if (!data) return 'Request failed (no response)';
+                if (!data.success) {
+                    return 'success=false message=' + (data.message || JSON.stringify(data));
+                }
                 const keys = Object.keys(data).join(',');
-                const isArr = Array.isArray(data.projects ? data.projects : data.data ? data.data : null);
                 const n = Array.isArray(data.projects) ? data.projects.length
                     : Array.isArray(data.data) ? data.data.length : -1;
                 const first = Array.isArray(data.projects) ? (data.projects[0] && JSON.stringify(data.projects[0])) : (Array.isArray(data.data) ? (data.data[0] && JSON.stringify(data.data[0])) : 'none');
-                return 'success=' + data.success + ' keys=[' + keys + '] projects length=' + n + ' first=' + first;
+                return 'success=true keys=[' + keys + '] projects length=' + n + ' first=' + first;
             })();
             console.log('GET /projects response:', dbg);
             if (data && (!data.success || !Array.isArray(data.projects || data.data) || ((data.projects || data.data).length === 0))) {
