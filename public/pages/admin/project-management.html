@@ -433,11 +433,12 @@
             const grid = document.getElementById('projectsGrid');
             grid.innerHTML = '<div style="text-align:center;padding:40px;grid-column:1/-1;"><div class="spinner" style="margin:0 auto;"></div></div>';
             const data = await apiCall('/projects');
+            if (data) console.log('GET /projects response keys:', Object.keys(data), 'success:', data.success, 'isArray(projects):', Array.isArray(data.projects));
             if (!data || !data.success) {
                 grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p></div>';
                 return;
             }
-            allProjects = data.projects || data.data || data || [];
+            allProjects = (data.projects || data.data || []);
             if (Array.isArray(allProjects)) {
                 renderProjects(allProjects);
             } else {
@@ -451,7 +452,8 @@
                 grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p></div>';
                 return;
             }
-            grid.innerHTML = projects.map(p => `
+            try {
+                grid.innerHTML = projects.map(p => `
                 <div class="card" style="padding:0;overflow:hidden;" id="project-card-${p.id}">
                     <div style="padding:20px;">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
@@ -469,11 +471,11 @@
                         <div style="display:flex;gap:18px;margin-bottom:14px;flex-wrap:wrap;">
                             <span style="display:inline-flex;align-items:center;gap:7px;font-size:0.9rem;color:var(--text-secondary);">
                                 <i class="fas fa-users" style="color:var(--primary);width:16px;text-align:center;"></i>
-                                <strong style="color:var(--text-primary);font-size:1.05rem;">${p.employees_count || 0}</strong> Employees Assigned
+                                <strong style="color:var(--text-primary);font-size:1.05rem;">${countOf(p.employees_count)}</strong> Employees Assigned
                             </span>
                             <span style="display:inline-flex;align-items:center;gap:7px;font-size:0.9rem;color:var(--text-secondary);">
                                 <i class="fas fa-layer-group" style="color:var(--primary);width:16px;text-align:center;"></i>
-                                <strong style="color:var(--text-primary);font-size:1.05rem;">${p.sets_count || 0}</strong> Sets
+                                <strong style="color:var(--text-primary);font-size:1.05rem;">${countOf(p.sets_count)}</strong> Sets
                             </span>
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
@@ -499,6 +501,15 @@
                     </div>
                 </div>
             `).join('');
+            } catch (err) {
+                console.error('renderProjects failed:', err);
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><p>Failed to render projects.</p></div>';
+            }
+        }
+
+        function countOf(v) {
+            const n = parseInt(v, 10);
+            return isNaN(n) ? 0 : n;
         }
 
         function filterProjects() {
