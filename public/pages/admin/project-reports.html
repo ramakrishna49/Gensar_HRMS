@@ -294,6 +294,22 @@
                         empSelect.innerHTML += `<option value="${e.id}">${e.first_name} ${e.last_name || ''}</option>`;
                     });
                 }
+            } else {
+                // Load all sets and employees across all projects
+                const [allSets, allEmps] = await Promise.all([
+                    apiCall('/project-reports/all-sets'),
+                    apiCall('/project-reports/all-employees')
+                ]);
+                if (allSets && allSets.success) {
+                    allSets.sets.forEach(s => {
+                        setSelect.innerHTML += `<option value="${s.id}">${s.project_name} - ${s.name}</option>`;
+                    });
+                }
+                if (allEmps && allEmps.success) {
+                    allEmps.employees.forEach(e => {
+                        empSelect.innerHTML += `<option value="${e.id}">${e.first_name} ${e.last_name || ''}</option>`;
+                    });
+                }
             }
             loadReport();
         }
@@ -417,7 +433,15 @@
                 let teamActualByDay = {};
 
                 employees.forEach(emp => {
-                    html += `<tr><td class="name-col">${escapeHtml(emp.employee.first_name)} ${escapeHtml(emp.employee.last_name || '')}<br><span style="font-size:0.7rem;color:var(--text-secondary);">${emp.employee.emp_id || ''}</span></td>`;
+                    const pct = set.targetPerEmployee > 0 ? Math.min((emp.totalActual / set.targetPerEmployee * 100), 100) : 0;
+                    const barColor = pct >= 100 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+                    html += `<tr><td class="name-col">
+                        <div style="font-weight:600;">${escapeHtml(emp.employee.first_name)} ${escapeHtml(emp.employee.last_name || '')}</div>
+                        <div style="font-size:0.7rem;color:var(--text-secondary);">${emp.employee.emp_id || ''}</div>
+                        <div style="margin-top:4px;background:var(--border-light);border-radius:4px;height:6px;overflow:hidden;">
+                            <div style="width:${pct}%;height:100%;background:${barColor};border-radius:4px;transition:width 0.3s;"></div>
+                        </div>
+                    </td>`;
                     html += `<td style="font-weight:600;">${set.targetPerEmployee}</td>`;
                     html += `<td style="font-weight:600;">${set.dailyTargetPerEmployee}</td>`;
 
@@ -564,6 +588,24 @@
                 const sel = document.getElementById('reportProject');
                 projData.projects.forEach(p => {
                     sel.innerHTML += `<option value="${p.id}">${p.name}${p.client ? ' - ' + p.client : ''}</option>`;
+                });
+            }
+
+            // Pre-load all employees and sets for "All Projects" default
+            const [allSetsData, allEmpData] = await Promise.all([
+                apiCall('/project-reports/all-sets'),
+                apiCall('/project-reports/all-employees')
+            ]);
+            if (allSetsData && allSetsData.success) {
+                const setSel = document.getElementById('reportSet');
+                allSetsData.sets.forEach(s => {
+                    setSel.innerHTML += `<option value="${s.id}">${s.project_name} - ${s.name}</option>`;
+                });
+            }
+            if (allEmpData && allEmpData.success) {
+                const empSel = document.getElementById('reportEmployee');
+                allEmpData.employees.forEach(e => {
+                    empSel.innerHTML += `<option value="${e.id}">${e.first_name} ${e.last_name || ''}${e.project_names ? ' (' + e.project_names + ')' : ''}</option>`;
                 });
             }
 

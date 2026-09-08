@@ -24,31 +24,31 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
 
         if (view === 'daily') {
             if (!date) return res.status(400).json({ success: false, message: 'Date is required for daily view' });
-            dateFilter = `AND dwc.work_date = $${++paramOffset}`;
+            dateFilter = ` AND dwc.work_date = $${++paramOffset}::date`;
             dateParams.push(date);
         } else if (view === 'weekly') {
             if (!startDate || !endDate) return res.status(400).json({ success: false, message: 'startDate and endDate required' });
-            dateFilter = `AND dwc.work_date >= $${++paramOffset} AND dwc.work_date <= $${++paramOffset}`;
+            dateFilter = ` AND dwc.work_date >= $${++paramOffset}::date AND dwc.work_date <= $${++paramOffset}::date`;
             dateParams.push(startDate, endDate);
         } else if (view === 'monthly') {
             if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
             const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
-            const lastDay = new Date(year, month, 0).getDate();
+            const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
             const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            dateFilter = `AND dwc.work_date >= $${++paramOffset} AND dwc.work_date <= $${++paramOffset}`;
+            dateFilter = ` AND dwc.work_date >= $${++paramOffset}::date AND dwc.work_date <= $${++paramOffset}::date`;
             dateParams.push(monthStart, monthEnd);
         }
 
         if (projectId && projectId !== 'all') {
-            dateFilter += ` AND pe.project_id = $${++paramOffset}`;
+            dateFilter += ` AND pe.project_id = $${++paramOffset}::int`;
             dateParams.push(projectId);
         }
         if (setId && setId !== 'all') {
-            dateFilter += ` AND ps.id = $${++paramOffset}`;
+            dateFilter += ` AND ps.id = $${++paramOffset}::int`;
             dateParams.push(setId);
         }
         if (employeeId && employeeId !== 'all') {
-            dateFilter += ` AND pe.employee_id = $${++paramOffset}`;
+            dateFilter += ` AND pe.employee_id = $${++paramOffset}::int`;
             dateParams.push(employeeId);
         }
 
@@ -231,6 +231,49 @@ router.get('/employees/:projectId', verifyToken, isAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/project-reports/all-employees
+ * All employees across all active projects (for "All Projects" filter)
+ */
+router.get('/all-employees', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const result = await q(
+            `SELECT DISTINCT e.id, e.employee_id, e.first_name, e.last_name,
+                    STRING_AGG(DISTINCT p.name, ', ') as project_names
+             FROM project_employees pe
+             INNER JOIN employees e ON pe.employee_id = e.id
+             INNER JOIN projects p ON p.id = pe.project_id
+             WHERE p.status = 'active' AND e.role != 'admin'
+             GROUP BY e.id, e.employee_id, e.first_name, e.last_name
+             ORDER BY e.first_name, e.last_name`
+        );
+        res.json({ success: true, employees: result.rows });
+    } catch (error) {
+        console.error('Error fetching all employees:', error);
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
+    }
+});
+
+/**
+ * GET /api/project-reports/all-sets
+ * All active sets across all active projects (for "All Projects" filter)
+ */
+router.get('/all-sets', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const result = await q(
+            `SELECT ps.id, ps.name, ps.project_id, p.name as project_name
+             FROM project_sets ps
+             INNER JOIN projects p ON p.id = ps.project_id
+             WHERE ps.status = 'active' AND p.status = 'active'
+             ORDER BY p.name, ps.name`
+        );
+        res.json({ success: true, sets: result.rows });
+    } catch (error) {
+        console.error('Error fetching all sets:', error);
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
+    }
+});
+
+/**
  * GET /api/project-reports/export
  */
 router.get('/export', verifyToken, isAdmin, async (req, res) => {
@@ -246,24 +289,24 @@ router.get('/export', verifyToken, isAdmin, async (req, res) => {
 
         if (view === 'daily') {
             if (!date) return res.status(400).json({ success: false, message: 'Date required' });
-            dateFilter = `AND dwc.work_date = $${++paramOffset}`;
+            dateFilter = ` AND dwc.work_date = $${++paramOffset}::date`;
             dateParams.push(date);
         } else if (view === 'weekly') {
             if (!startDate || !endDate) return res.status(400).json({ success: false, message: 'Dates required' });
-            dateFilter = `AND dwc.work_date >= $${++paramOffset} AND dwc.work_date <= $${++paramOffset}`;
+            dateFilter = ` AND dwc.work_date >= $${++paramOffset}::date AND dwc.work_date <= $${++paramOffset}::date`;
             dateParams.push(startDate, endDate);
         } else if (view === 'monthly') {
             if (!month || !year) return res.status(400).json({ success: false, message: 'Month/year required' });
             const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
-            const lastDay = new Date(year, month, 0).getDate();
+            const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
             const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            dateFilter = `AND dwc.work_date >= $${++paramOffset} AND dwc.work_date <= $${++paramOffset}`;
+            dateFilter = ` AND dwc.work_date >= $${++paramOffset}::date AND dwc.work_date <= $${++paramOffset}::date`;
             dateParams.push(monthStart, monthEnd);
         }
 
-        if (projectId && projectId !== 'all') { dateFilter += ` AND pe.project_id = $${++paramOffset}`; dateParams.push(projectId); }
-        if (setId && setId !== 'all') { dateFilter += ` AND ps.id = $${++paramOffset}`; dateParams.push(setId); }
-        if (employeeId && employeeId !== 'all') { dateFilter += ` AND pe.employee_id = $${++paramOffset}`; dateParams.push(employeeId); }
+        if (projectId && projectId !== 'all') { dateFilter += ` AND pe.project_id = $${++paramOffset}::int`; dateParams.push(projectId); }
+        if (setId && setId !== 'all') { dateFilter += ` AND ps.id = $${++paramOffset}::int`; dateParams.push(setId); }
+        if (employeeId && employeeId !== 'all') { dateFilter += ` AND pe.employee_id = $${++paramOffset}::int`; dateParams.push(employeeId); }
 
         const columns = [];
         if (view === 'daily') {
