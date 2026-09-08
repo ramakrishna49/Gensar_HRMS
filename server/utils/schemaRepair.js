@@ -225,10 +225,14 @@ const ENSURE_TABLE_DDL = {
 
 function missingColumnInfo(error) {
     // Postgres reports 42703 either as `column "x" of relation "y" does not
-    // exist` or simply `column "x" does not exist`. Accept both, and fall back
-    // to the structured error fields when the driver exposes them.
+    // exist`, `column x.y does not exist`, or `column "x" does not exist`.
     const msg = error && error.message ? String(error.message) : '';
-    const m = /column "([a-z0-9_]+)"(?: of relation "([a-z0-9_]+)")? does not exist/i.exec(msg);
+    // Try quoted format first: column "x" [of relation "y"]
+    let m = /column "([a-z0-9_]+)"(?:\s+of\s+relation\s+"([a-z0-9_]+)")?\s+does not exist/i.exec(msg);
+    // Try unquoted format: column x.y does not exist
+    if (!m) m = /column\s+([a-z0-9_]+)\.([a-z0-9_]+)\s+does not exist/i.exec(msg);
+    // Try simple unquoted: column x does not exist
+    if (!m) m = /column\s+([a-z0-9_]+)\s+does not exist/i.exec(msg);
     const column = (m && m[1]) || (error && error.column) || null;
     const table = (m && m[2]) || (error && error.table) || null;
     return { column, table };
