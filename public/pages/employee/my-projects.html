@@ -71,6 +71,7 @@
             <div class="mb-3">
                 <h1 style="font-size:1.75rem;font-weight:700;">My Projects</h1>
                 <p style="color:var(--text-secondary);">Projects and work assigned to you</p>
+                <div id="assignSummary" style="display:none;margin-top:8px;padding:10px 14px;background:var(--bg-light);border:1px solid var(--border-light);border-radius:8px;font-size:0.9rem;font-weight:600;"></div>
             </div>
 
             <!-- Loading State -->
@@ -245,6 +246,12 @@
                 }
                 projectSetsMap[project.id] = (setsData && setsData.success) ? setsData.sets : [];
             }
+
+            // Top summary: how many projects this employee is in
+            const totalSets = Object.values(projectSetsMap).reduce((n, arr) => n + arr.length, 0);
+            const summaryEl = document.getElementById('assignSummary');
+            summaryEl.style.display = 'block';
+            summaryEl.innerHTML = `<i class="fas fa-project-diagram" style="margin-right:6px;color:var(--primary);"></i>You are assigned to <strong>${allProjects.length} project${allProjects.length === 1 ? '' : 's'}</strong> &middot; <strong>${totalSets} active set${totalSets === 1 ? '' : 's'}</strong>`;
 
             // Fill project dropdown (step 1). Nothing rendered directly.
             const selP = document.getElementById('selProject');
