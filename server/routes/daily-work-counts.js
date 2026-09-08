@@ -55,7 +55,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         );
         res.json({ success: true, counts: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
     }
 });
 
@@ -77,7 +77,7 @@ router.get('/employee/:employeeId', verifyToken, async (req, res) => {
         );
         res.json({ success: true, counts: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
     }
 });
 
@@ -173,7 +173,8 @@ router.post('/', verifyToken, async (req, res) => {
             });
         }
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Error submitting daily work count:', error);
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
     }
 });
 
@@ -217,7 +218,7 @@ router.put('/:id', verifyToken, isEmployee, async (req, res) => {
             message: 'Daily work count updated successfully' 
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
     }
 });
 
@@ -236,7 +237,7 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
         }
         res.json({ success: true, message: 'Daily work count record deleted' });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
     }
 });
 
@@ -335,7 +336,7 @@ router.get('/summary/:projectId/:setId', verifyToken, isAdmin, async (req, res) 
             overallAchievement: totalTarget > 0 ? (totalActual / totalTarget * 100).toFixed(1) : '0.0'
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
     }
 });
 

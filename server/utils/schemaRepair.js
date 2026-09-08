@@ -266,6 +266,10 @@ async function ensureProjectSetColumn(column) {
 const PROJECT_MODULE_ALTER_COLUMNS = {
     'daily_work_counts': {
         set_id: 'INT REFERENCES project_sets(id) ON DELETE CASCADE',
+        project_id: 'INT REFERENCES projects(id) ON DELETE CASCADE',
+        employee_id: 'INT REFERENCES employees(id) ON DELETE CASCADE',
+        work_date: 'DATE',
+        daily_count: 'INT NOT NULL DEFAULT 0',
     },
     'project_employees': {
         status: 'VARCHAR(20) DEFAULT \'active\'',

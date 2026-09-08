@@ -47,13 +47,16 @@ router.get('/single/:id', verifyToken, async (req, res) => {
  */
 router.get('/:projectId', verifyToken, isAdmin, async (req, res) => {
     try {
-        // Legacy databases created before soft-delete have no deleted_at column.
-        // Gate the filter on its existence so this never 500s with 42703.
+        // Legacy databases created before soft-delete / assignment-status have no
+        // deleted_at / status columns. Gate both filters on their existence so
+        // this never 500s with 42703.
         const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
         const deletedFilter = hasDeletedAt ? 'AND ps.deleted_at IS NULL' : '';
+        const hasPeStatus = await hasColumn('project_employees', 'status');
+        const teamFilter = hasPeStatus ? "AND (pe.status = 'active' OR pe.status IS NULL)" : '';
         const result = await q(
             `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days,
-             (SELECT COUNT(DISTINCT pe.employee_id) FROM project_employees pe WHERE pe.project_id = $1 AND (pe.status = 'active' OR pe.status IS NULL)) as team_size,
+             (SELECT COUNT(DISTINCT pe.employee_id) FROM project_employees pe WHERE pe.project_id = $1 ${teamFilter}) as team_size,
              (SELECT COUNT(*) FROM daily_work_counts dc WHERE dc.set_id = ps.id) as submission_count
              FROM project_sets ps
              WHERE ps.project_id = $1 ${deletedFilter}
