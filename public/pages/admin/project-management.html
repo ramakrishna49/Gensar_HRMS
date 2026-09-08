@@ -904,6 +904,7 @@
                 return;
             }
             select.innerHTML = '<option value="">-- Select designation --</option>' +
+                '<option value="none">-- No designation assigned --</option>' +
                 list.map(d => `<option value="${d.id}">${esc(d.name || '')}</option>`).join('');
         }
 

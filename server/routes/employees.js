@@ -80,9 +80,13 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         }
 
         if (designation) {
-            sqlQuery += ` AND e.designation_id = $${paramIndex}`;
-            params.push(designation);
-            paramIndex++;
+            if (designation === 'none') {
+                sqlQuery += ` AND e.designation_id IS NULL`;
+            } else {
+                sqlQuery += ` AND e.designation_id = $${paramIndex}`;
+                params.push(designation);
+                paramIndex++;
+            }
         }
         
         if (status) {
