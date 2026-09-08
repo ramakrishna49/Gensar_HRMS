@@ -209,7 +209,8 @@ async function runMigrations() {
 
     try {
         await query(`ALTER TABLE project_sets ADD COLUMN IF NOT EXISTS working_days INT DEFAULT 0`);
-        console.log('[Migration] project_sets.working_days column ensured.');
+        await query(`ALTER TABLE project_sets ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
+        console.log('[Migration] project_sets.working_days/deleted_at columns ensured.');
     } catch (e) { console.warn('[Migration] working_days column skipped:', e.message); }
 
     // Projects module tables. Databases initialized before the projects module

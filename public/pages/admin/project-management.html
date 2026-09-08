@@ -625,8 +625,9 @@
             const container = document.getElementById(`sets-content-${projectId}`);
             container.innerHTML = '<div style="text-align:center;padding:12px;"><div class="spinner" style="margin:0 auto;width:20px;height:20px;"></div></div>';
             const data = await apiCall(`/project-sets/${projectId}`);
+            if (data) console.log(`GET /project-sets/${projectId} response:`, data.success, 'sets length=', Array.isArray(data.sets) ? data.sets.length : 'n/a', 'msg=', data.message || '');
             if (!data || !data.success) {
-                container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">No sets found.</p>';
+                container.innerHTML = `<p style="color:var(--text-secondary);font-size:0.85rem;">No sets found.${data && data.message ? ' (' + esc(data.message) + ')' : ''}</p>`;
                 return;
             }
             const sets = data.sets || data.data || data || [];
@@ -777,18 +778,9 @@
             if (data && data.success) {
                 showToast('Project created successfully');
                 closeModal('createProjectModal');
-                const created = data.project || null;
-                if (created) {
-                    const already = allProjects.find(p => String(p.id) === String(created.id));
-                    if (!already) {
-                        allProjects.unshift(created);
-                        renderProjects(allProjects);
-                    } else {
-                        loadProjects();
-                    }
-                } else {
-                    loadProjects();
-                }
+                // Always re-fetch from the server so a project deleted moments ago
+                // can never linger in the stale in-memory list and re-appear.
+                await loadProjects();
             } else {
                 showToast(data?.message || 'Failed to create project', 'error');
             }
@@ -837,7 +829,7 @@
             const data = await apiCall(`/projects/${id}`, 'DELETE');
             if (data && data.success) {
                 showToast('Project deleted successfully');
-                loadProjects();
+                await loadProjects();
             } else {
                 showToast(data?.message || 'Failed to delete project', 'error');
             }

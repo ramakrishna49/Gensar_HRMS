@@ -67,7 +67,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
         const result = await q(
             `SELECT p.id, p.name, p.customer, p.description, p.status, p.created_at,
-             (SELECT COUNT(*) FROM project_sets s WHERE s.project_id = p.id) as sets_count,
+             (SELECT COUNT(*) FROM project_sets s WHERE s.project_id = p.id AND s.deleted_at IS NULL) as sets_count,
              (SELECT COUNT(*) FROM project_employees pe WHERE pe.project_id = p.id) as employees_count
              FROM projects p
              ORDER BY p.name`
