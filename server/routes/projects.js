@@ -16,6 +16,7 @@ const ALLOWED_STATUSES = ['active', 'inactive', 'on_hold', 'completed', 'cancell
  */
 router.get('/my', verifyToken, async (req, res) => {
     try {
+        await q(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`).catch(() => {});
         const result = await q(
             `SELECT p.id, p.name, COALESCE(p.client, p.customer) as client, p.description, p.status, p.created_at
              FROM projects p
@@ -67,6 +68,10 @@ router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
  */
 router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
+        // Ensure client column exists (safe DDL, idempotent)
+        await q(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`).catch(() => {});
+        await q(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`).catch(() => {});
+
         const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
         const result = await q(
             `SELECT p.id, p.name, COALESCE(p.client, p.customer) as client, p.description, p.status, p.created_at,

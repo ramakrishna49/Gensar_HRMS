@@ -169,6 +169,8 @@
                                     <th>PROJECT</th>
                                     <th>TARGET</th>
                                     <th>COUNT</th>
+                                    <th>%</th>
+                                    <th>STATUS</th>
                                 </tr>
                             </thead>
                             <tbody id="dailyBreakdownTable">
@@ -351,12 +353,17 @@
                 const empCount = c.emp_count || 1;
                 const workingDays = c.working_days || 1;
                 const dailyTarget = Math.ceil((c.total_target || 0) / empCount / workingDays);
+                const percentage = dailyTarget > 0 ? Math.round((c.daily_count / dailyTarget) * 100) : 0;
+                const status = percentage >= 100 ? 'ACHIEVED' : 'BELOW';
+                const statusColor = percentage >= 100 ? 'var(--success)' : 'var(--danger)';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${formatDate(c.work_date)}</td>
                     <td>${escapeHtml(c.project_name)}</td>
                     <td><strong>${dailyTarget}</strong></td>
                     <td><strong>${c.daily_count}</strong></td>
+                    <td style="font-weight:600;color:${statusColor};">${percentage}%</td>
+                    <td style="font-weight:600;color:${statusColor};">${status}</td>
                 `;
                 tbody.appendChild(tr);
             });

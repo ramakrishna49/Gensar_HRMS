@@ -315,14 +315,23 @@ async function runWithSchemaRepair(fn) {
                     const miss = missingColumnInfo(error);
                     const table = (miss.table || '').toLowerCase() || 'employees';
                     let healed = false;
-                    if (table === 'projects') {
+                    // Try the specific table first
+                    if (table === 'projects' || table === 'p') {
                         healed = miss.column && await ensureProjectColumn(miss.column);
-                    } else if (table === 'project_sets') {
+                    } else if (table === 'project_sets' || table === 'ps') {
                         healed = miss.column && await ensureProjectSetColumn(miss.column);
-                    } else if (table === 'daily_work_counts' || table === 'project_employees') {
-                        healed = miss.column && await ensureProjectModuleColumn(table, miss.column);
-                    } else if (table === 'employees') {
+                    } else if (table === 'daily_work_counts' || table === 'dwc' || table === 'project_employees' || table === 'pe') {
+                        healed = miss.column && await ensureProjectModuleColumn(table === 'dwc' ? 'daily_work_counts' : table === 'pe' ? 'project_employees' : table, miss.column);
+                    } else if (table === 'employees' || table === 'e') {
                         healed = miss.column && await ensureEmployeeColumn(miss.column);
+                    }
+                    // If specific table didn't heal, try all known tables
+                    if (!healed && miss.column) {
+                        healed = await ensureProjectColumn(miss.column)
+                            || await ensureProjectSetColumn(miss.column)
+                            || await ensureProjectModuleColumn('daily_work_counts', miss.column)
+                            || await ensureProjectModuleColumn('project_employees', miss.column)
+                            || await ensureEmployeeColumn(miss.column);
                     }
                     if (healed) {
                         continue;
