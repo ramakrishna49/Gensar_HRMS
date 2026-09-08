@@ -8,6 +8,16 @@ const { runWithSchemaRepair, pgErrorResponse, hasColumn } = require('../utils/sc
 // module tables, the first 42P01 error creates them and the request retries.
 const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
 
+// Raw query for DDL
+const rawQuery = (sql, params) => query(sql, params);
+
+async function ensureClientColumn() {
+    try {
+        await rawQuery(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
+        await rawQuery(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
+    } catch (e) { /* column may already exist */ }
+}
+
 const ALLOWED_STATUSES = ['active', 'inactive', 'on_hold', 'completed', 'cancelled', 'paused', 'terminated'];
 
 /**
@@ -16,6 +26,7 @@ const ALLOWED_STATUSES = ['active', 'inactive', 'on_hold', 'completed', 'cancell
  */
 router.get('/my', verifyToken, async (req, res) => {
     try {
+        await ensureClientColumn();
         const result = await q(
             `SELECT p.id, p.name, COALESCE(p.client, p.customer) as client, p.description, p.status, p.created_at
              FROM projects p
@@ -67,6 +78,7 @@ router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
  */
 router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
+        await ensureClientColumn();
         const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
         const result = await q(
             `SELECT p.id, p.name, COALESCE(p.client, p.customer) as client, p.description, p.status, p.created_at,
@@ -118,6 +130,7 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
  */
 router.post('/', verifyToken, isAdmin, async (req, res) => {
     try {
+        await ensureClientColumn();
         const { name, client, description, status } = req.body;
         if (!name) {
             return res.status(400).json({ success: false, message: 'Project name is required' });
@@ -147,6 +160,7 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
  */
 router.get('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
+        await ensureClientColumn();
         const result = await q(
             `SELECT id, name, COALESCE(client, customer) as client, description, status, created_at, updated_at 
              FROM projects WHERE id = $1`,
@@ -167,6 +181,7 @@ router.get('/:id', verifyToken, isAdmin, async (req, res) => {
  */
 router.put('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
+        await ensureClientColumn();
         const { name, client, description, status } = req.body;
         const finalStatus = ALLOWED_STATUSES.includes(status) ? status : 'active';
         const result = await q(

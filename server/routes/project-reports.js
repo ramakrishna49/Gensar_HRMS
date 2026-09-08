@@ -7,6 +7,17 @@ const { buildReportWorkbook, sendWorkbook } = require('../utils/excel');
 
 const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
 
+// Raw query (no self-healing) for DDL statements
+const rawQuery = (sql, params) => query(sql, params);
+
+// Ensure client column exists on projects table
+async function ensureClientColumn() {
+    try {
+        await rawQuery(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
+        await rawQuery(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
+    } catch (e) { /* column may already exist */ }
+}
+
 /**
  * GET /api/project-reports
  * Get project reports with daily/weekly/monthly views
@@ -21,12 +32,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         }
 
         const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
-
-        // Ensure client column exists (safe migration on first use)
-        try {
-            await q(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
-            await q(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
-        } catch (e) { /* column may already exist */ }
+        await ensureClientColumn();
 
         let dateFilter = '';
         let dateParams = [];
@@ -242,18 +248,14 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
  */
 router.get('/projects', verifyToken, isAdmin, async (req, res) => {
     try {
-        // Ensure client column exists
-        try {
-            await q(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
-            await q(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
-        } catch (e) { /* column may already exist */ }
-
+        await ensureClientColumn();
         const result = await q(
             `SELECT id, name, COALESCE(client, customer) as client, status FROM projects WHERE status = 'active' ORDER BY name`
         );
         res.json({ success: true, projects: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Error fetching projects:', error);
+        res.status(500).json({ success: false, message: (error && error.message) || 'Server error' });
     }
 });
 
@@ -352,12 +354,7 @@ router.get('/export', verifyToken, isAdmin, async (req, res) => {
 
         // Get projects
         const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
-
-        // Ensure client column exists
-        try {
-            await q(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
-            await q(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
-        } catch (e) { /* column may already exist */ }
+        await ensureClientColumn();
 
         const projectsQuery = `
             SELECT DISTINCT p.id, p.name, COALESCE(p.client, p.customer) as client
