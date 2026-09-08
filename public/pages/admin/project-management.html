@@ -633,7 +633,7 @@
 
         // ===================== DELETE PROJECT =====================
         async function deleteProject(id) {
-            if (!(await confirmAction('Are you sure you want to delete this project? This action cannot be undone.'))) return;
+            if (!(await confirmAction('Delete this project? All associated sets, daily work counts and employee assignments will also be deleted. This action cannot be undone.'))) return;
             const data = await apiCall(`/projects/${id}`, 'DELETE');
             if (data && data.success) {
                 showToast('Project deleted successfully');

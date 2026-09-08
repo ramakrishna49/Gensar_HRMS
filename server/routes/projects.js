@@ -155,25 +155,31 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
  */
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        // Check if project has associated sets or employees
-        const check = await q(
-            `SELECT COUNT(*) as count FROM project_sets WHERE project_id = $1`,
-            [req.params.id]
+        const projectId = req.params.id;
+        const exists = await q(
+            `SELECT id FROM projects WHERE id = $1`,
+            [projectId]
         );
-        if (parseInt(check.rows[0].count) > 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Cannot delete project: it has associated sets. Deactivate instead.' 
-            });
+        if (exists.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Project not found' });
         }
-        
+
+        // Delete descendants explicitly (daily counts, sets, assignments) so the
+        // project can be removed even when it has associated sets - and so a
+        // legacy DB without FK CASCADE is handled too.
+        await q(`DELETE FROM daily_work_counts WHERE project_id = $1`, [projectId]);
+        await q(`DELETE FROM project_sets WHERE project_id = $1`, [projectId]);
+        await q(`DELETE FROM project_employees WHERE project_id = $1`, [projectId]);
+
         const result = await q(
             `DELETE FROM projects WHERE id = $1 RETURNING id, name`,
-            [req.params.id]
+            [projectId]
         );
-        res.json({ success: true, project: result.rows[0] });
+        res.json({ success: true, project: result.rows[0], message: 'Project deleted successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error(`Error deleting project ${req.params.id}:`, error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
     }
 });
 
