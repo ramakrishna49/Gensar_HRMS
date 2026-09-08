@@ -48,7 +48,8 @@ router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
 
         const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
         const result = await q(
-            `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days
+            `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days,
+              (SELECT COUNT(*) FROM project_employees pe2 WHERE pe2.project_id = $1) as project_employee_count
              FROM project_sets ps
              WHERE ps.project_id = $1 ${hasDeletedAt ? 'AND ps.deleted_at IS NULL' : ''} AND ps.status = 'active'
              ORDER BY ps.name`,

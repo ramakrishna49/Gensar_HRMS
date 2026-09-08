@@ -18,39 +18,33 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'View must be daily, weekly, or monthly' });
         }
 
+        // NOTE: inner count queries use params [setId=$1, empId=$2, ...dateParams],
+        // so date placeholders must start at $3 (NOT $1). Project/set/employee
+        // filters are applied in JS loops below (inner query only has dwc table,
+        // so pe/ps references would cause missing-FROM errors).
         let dateFilter = '';
         let dateParams = [];
-        let paramOffset = 0;
 
         if (view === 'daily') {
             if (!date) return res.status(400).json({ success: false, message: 'Date is required for daily view' });
-            dateFilter = ` AND dwc.work_date = $${++paramOffset}::date`;
+            dateFilter = ` AND dwc.work_date = $3::date`;
             dateParams.push(date);
         } else if (view === 'weekly') {
             if (!startDate || !endDate) return res.status(400).json({ success: false, message: 'startDate and endDate required' });
-            dateFilter = ` AND dwc.work_date >= $${++paramOffset}::date AND dwc.work_date <= $${++paramOffset}::date`;
+            dateFilter = ` AND dwc.work_date >= $3::date AND dwc.work_date <= $4::date`;
             dateParams.push(startDate, endDate);
         } else if (view === 'monthly') {
             if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
             const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
             const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
             const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            dateFilter = ` AND dwc.work_date >= $${++paramOffset}::date AND dwc.work_date <= $${++paramOffset}::date`;
+            dateFilter = ` AND dwc.work_date >= $3::date AND dwc.work_date <= $4::date`;
             dateParams.push(monthStart, monthEnd);
         }
 
-        if (projectId && projectId !== 'all') {
-            dateFilter += ` AND pe.project_id = $${++paramOffset}::int`;
-            dateParams.push(projectId);
-        }
-        if (setId && setId !== 'all') {
-            dateFilter += ` AND ps.id = $${++paramOffset}::int`;
-            dateParams.push(setId);
-        }
-        if (employeeId && employeeId !== 'all') {
-            dateFilter += ` AND pe.employee_id = $${++paramOffset}::int`;
-            dateParams.push(employeeId);
-        }
+        const filterProjectId = (projectId && projectId !== 'all') ? parseInt(projectId) : null;
+        const filterSetId = (setId && setId !== 'all') ? parseInt(setId) : null;
+        const filterEmployeeId = (employeeId && employeeId !== 'all') ? parseInt(employeeId) : null;
 
         // Simple query: get projects that have active sets and assigned employees
         // Use COALESCE for client/customer backward compat
@@ -67,6 +61,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         const reports = [];
 
         for (const project of projectsResult.rows) {
+            if (filterProjectId && project.id !== filterProjectId) continue;
             const setsResult = await q(`
                 SELECT ps.id, ps.name, ps.total_target, ps.working_days, ps.start_date, ps.end_date
                 FROM project_sets ps
@@ -77,6 +72,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
             const projectSets = [];
 
             for (const set of setsResult.rows) {
+                if (filterSetId && set.id !== filterSetId) continue;
                 const empResult = await q(`
                     SELECT e.id, e.first_name, e.last_name, e.employee_id as emp_id
                     FROM project_employees pe
@@ -94,6 +90,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
                 const employeeData = [];
 
                 for (const emp of employees) {
+                    if (filterEmployeeId && emp.id !== filterEmployeeId) continue;
                     let actualCounts = {};
                     let totalActual = 0;
 
@@ -283,30 +280,31 @@ router.get('/export', verifyToken, isAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'View must be daily, weekly, or monthly' });
         }
 
+        // Same as main endpoint: inner queries use [setId=$1, empId=$2, ...dates]
+        // so date placeholders start at $3. Project/set/employee filters applied in JS.
         let dateFilter = '';
         let dateParams = [];
-        let paramOffset = 0;
 
         if (view === 'daily') {
             if (!date) return res.status(400).json({ success: false, message: 'Date required' });
-            dateFilter = ` AND dwc.work_date = $${++paramOffset}::date`;
+            dateFilter = ` AND dwc.work_date = $3::date`;
             dateParams.push(date);
         } else if (view === 'weekly') {
             if (!startDate || !endDate) return res.status(400).json({ success: false, message: 'Dates required' });
-            dateFilter = ` AND dwc.work_date >= $${++paramOffset}::date AND dwc.work_date <= $${++paramOffset}::date`;
+            dateFilter = ` AND dwc.work_date >= $3::date AND dwc.work_date <= $4::date`;
             dateParams.push(startDate, endDate);
         } else if (view === 'monthly') {
             if (!month || !year) return res.status(400).json({ success: false, message: 'Month/year required' });
             const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
             const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
             const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            dateFilter = ` AND dwc.work_date >= $${++paramOffset}::date AND dwc.work_date <= $${++paramOffset}::date`;
+            dateFilter = ` AND dwc.work_date >= $3::date AND dwc.work_date <= $4::date`;
             dateParams.push(monthStart, monthEnd);
         }
 
-        if (projectId && projectId !== 'all') { dateFilter += ` AND pe.project_id = $${++paramOffset}::int`; dateParams.push(projectId); }
-        if (setId && setId !== 'all') { dateFilter += ` AND ps.id = $${++paramOffset}::int`; dateParams.push(setId); }
-        if (employeeId && employeeId !== 'all') { dateFilter += ` AND pe.employee_id = $${++paramOffset}::int`; dateParams.push(employeeId); }
+        const filterProjectId = (projectId && projectId !== 'all') ? parseInt(projectId) : null;
+        const filterSetId = (setId && setId !== 'all') ? parseInt(setId) : null;
+        const filterEmployeeId = (employeeId && employeeId !== 'all') ? parseInt(employeeId) : null;
 
         const columns = [];
         if (view === 'daily') {
@@ -364,8 +362,10 @@ router.get('/export', verifyToken, isAdmin, async (req, res) => {
         const projectsResult = await q(`SELECT DISTINCT p.id, p.name, COALESCE(p.client, p.customer) as client FROM projects p INNER JOIN project_employees pe ON p.id = pe.project_id INNER JOIN project_sets ps ON ps.project_id = p.id AND ps.status = 'active' WHERE p.status = 'active' ORDER BY p.name`);
 
         for (const project of projectsResult.rows) {
+            if (filterProjectId && project.id !== filterProjectId) continue;
             const setsResult = await q(`SELECT ps.id, ps.name, ps.total_target, ps.working_days FROM project_sets ps WHERE ps.project_id = $1 AND ps.status = 'active' ORDER BY ps.name`, [project.id]);
             for (const set of setsResult.rows) {
+                if (filterSetId && set.id !== filterSetId) continue;
                 const empResult = await q(`SELECT e.id, e.first_name, e.last_name FROM project_employees pe INNER JOIN employees e ON pe.employee_id = e.id WHERE pe.project_id = $1 AND e.role != 'admin' ORDER BY e.first_name`, [project.id]);
                 const empCount = empResult.rows.length || 1;
                 const workingDays = set.working_days || 1;
@@ -373,6 +373,7 @@ router.get('/export', verifyToken, isAdmin, async (req, res) => {
                 const dailyTarget = Math.ceil(set.total_target / empCount / workingDays);
 
                 for (const emp of empResult.rows) {
+                    if (filterEmployeeId && emp.id !== filterEmployeeId) continue;
                     const row = { project: project.name, set: set.name, employee: `${emp.first_name} ${emp.last_name || ''}`, target: targetPerEmployee, dailyTarget };
                     let totalActual = 0;
 

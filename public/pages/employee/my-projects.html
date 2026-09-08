@@ -356,13 +356,19 @@
                 const percentage = dailyTarget > 0 ? Math.round((c.daily_count / dailyTarget) * 100) : 0;
                 const status = percentage >= 100 ? 'ACHIEVED' : 'BELOW';
                 const statusColor = percentage >= 100 ? 'var(--success)' : 'var(--danger)';
+                const barWidth = Math.min(percentage, 100);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${formatDate(c.work_date)}</td>
                     <td>${escapeHtml(c.project_name)}</td>
                     <td><strong>${dailyTarget}</strong></td>
                     <td><strong>${c.daily_count}</strong></td>
-                    <td style="font-weight:600;color:${statusColor};">${percentage}%</td>
+                    <td style="min-width:110px;">
+                        <div style="font-weight:600;color:${statusColor};margin-bottom:4px;">${percentage}%</div>
+                        <div style="background:var(--border-light);border-radius:4px;height:6px;overflow:hidden;">
+                            <div style="width:${barWidth}%;height:100%;background:${statusColor};border-radius:4px;"></div>
+                        </div>
+                    </td>
                     <td style="font-weight:600;color:${statusColor};">${status}</td>
                 `;
                 tbody.appendChild(tr);
