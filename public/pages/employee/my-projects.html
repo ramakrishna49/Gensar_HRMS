@@ -267,6 +267,18 @@
             document.getElementById('selectPrompt').style.display = 'block';
             document.getElementById('projectsList').style.display = 'none';
             document.getElementById('projectsList').innerHTML = '';
+
+            // Auto-select when there is only one choice, so data shows immediately
+            // (multi-project users still get the step-by-step dropdown flow).
+            if (allProjects.length === 1) {
+                document.getElementById('selProject').value = String(allProjects[0].id);
+                onProjectSelect();
+                const onlySets = projectSetsMap[allProjects[0].id] || [];
+                if (onlySets.length === 1) {
+                    document.getElementById('selSet').value = String(onlySets[0].id);
+                    onSetSelect();
+                }
+            }
         }
 
         function onProjectSelect() {
