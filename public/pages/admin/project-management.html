@@ -1152,22 +1152,6 @@
                 }
             }
             loadProjects();
-
-            // Light polling: refresh any open sets/employees sections so live
-            // employee submissions and assignment changes appear without reload.
-            setInterval(() => {
-                if (document.visibilityState !== 'visible') return;
-                Object.keys(expandedSections).forEach(key => {
-                    if (!expandedSections[key]) return;
-                    const parts = key.split('-');
-                    const id = parts[0];
-                    const type = parts.slice(1).join('-');
-                    if (type === 'sets') loadSets(id);
-                    else if (type === 'employees') loadEmployeesForProject(id);
-                });
-                // Also refresh card counts periodically.
-                loadProjects();
-            }, 30000);
         });
     </script>
 </body>
