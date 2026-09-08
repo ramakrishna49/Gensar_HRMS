@@ -54,7 +54,7 @@ async function adminTargetGuard(targetId, requesterId) {
 // @access  Private (Admin/HR)
 router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
-        const { search, department, status, page = 1, limit = 10 } = req.query;
+        const { search, department, designation, status, page = 1, limit = 10 } = req.query;
         let sqlQuery = `
             SELECT e.*, d.name as department_name, des.name as designation_name, des.level as designation_level,
             rm.first_name || ' ' || rm.last_name as reporting_manager_name, rm.employee_id as reporting_manager_employee_id
@@ -76,6 +76,12 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         if (department) {
             sqlQuery += ` AND e.department_id = $${paramIndex}`;
             params.push(department);
+            paramIndex++;
+        }
+
+        if (designation) {
+            sqlQuery += ` AND e.designation_id = $${paramIndex}`;
+            params.push(designation);
             paramIndex++;
         }
         

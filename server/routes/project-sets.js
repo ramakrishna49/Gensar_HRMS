@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
-const { runWithSchemaRepair } = require('../utils/schemaRepair');
+const { runWithSchemaRepair, pgErrorResponse } = require('../utils/schemaRepair');
 
 // Self-healing query wrapper: heals missing projects-module tables per request.
 const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
@@ -35,7 +35,9 @@ router.get('/single/:id', verifyToken, async (req, res) => {
         }
         res.json({ success: true, set: result.rows[0] });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error(`Error fetching set ${req.params.id}:`, error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
     }
 });
 
@@ -64,7 +66,9 @@ router.get('/:projectId', verifyToken, isAdmin, async (req, res) => {
         );
         res.json({ success: true, sets: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error(`Error fetching sets for project ${req.params.projectId}:`, error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
     }
 });
 
@@ -95,7 +99,9 @@ router.post('/:projectId', verifyToken, isAdmin, async (req, res) => {
     
         res.json({ success: true, set: result.rows[0], workingDays });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error(`Error creating set for project ${req.params.projectId}:`, error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
     }
 });
 
@@ -114,7 +120,9 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
         }
         res.json({ success: true, message: 'Set deleted successfully', set: result.rows[0] });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error(`Error deleting set ${req.params.id}:`, error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
     }
 });
 

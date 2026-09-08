@@ -47,6 +47,16 @@ const PROJECT_ALTER_COLUMNS = {
     updated_at: 'TIMESTAMP DEFAULT NOW()'
 };
 
+// project_sets columns that a half-initialized live database may be missing
+// (e.g. the table was created by an older schema without working_days/status).
+const PROJECT_SETS_ALTER_COLUMNS = {
+    status: "VARCHAR(20) DEFAULT 'active'",
+    working_days: 'INT DEFAULT 0',
+    total_target: 'INT NOT NULL DEFAULT 0',
+    created_at: 'TIMESTAMP DEFAULT NOW()',
+    updated_at: 'TIMESTAMP DEFAULT NOW()'
+};
+
 // Tables added in later releases. A live database that predates them fails with
 // 42P01 ("relation does not exist"); the DDL below is fully idempotent and only
 // ever creates what is missing - existing rows are never touched.
@@ -226,6 +236,13 @@ async function ensureProjectColumn(column) {
     return true;
 }
 
+async function ensureProjectSetColumn(column) {
+    const ddl = PROJECT_SETS_ALTER_COLUMNS[column];
+    if (!ddl) return false;
+    await query(`ALTER TABLE project_sets ADD COLUMN IF NOT EXISTS "${column}" ${ddl}`);
+    return true;
+}
+
 async function ensureTable(table) {
     const statements = ENSURE_TABLE_DDL[table];
     if (!statements) return false;
@@ -241,6 +258,7 @@ async function ensureTable(table) {
 async function runWithSchemaRepair(fn) {
     const maxAttempts = Object.keys(EMPLOYEE_ALTER_COLUMNS).length
         + Object.keys(PROJECT_ALTER_COLUMNS).length
+        + Object.keys(PROJECT_SETS_ALTER_COLUMNS).length
         + Object.keys(ENSURE_TABLE_DDL).length + 2;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
@@ -250,9 +268,14 @@ async function runWithSchemaRepair(fn) {
                 if (error && error.code === '42703') {
                     const miss = missingColumnInfo(error);
                     const table = (miss.table || '').toLowerCase() || 'employees';
-                    const healed = table === 'projects'
-                        ? (miss.column && await ensureProjectColumn(miss.column))
-                        : (miss.column && await ensureEmployeeColumn(miss.column));
+                    let healed = false;
+                    if (table === 'projects') {
+                        healed = miss.column && await ensureProjectColumn(miss.column);
+                    } else if (table === 'project_sets') {
+                        healed = miss.column && await ensureProjectSetColumn(miss.column);
+                    } else {
+                        healed = miss.column && await ensureEmployeeColumn(miss.column);
+                    }
                     if (healed) {
                         continue;
                     }
@@ -298,4 +321,4 @@ function pgErrorResponse(error) {
     return { status: 500, message: 'Server error' };
 }
 
-module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureProjectColumn, ensureTable, pgErrorResponse, missingColumnInfo };
+module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureProjectColumn, ensureProjectSetColumn, ensureTable, pgErrorResponse, missingColumnInfo };
