@@ -86,6 +86,29 @@
                 <p style="margin:0;">Your manager will assign projects to you.</p>
             </div>
 
+            <!-- Project / Set selection (step-by-step, nothing shown directly) -->
+            <div id="selectorCard" class="card mb-3" style="display:none;">
+                <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div class="form-group">
+                        <label style="font-weight:600;display:block;margin-bottom:6px;">1. Select Project <span style="color:var(--danger);">*</span></label>
+                        <select id="selProject" class="form-control" onchange="onProjectSelect()">
+                            <option value="">-- Select Project --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight:600;display:block;margin-bottom:6px;">2. Select Set <span style="color:var(--danger);">*</span></label>
+                        <select id="selSet" class="form-control" onchange="onSetSelect()" disabled>
+                            <option value="">-- Select Set --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="selectPrompt" style="display:none;text-align:center;padding:40px 20px;color:var(--text-secondary);">
+                <i class="fas fa-hand-pointer" style="font-size:2rem;margin-bottom:12px;opacity:0.4;"></i>
+                <p style="margin:0;">Please select a project first, then select a set.</p>
+            </div>
+
             <!-- Projects List -->
             <div id="projectsList" style="display:none;"></div>
 
@@ -187,6 +210,9 @@
     <script src="../../js/tickets.js"></script>
     <script>
         let allProjects = [];
+        let projectSetsMap = {};
+        let selectedProjectId = '';
+        let selectedSetId = '';
 
         async function loadMyProjectsData() {
             const user = getCurrentUser();
@@ -195,6 +221,8 @@
             document.getElementById('loadingState').style.display = 'block';
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('projectsList').style.display = 'none';
+            document.getElementById('selectorCard').style.display = 'none';
+            document.getElementById('selectPrompt').style.display = 'none';
 
             const data = await apiCall('/projects/my');
 
@@ -206,19 +234,88 @@
             }
 
             allProjects = data.projects;
-            const container = document.getElementById('projectsList');
-            container.style.display = 'block';
-            container.innerHTML = '';
+            projectSetsMap = {};
+            selectedProjectId = '';
+            selectedSetId = '';
 
             for (const project of data.projects) {
                 const setsData = await apiCall('/projects/my/' + project.id + '/sets');
                 if (setsData && !setsData.success) {
                     console.warn(`GET /projects/my/${project.id}/sets failed:`, setsData.message || setsData);
                 }
-                const sets = (setsData && setsData.success) ? setsData.sets : [];
+                projectSetsMap[project.id] = (setsData && setsData.success) ? setsData.sets : [];
+            }
 
-                const card = document.createElement('div');
-                card.className = 'card mb-3';
+            // Fill project dropdown (step 1). Nothing rendered directly.
+            const selP = document.getElementById('selProject');
+            selP.innerHTML = '<option value="">-- Select Project --</option>';
+            allProjects.forEach(p => {
+                selP.innerHTML += `<option value="${p.id}">${escapeHtml(p.name)}${p.client ? ' - ' + escapeHtml(p.client) : ''}</option>`;
+            });
+            const selS = document.getElementById('selSet');
+            selS.innerHTML = '<option value="">-- Select Set --</option>';
+            selS.disabled = true;
+
+            document.getElementById('selectorCard').style.display = 'block';
+            document.getElementById('selectPrompt').style.display = 'block';
+            document.getElementById('projectsList').style.display = 'none';
+            document.getElementById('projectsList').innerHTML = '';
+        }
+
+        function onProjectSelect() {
+            selectedProjectId = document.getElementById('selProject').value;
+            selectedSetId = '';
+            const selS = document.getElementById('selSet');
+            selS.innerHTML = '<option value="">-- Select Set --</option>';
+            if (!selectedProjectId) {
+                selS.disabled = true;
+                document.getElementById('selectPrompt').style.display = 'block';
+                document.getElementById('projectsList').style.display = 'none';
+                document.getElementById('projectsList').innerHTML = '';
+                return;
+            }
+            const sets = projectSetsMap[selectedProjectId] || [];
+            sets.forEach(s => {
+                selS.innerHTML += `<option value="${s.id}">${escapeHtml(s.name)}</option>`;
+            });
+            selS.disabled = false;
+            // Show only the selected project (sets hidden until a set is picked)
+            renderFiltered();
+        }
+
+        function onSetSelect() {
+            selectedSetId = document.getElementById('selSet').value;
+            renderFiltered();
+        }
+
+        function renderFiltered() {
+            const container = document.getElementById('projectsList');
+            const prompt = document.getElementById('selectPrompt');
+            container.innerHTML = '';
+
+            if (!selectedProjectId) {
+                prompt.style.display = 'block';
+                container.style.display = 'none';
+                return;
+            }
+            const project = allProjects.find(p => String(p.id) === String(selectedProjectId));
+            if (!project) return;
+            let sets = projectSetsMap[selectedProjectId] || [];
+            if (selectedSetId) {
+                sets = sets.filter(s => String(s.id) === String(selectedSetId));
+            } else {
+                // Project chosen but set not yet chosen -> ask for set, render nothing
+                prompt.style.display = 'block';
+                prompt.querySelector('p').textContent = 'Project selected. Now please select a set.';
+                container.style.display = 'none';
+                return;
+            }
+
+            prompt.style.display = 'none';
+            container.style.display = 'block';
+
+            const card = document.createElement('div');
+            card.className = 'card mb-3';
                 card.innerHTML = `
                     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                         <div>
@@ -235,7 +332,6 @@
                     </div>
                 `;
                 container.appendChild(card);
-            }
         }
 
         function renderSetRow(project, set) {
