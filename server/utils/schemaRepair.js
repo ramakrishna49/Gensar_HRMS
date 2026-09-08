@@ -1,5 +1,21 @@
 const { query } = require('../config/database');
 
+// Whether a given table actually has a column. Routes that reference optional
+// columns (e.g. project_sets.deleted_at on a legacy DB created before soft
+// delete) can gate the reference on this so the query never 500s with 42703.
+async function hasColumn(table, column) {
+    try {
+        const result = await query(
+            `SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+            [String(table).replace(/[^a-z0-9_]/gi, ''), String(column).replace(/[^a-z0-9_]/gi, '')]
+        );
+        return result.rows && result.rows.length > 0;
+    } catch (e) {
+        console.warn(`[hasColumn] check ${table}.${column} failed:`, e.message);
+        return true;
+    }
+}
+
 // Columns that may have been added to the employees table via ALTER TABLE after
 // the production database was first initialized (server/scripts/init-db.js is
 // manual-only and was probably last run before the payroll/salary-structure
@@ -343,4 +359,4 @@ function pgErrorResponse(error) {
     return { status: 500, message: 'Server error' };
 }
 
-module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureProjectColumn, ensureProjectSetColumn, ensureProjectModuleColumn, ensureTable, pgErrorResponse, missingColumnInfo };
+module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureProjectColumn, ensureProjectSetColumn, ensureProjectModuleColumn, ensureTable, hasColumn, pgErrorResponse, missingColumnInfo };

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
-const { runWithSchemaRepair, pgErrorResponse } = require('../utils/schemaRepair');
+const { runWithSchemaRepair, pgErrorResponse, hasColumn } = require('../utils/schemaRepair');
 
 // Self-healing query wrapper: heals missing projects-module tables per request.
 const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
@@ -47,12 +47,16 @@ router.get('/single/:id', verifyToken, async (req, res) => {
  */
 router.get('/:projectId', verifyToken, isAdmin, async (req, res) => {
     try {
+        // Legacy databases created before soft-delete have no deleted_at column.
+        // Gate the filter on its existence so this never 500s with 42703.
+        const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
+        const deletedFilter = hasDeletedAt ? 'AND ps.deleted_at IS NULL' : '';
         const result = await q(
             `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days,
              (SELECT COUNT(DISTINCT pe.employee_id) FROM project_employees pe WHERE pe.project_id = $1 AND (pe.status = 'active' OR pe.status IS NULL)) as team_size,
              (SELECT COUNT(*) FROM daily_work_counts dc WHERE dc.set_id = ps.id) as submission_count
              FROM project_sets ps
-             WHERE ps.project_id = $1 AND ps.deleted_at IS NULL
+             WHERE ps.project_id = $1 ${deletedFilter}
              ORDER BY ps.name`,
             [req.params.projectId]
         );
@@ -60,7 +64,7 @@ router.get('/:projectId', verifyToken, isAdmin, async (req, res) => {
     } catch (error) {
         console.error(`Error fetching sets for project ${req.params.projectId}:`, error);
         const r = pgErrorResponse(error);
-        res.status(r.status).json({ success: false, message: r.message });
+        res.status(r.status).json({ success: false, message: (error && error.message) || r.message });
     }
 });
 
@@ -117,7 +121,7 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     } catch (error) {
         console.error(`Error deleting set ${req.params.id}:`, error);
         const r = pgErrorResponse(error);
-        res.status(r.status).json({ success: false, message: r.message });
+        res.status(r.status).json({ success: false, message: (error && error.message) || r.message });
     }
 });
 
@@ -140,7 +144,7 @@ router.post('/:id/restore', verifyToken, isAdmin, async (req, res) => {
     } catch (error) {
         console.error(`Error restoring set ${req.params.id}:`, error);
         const r = pgErrorResponse(error);
-        res.status(r.status).json({ success: false, message: r.message });
+        res.status(r.status).json({ success: false, message: (error && error.message) || r.message });
     }
 });
 

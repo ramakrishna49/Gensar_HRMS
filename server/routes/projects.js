@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
-const { runWithSchemaRepair, pgErrorResponse } = require('../utils/schemaRepair');
+const { runWithSchemaRepair, pgErrorResponse, hasColumn } = require('../utils/schemaRepair');
 
 // Self-healing query wrapper: if a legacy database is missing the projects
 // module tables, the first 42P01 error creates them and the request retries.
@@ -45,17 +45,19 @@ router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
             return res.status(403).json({ success: false, message: 'You are not assigned to this project' });
         }
 
+        const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
         const result = await q(
             `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days
              FROM project_sets ps
-             WHERE ps.project_id = $1 AND ps.deleted_at IS NULL AND ps.status = 'active'
+             WHERE ps.project_id = $1 ${hasDeletedAt ? 'AND ps.deleted_at IS NULL' : ''} AND ps.status = 'active'
              ORDER BY ps.name`,
             [req.params.projectId]
         );
         res.json({ success: true, sets: result.rows });
     } catch (error) {
         console.error('Error fetching project sets:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: (error && error.message) || r.message });
     }
 });
 
@@ -65,9 +67,10 @@ router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
  */
 router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
+        const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
         const result = await q(
             `SELECT p.id, p.name, p.customer, p.description, p.status, p.created_at,
-             (SELECT COUNT(*) FROM project_sets s WHERE s.project_id = p.id AND s.deleted_at IS NULL) as sets_count,
+             (SELECT COUNT(*) FROM project_sets s WHERE s.project_id = p.id ${hasDeletedAt ? 'AND s.deleted_at IS NULL' : ''}) as sets_count,
              (SELECT COUNT(*) FROM project_employees pe WHERE pe.project_id = p.id) as employees_count
              FROM projects p
              ORDER BY p.name`
