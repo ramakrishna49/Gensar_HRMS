@@ -472,7 +472,8 @@
             try {
                 grid.innerHTML = projects.map(p => {
                     try {
-                        return projectCard(p);
+                        const card = projectCard(p);
+                        return card;
                     } catch (cardErr) {
                         console.error('render card failed for project', p && p.id, cardErr);
                         return '';
@@ -480,7 +481,22 @@
                 }).join('');
                 if (!grid.innerHTML.trim()) {
                     grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><p>No projects found</p></div>';
+                    return;
                 }
+                // Restore any previously-opened expand sections and re-fetch their content
+                // so live data always shows (no stale/collapsed UI after a re-render).
+                setTimeout(() => {
+                    projects.forEach(p => {
+                        if (expandedSections[`${p.id}-sets`]) {
+                            const s = document.getElementById(`expand-sets-${p.id}`);
+                            if (s) { s.style.display = 'block'; loadSets(p.id); }
+                        }
+                        if (expandedSections[`${p.id}-employees`]) {
+                            const e = document.getElementById(`expand-employees-${p.id}`);
+                            if (e) { e.style.display = 'block'; loadEmployeesForProject(p.id); }
+                        }
+                    });
+                }, 50);
             } catch (err) {
                 console.error('renderProjects failed:', err);
                 grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><p>Failed to render projects.</p></div>';
@@ -543,6 +559,32 @@
             return isNaN(n) ? 0 : n;
         }
 
+        // Live-update a project card's employee/set counts and in-place DOM without
+        // a full list re-render, so changes reflect immediately after assign/create.
+        async function refreshProjectCount(projectId) {
+            const p = allProjects.find(x => String(x.id) === String(projectId));
+            if (!p) return;
+            try {
+                const d = await apiCall('/projects');
+                if (d && d.success) {
+                    const fresh = (d.projects || d.data || []).find(x => String(x.id) === String(projectId));
+                    if (fresh) {
+                        p.employees_count = fresh.employees_count;
+                        p.sets_count = fresh.sets_count;
+                        const card = document.getElementById(`project-card-${projectId}`);
+                        if (card) {
+                            const em = card.querySelectorAll('span strong')[0];
+                            const st = card.querySelectorAll('span strong')[1];
+                            if (em) em.textContent = countOf(fresh.employees_count);
+                            if (st) st.textContent = countOf(fresh.sets_count);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('refreshProjectCount failed:', e);
+            }
+        }
+
         function filterProjects() {
             const q = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allProjects.filter(p =>
@@ -566,7 +608,9 @@
             const section = document.getElementById(`expand-${type}-${projectId}`);
             if (!section) return;
             const key = `${projectId}-${type}`;
-            if (expandedSections[key]) {
+            // If state says open but DOM is hidden, it's stale - re-open instead of collapsing.
+            const actuallyVisible = section.style.display === 'block';
+            if (expandedSections[key] && actuallyVisible) {
                 section.style.display = 'none';
                 expandedSections[key] = false;
                 return;
@@ -863,12 +907,16 @@
             if (data && data.success) {
                 showToast('Set created successfully');
                 closeModal('createSetModal');
-                await loadProjects();
-                await loadSets(projectId);
+                // Refresh counts in-place, then show/reload the sets list live
+                await refreshProjectCount(projectId);
                 const section = document.getElementById(`expand-sets-${projectId}`);
                 if (section) {
                     section.style.display = 'block';
                     expandedSections[`${projectId}-sets`] = true;
+                }
+                await loadSets(projectId);
+                if (expandedSections[`${projectId}-employees`]) {
+                    loadEmployeesForProject(projectId);
                 }
             } else {
                 showToast(data?.message || 'Failed to create set', 'error');
@@ -880,6 +928,7 @@
             if (!(await confirmAction('Delete this set? You can undo this action.'))) return;
             const data = await apiCall(`/project-sets/${setId}`, 'DELETE');
             if (data && data.success) {
+                await refreshProjectCount(projectId);
                 await loadSets(projectId);
                 showUndoToast('Set deleted', () => restoreSet(setId, projectId));
             } else {
@@ -891,6 +940,7 @@
             const data = await apiCall(`/project-sets/${setId}/restore`, 'POST');
             if (data && data.success) {
                 showToast('Set restored successfully');
+                await refreshProjectCount(projectId);
                 await loadSets(projectId);
                 const section = document.getElementById(`expand-sets-${projectId}`);
                 if (section) {
@@ -1070,8 +1120,13 @@
             if (data && data.success) {
                 showToast('Employees assigned successfully');
                 closeModal('assignEmployeesModal');
+                // Refresh the card's employee count and any open employee section live
+                await refreshProjectCount(currentAssignProjectId);
                 if (expandedSections[`${currentAssignProjectId}-employees`]) {
                     loadEmployeesForProject(currentAssignProjectId);
+                }
+                if (expandedSections[`${currentAssignProjectId}-sets`]) {
+                    loadSets(currentAssignProjectId);
                 }
             } else {
                 showToast(data?.message || 'Failed to assign employees', 'error');
@@ -1084,7 +1139,10 @@
             const data = await apiCall(`/projects/${projectId}/employees/${empId}`, 'DELETE');
             if (data && data.success) {
                 showToast('Employee removed from project');
-                loadEmployeesForProject(projectId);
+                await refreshProjectCount(projectId);
+                if (expandedSections[`${projectId}-employees`]) {
+                    loadEmployeesForProject(projectId);
+                }
             } else {
                 showToast(data?.message || 'Failed to remove employee', 'error');
             }
@@ -1102,6 +1160,22 @@
                 }
             }
             loadProjects();
+
+            // Light polling: refresh any open sets/employees sections so live
+            // employee submissions and assignment changes appear without reload.
+            setInterval(() => {
+                if (document.visibilityState !== 'visible') return;
+                Object.keys(expandedSections).forEach(key => {
+                    if (!expandedSections[key]) return;
+                    const parts = key.split('-');
+                    const id = parts[0];
+                    const type = parts.slice(1).join('-');
+                    if (type === 'sets') loadSets(id);
+                    else if (type === 'employees') loadEmployeesForProject(id);
+                });
+                // Also refresh card counts periodically.
+                loadProjects();
+            }, 30000);
         });
     </script>
 </body>

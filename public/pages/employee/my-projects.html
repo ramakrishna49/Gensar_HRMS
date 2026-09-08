@@ -403,6 +403,15 @@
 
             loadMyProjectsData();
             loadRecentSubmissions();
+
+            // Light polling so admin-side changes (new sets / assignments) show up
+            // without a manual page refresh - best-effort background refresh.
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    loadMyProjectsData();
+                    loadRecentSubmissions();
+                }
+            }, 30000);
         });
 
         document.addEventListener('click', function(e) {
