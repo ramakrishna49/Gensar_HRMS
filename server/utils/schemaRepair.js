@@ -36,6 +36,17 @@ const EMPLOYEE_ALTER_COLUMNS = {
     token_version: 'INTEGER NOT NULL DEFAULT 0'
 };
 
+// Projects module columns that a half-initialized live database may be missing.
+// ALTER ... ADD COLUMN IF NOT EXISTS is idempotent; detecting them by the
+// column name from the Postgres error message so user input is never interpolated.
+const PROJECT_ALTER_COLUMNS = {
+    status: "VARCHAR(20) DEFAULT 'active'",
+    customer: 'VARCHAR(255)',
+    description: 'TEXT',
+    created_at: 'TIMESTAMP DEFAULT NOW()',
+    updated_at: 'TIMESTAMP DEFAULT NOW()'
+};
+
 // Tables added in later releases. A live database that predates them fails with
 // 42P01 ("relation does not exist"); the DDL below is fully idempotent and only
 // ever creates what is missing - existing rows are never touched.
@@ -208,6 +219,13 @@ async function ensureEmployeeColumn(column) {
     return true;
 }
 
+async function ensureProjectColumn(column) {
+    const ddl = PROJECT_ALTER_COLUMNS[column];
+    if (!ddl) return false;
+    await query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS "${column}" ${ddl}`);
+    return true;
+}
+
 async function ensureTable(table) {
     const statements = ENSURE_TABLE_DDL[table];
     if (!statements) return false;
@@ -221,7 +239,9 @@ async function ensureTable(table) {
 // (42P01) error, heals the schema and retries. Loops in case several things
 // are missing (Postgres reports one at a time).
 async function runWithSchemaRepair(fn) {
-    const maxAttempts = Object.keys(EMPLOYEE_ALTER_COLUMNS).length + Object.keys(ENSURE_TABLE_DDL).length + 2;
+    const maxAttempts = Object.keys(EMPLOYEE_ALTER_COLUMNS).length
+        + Object.keys(PROJECT_ALTER_COLUMNS).length
+        + Object.keys(ENSURE_TABLE_DDL).length + 2;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
             return await fn();
@@ -229,7 +249,11 @@ async function runWithSchemaRepair(fn) {
             if (attempt < maxAttempts - 1) {
                 if (error && error.code === '42703') {
                     const miss = missingColumnInfo(error);
-                    if (miss.column && await ensureEmployeeColumn(miss.column)) {
+                    const table = (miss.table || '').toLowerCase() || 'employees';
+                    const healed = table === 'projects'
+                        ? (miss.column && await ensureProjectColumn(miss.column))
+                        : (miss.column && await ensureEmployeeColumn(miss.column));
+                    if (healed) {
                         continue;
                     }
                 } else {
@@ -268,7 +292,10 @@ function pgErrorResponse(error) {
     if (error && error.code === '23514') {
         return { status: 400, message: 'One of the entered values is not allowed for this field.' };
     }
+    if (error && error.code === '23502') {
+        return { status: 400, message: 'A required field is missing.' };
+    }
     return { status: 500, message: 'Server error' };
 }
 
-module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureTable, pgErrorResponse, missingColumnInfo };
+module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureProjectColumn, ensureTable, pgErrorResponse, missingColumnInfo };

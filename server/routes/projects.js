@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
-const { runWithSchemaRepair } = require('../utils/schemaRepair');
+const { runWithSchemaRepair, pgErrorResponse } = require('../utils/schemaRepair');
 
 // Self-healing query wrapper: if a legacy database is missing the projects
 // module tables, the first 42P01 error creates them and the request retries.
@@ -72,7 +72,9 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
         );
         res.json({ success: true, projects: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Error fetching projects:', error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
     }
 });
 
@@ -96,7 +98,9 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
         );
         res.json({ success: true, project: result.rows[0] });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Error creating project:', error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
     }
 });
 
@@ -139,7 +143,9 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
         }
         res.json({ success: true, project: result.rows[0] });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error(`Error updating project ${req.params.id}:`, error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
     }
 });
 
