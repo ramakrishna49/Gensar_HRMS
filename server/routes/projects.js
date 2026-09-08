@@ -127,7 +127,10 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
              RETURNING id, name, customer, description, status, created_at`,
             [name, customer || null, description || null, finalStatus]
         );
-        res.json({ success: true, project: result.rows[0] });
+        const created = result.rows[0];
+        created.employees_count = 0;
+        created.sets_count = 0;
+        res.json({ success: true, project: created });
     } catch (error) {
         console.error('Error creating project:', error);
         const r = pgErrorResponse(error);

@@ -731,7 +731,18 @@
             if (data && data.success) {
                 showToast('Project created successfully');
                 closeModal('createProjectModal');
-                loadProjects();
+                const created = data.project || null;
+                if (created) {
+                    const already = allProjects.find(p => String(p.id) === String(created.id));
+                    if (!already) {
+                        allProjects.unshift(created);
+                        renderProjects(allProjects);
+                    } else {
+                        loadProjects();
+                    }
+                } else {
+                    loadProjects();
+                }
             } else {
                 showToast(data?.message || 'Failed to create project', 'error');
             }
