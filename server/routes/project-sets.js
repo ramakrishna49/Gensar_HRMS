@@ -49,17 +49,9 @@ router.get('/:projectId', verifyToken, isAdmin, async (req, res) => {
     try {
         const result = await q(
             `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days,
-             pe.count as assigned_employees,
-             (
-                 SELECT COUNT(*) FROM daily_work_counts dc
-                 WHERE dc.set_id = ps.id
-             ) as submission_count
+             (SELECT COUNT(DISTINCT pe.employee_id) FROM project_employees pe WHERE pe.project_id = $1 AND (pe.status = 'active' OR pe.status IS NULL)) as team_size,
+             (SELECT COUNT(*) FROM daily_work_counts dc WHERE dc.set_id = ps.id) as submission_count
              FROM project_sets ps
-             LEFT JOIN (
-                 SELECT set_id, COUNT(DISTINCT employee_id) as count
-                 FROM daily_work_counts
-                 GROUP BY set_id
-             ) pe ON ps.id = pe.set_id
              WHERE ps.project_id = $1
              ORDER BY ps.name`,
             [req.params.projectId]

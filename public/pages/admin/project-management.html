@@ -89,6 +89,21 @@
                 </div>
             </div>
 
+            <div class="grid grid-3 mb-3" style="gap:16px;margin-bottom:20px;">
+                <div class="card" style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-50);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-briefcase"></i></div>
+                    <div><div style="font-size:1.5rem;font-weight:700;line-height:1;" id="statProjects">0</div><div style="font-size:0.8rem;color:var(--text-secondary);">Projects</div></div>
+                </div>
+                <div class="card" style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-50);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-layer-group"></i></div>
+                    <div><div style="font-size:1.5rem;font-weight:700;line-height:1;" id="statSets">0</div><div style="font-size:0.8rem;color:var(--text-secondary);">Sets</div></div>
+                </div>
+                <div class="card" style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-50);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-users"></i></div>
+                    <div><div style="font-size:1.5rem;font-weight:700;line-height:1;" id="statEmployees">0</div><div style="font-size:0.8rem;color:var(--text-secondary);">Employees Assigned</div></div>
+                </div>
+            </div>
+
             <div id="projectsGrid" class="grid grid-2 mb-3" style="gap:16px;"></div>
             <div id="modalsContainer"></div>
         </div>
@@ -420,6 +435,16 @@
             } else {
                 grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p></div>';
             }
+            loadStats();
+        }
+
+        async function loadStats() {
+            const data = await apiCall('/projects/stats');
+            const stats = (data && data.success && data.stats) || {};
+            const setN = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || 0; };
+            setN('statProjects', stats.projects);
+            setN('statSets', stats.sets);
+            setN('statEmployees', stats.assigned_employees);
         }
 
         function renderProjects(projects) {
@@ -445,10 +470,10 @@
                         ${p.description ? `<p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:12px;line-height:1.5;">${esc(p.description)}</p>` : ''}
                         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
                             <button class="btn btn-secondary btn-sm" onclick="toggleExpand(${p.id}, 'sets')">
-                                <i class="fas fa-layer-group"></i> Sets
+                                <i class="fas fa-layer-group"></i> Sets${p.sets_count > 0 ? ` (${p.sets_count})` : ''}
                             </button>
                             <button class="btn btn-secondary btn-sm" onclick="toggleExpand(${p.id}, 'employees')">
-                                <i class="fas fa-users"></i> Employees
+                                <i class="fas fa-users"></i> Employees${p.employees_count > 0 ? ` (${p.employees_count})` : ''}
                             </button>
                             <button class="btn btn-primary btn-sm" onclick="openCreateSetModal(${p.id})">
                                 <i class="fas fa-plus"></i> Add Set
@@ -520,20 +545,77 @@
                     <h4 style="font-size:0.9rem;font-weight:600;">Sets (${sets.length})</h4>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:6px;">
-                    ${sets.map(s => `
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);">
-                            <div style="min-width:0;flex:1;">
-                                <span style="font-weight:500;font-size:0.85rem;">${esc(s.name)}</span>
-                                ${s.start_date || s.end_date ? `<span style="color:var(--text-tertiary);font-size:0.78rem;margin-left:8px;">${formatDate(s.start_date)}${s.end_date ? ' - ' + formatDate(s.end_date) : ''}</span>` : ''}
-                                ${s.total_target ? `<span style="color:var(--text-secondary);font-size:0.78rem;margin-left:8px;">Target: ${s.total_target}</span>` : ''}
+                    ${sets.map(s => {
+                        const teamSize = parseInt(s.team_size, 10) || 0;
+                        const target = parseInt(s.total_target, 10) || 0;
+                        const submitted = parseInt(s.submission_count, 10) || 0;
+                        const workingDays = parseInt(s.working_days, 10) || 0;
+                        const perHead = teamSize > 0 ? target / teamSize : target;
+                        const perDayPerHead = teamSize > 0 ? (workingDays > 0 ? perHead / workingDays : perHead) : (workingDays > 0 ? target / workingDays : target);
+                        return `
+                        <div style="border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;" onclick="toggleSetDetail(${s.id})" title="Click for details">
+                                <div style="min-width:0;flex:1;">
+                                    <span style="font-weight:500;font-size:0.85rem;">${esc(s.name)}</span>
+                                    ${s.start_date ? `<span style="color:var(--text-tertiary);font-size:0.78rem;margin-left:8px;">${formatDate(s.start_date)}${s.end_date ? ' - ' + formatDate(s.end_date) : ''}</span>` : ''}
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px;">
+                                    <span style="font-size:0.78rem;color:var(--text-secondary);">${submitted}/${target} files</span>
+                                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();toggleSetDetail(${s.id})" title="Details"><i class="fas fa-chevron-down" style="font-size:0.7rem;"></i></button>
+                                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteSet(${s.id}, ${projectId})" title="Delete"><i class="fas fa-trash" style="font-size:0.7rem;"></i></button>
+                                </div>
                             </div>
-                            <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;">
-                                <button class="btn btn-secondary btn-sm" onclick="deleteSet(${s.id}, ${projectId})" title="Delete"><i class="fas fa-trash" style="font-size:0.7rem;"></i></button>
+                            <div id="set-detail-${s.id}" style="display:none;border-top:1px solid var(--border);padding:12px;background:var(--bg-light);">
+                                <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+                                    <span style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);">${esc(s.name)}</span>
+                                    ${statusBadge && s.status ? statusBadge(s.status) : ''}
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;">
+                                    <div style="padding:8px;background:var(--bg-card);border-radius:var(--radius);">
+                                        <div style="font-size:0.72rem;color:var(--text-tertiary);">DATE RANGE</div>
+                                        <div style="font-size:0.8rem;font-weight:600;">${formatDate(s.start_date)}<br>${s.end_date ? 'to ' + formatDate(s.end_date) : ''}</div>
+                                    </div>
+                                    <div style="padding:8px;background:var(--bg-card);border-radius:var(--radius);">
+                                        <div style="font-size:0.72rem;color:var(--text-tertiary);">WORKING DAYS</div>
+                                        <div style="font-size:0.8rem;font-weight:600;">${workingDays}</div>
+                                    </div>
+                                    <div style="padding:8px;background:var(--bg-card);border-radius:var(--radius);">
+                                        <div style="font-size:0.72rem;color:var(--text-tertiary);">TEAM SIZE</div>
+                                        <div style="font-size:0.8rem;font-weight:600;">${teamSize}</div>
+                                    </div>
+                                    <div style="padding:8px;background:var(--bg-card);border-radius:var(--radius);">
+                                        <div style="font-size:0.72rem;color:var(--text-tertiary);">TOTAL TARGET</div>
+                                        <div style="font-size:0.8rem;font-weight:600;">${target} files</div>
+                                    </div>
+                                    <div style="padding:8px;background:var(--bg-card);border-radius:var(--radius);">
+                                        <div style="font-size:0.72rem;color:var(--text-tertiary);">SUBMITTED</div>
+                                        <div style="font-size:0.8rem;font-weight:600;">${submitted} files</div>
+                                    </div>
+                                    <div style="padding:8px;background:var(--bg-card);border-radius:var(--radius);">
+                                        <div style="font-size:0.72rem;color:var(--text-tertiary);">TARGET PER HEAD</div>
+                                        <div style="font-size:0.8rem;font-weight:600;">${fmt(perHead)} files</div>
+                                    </div>
+                                    <div style="padding:8px;background:var(--bg-card);border-radius:var(--radius);">
+                                        <div style="font-size:0.72rem;color:var(--text-tertiary);">PER DAY PER HEAD</div>
+                                        <div style="font-size:0.8rem;font-weight:600;">${fmt(perDayPerHead)} / day</div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    `).join('')}
+                        </div>`;
+                    }).join('')}
                 </div>
             `;
+        }
+
+        function toggleSetDetail(setId) {
+            const el = document.getElementById(`set-detail-${setId}`);
+            if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function fmt(n) {
+            if (!isFinite(n)) return '0';
+            const r = Math.round(n * 100) / 100;
+            return Number.isInteger(r) ? String(r) : r.toFixed(2);
         }
 
         async function loadEmployeesForProject(projectId) {
@@ -683,9 +765,12 @@
             if (data && data.success) {
                 showToast('Set created successfully');
                 closeModal('createSetModal');
-                loadProjects();
-                if (expandedSections[`${projectId}-sets`]) {
-                    loadSets(projectId);
+                await loadProjects();
+                await loadSets(projectId);
+                const section = document.getElementById(`expand-sets-${projectId}`);
+                if (section) {
+                    section.style.display = 'block';
+                    expandedSections[`${projectId}-sets`] = true;
                 }
             } else {
                 showToast(data?.message || 'Failed to create set', 'error');
