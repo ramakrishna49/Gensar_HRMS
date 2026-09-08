@@ -119,11 +119,9 @@
                 if (unreadCount > 0) {
                     showUnreadPopup(unreadCount);
                 }
-                allAnnouncements.forEach(a => {
-                    if (!a.is_read) {
-                        apiCall('/announcements/' + a.id + '/read', 'POST');
-                    }
-                });
+                if (unreadCount > 0) {
+                    await apiCall('/announcements/read-all', 'POST');
+                }
             } else {
                 showEmptyState(document.getElementById('announcementsContainer'), 'fa-exclamation-triangle', 'Error', 'Failed to load announcements');
             }
@@ -134,6 +132,7 @@
             const popup = document.createElement('div');
             popup.style.cssText = 'background:var(--primary);color:white;padding:14px 20px;border-radius:var(--radius);margin-bottom:16px;display:flex;align-items:center;gap:12px;animation:slideUp 0.3s ease;';
             popup.innerHTML = '<i class="fas fa-bell" style="font-size:1.2rem;"></i><span style="font-weight:500;">You have <strong>' + count + '</strong> unread announcement' + (count > 1 ? 's' : '') + '</span><button onclick="this.parentElement.remove()" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 10px;border-radius:var(--radius);cursor:pointer;">Dismiss</button>';
+            popup.setAttribute('data-unread-popup', 'true');
             container.insertBefore(popup, container.firstChild);
         }
 

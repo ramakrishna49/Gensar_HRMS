@@ -32,9 +32,6 @@ app.use(cors({
     }
 }));
 
-// Static files
-app.use(express.static(path.join(__dirname, '../public')));
-
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/employees', require('./routes/employees'));
@@ -62,6 +59,9 @@ app.use('/api/cron', require('./routes/cron'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/project-sets', require('./routes/project-sets'));
 app.use('/api/daily-work-counts', require('./routes/daily-work-counts'));
+
+// Static files (mounted after API routes so API paths always take precedence)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Serve pages
 app.get('/', (req, res) => {
@@ -211,6 +211,65 @@ async function runMigrations() {
         await query(`ALTER TABLE project_sets ADD COLUMN IF NOT EXISTS working_days INT DEFAULT 0`);
         console.log('[Migration] project_sets.working_days column ensured.');
     } catch (e) { console.warn('[Migration] working_days column skipped:', e.message); }
+
+    // Projects module tables. Databases initialized before the projects module
+    // exists fail every /api/projects create/set/assign call with 42P01 unless
+    // the tables are ensured here (idempotent) or lazily healed per-request.
+    try {
+        await query(`CREATE TABLE IF NOT EXISTS projects (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            customer VARCHAR(255),
+            description TEXT,
+            status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'paused', 'terminated', 'on_hold', 'completed', 'cancelled')),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)`);
+        await query(`CREATE TABLE IF NOT EXISTS project_employees (
+            id SERIAL PRIMARY KEY,
+            project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+            employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+            assigned_at TIMESTAMP DEFAULT NOW(),
+            status VARCHAR(20) DEFAULT 'active',
+            UNIQUE(project_id, employee_id)
+        )`);
+        await query(`CREATE TABLE IF NOT EXISTS project_sets (
+            id SERIAL PRIMARY KEY,
+            project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            total_target INT NOT NULL DEFAULT 0,
+            working_days INT DEFAULT 0,
+            status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )`);
+        await query(`CREATE TABLE IF NOT EXISTS daily_work_counts (
+            id SERIAL PRIMARY KEY,
+            project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+            set_id INT REFERENCES project_sets(id) ON DELETE CASCADE,
+            employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+            work_date DATE NOT NULL,
+            daily_count INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(project_id, set_id, employee_id, work_date)
+        )`);
+        console.log('[Migration] Projects module tables ensured.');
+    } catch (e) { console.warn('[Migration] Projects module tables skipped:', e.message); }
+
+    // The admin UI offers on_hold/completed/cancelled project statuses, but the
+    // original CHECK constraint only allowed active/inactive/paused/terminated.
+    // UPDATE /api/projects/:id thus failed with 23514 (check violation) and the
+    // chart-facing statuses were silently rejected. Relax the constraint.
+    try {
+        await query(`ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_status_check`);
+        await query(`ALTER TABLE projects ADD CONSTRAINT projects_status_check
+            CHECK (status IN ('active', 'inactive', 'paused', 'terminated', 'on_hold', 'completed', 'cancelled'))`);
+        console.log('[Migration] projects.status CHECK constraint relaxed.');
+    } catch (e) { console.warn('[Migration] projects status CHECK skipped:', e.message); }
 }
 runMigrations();
 

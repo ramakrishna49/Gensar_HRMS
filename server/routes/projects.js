@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
+
+// Self-healing query wrapper: if a legacy database is missing the projects
+// module tables, the first 42P01 error creates them and the request retries.
+const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
+
+const ALLOWED_STATUSES = ['active', 'inactive', 'on_hold', 'completed', 'cancelled', 'paused', 'terminated'];
 
 /**
  * GET /api/projects/my
@@ -9,7 +16,7 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
  */
 router.get('/my', verifyToken, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `SELECT p.id, p.name, p.customer, p.description, p.status, p.created_at
              FROM projects p
              JOIN project_employees pe ON p.id = pe.project_id
@@ -30,7 +37,7 @@ router.get('/my', verifyToken, async (req, res) => {
  */
 router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
     try {
-        const empCheck = await query(
+        const empCheck = await q(
             `SELECT id FROM project_employees WHERE project_id = $1 AND employee_id = $2`,
             [req.params.projectId, req.user.id]
         );
@@ -38,7 +45,7 @@ router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
             return res.status(403).json({ success: false, message: 'You are not assigned to this project' });
         }
 
-        const result = await query(
+        const result = await q(
             `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days
              FROM project_sets ps
              WHERE ps.project_id = $1 AND ps.status = 'active'
@@ -58,7 +65,7 @@ router.get('/my/:projectId/sets', verifyToken, async (req, res) => {
  */
 router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `SELECT id, name, customer, description, status, created_at 
              FROM projects 
              ORDER BY name`
@@ -74,16 +81,18 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
  * Create a new project
  */
 router.post('/', verifyToken, isAdmin, async (req, res) => {
-    try { const { name, customer, description } = req.body;
+    try {
+        const { name, customer, description, status } = req.body;
         if (!name) {
             return res.status(400).json({ success: false, message: 'Project name is required' });
         }
-    
-        const result = await query(
+        const finalStatus = ALLOWED_STATUSES.includes(status) ? status : 'active';
+
+        const result = await q(
             `INSERT INTO projects (name, customer, description, status) 
-             VALUES ($1, $2, $3, 'active') 
+             VALUES ($1, $2, $3, $4) 
              RETURNING id, name, customer, description, status, created_at`,
-            [name, customer || null, description || null]
+            [name, customer || null, description || null, finalStatus]
         );
         res.json({ success: true, project: result.rows[0] });
     } catch (error) {
@@ -97,7 +106,7 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
  */
 router.get('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `SELECT id, name, customer, description, status, created_at, updated_at 
              FROM projects WHERE id = $1`,
             [req.params.id]
@@ -118,11 +127,12 @@ router.get('/:id', verifyToken, isAdmin, async (req, res) => {
 router.put('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
         const { name, customer, description, status } = req.body;
-        const result = await query(
+        const finalStatus = ALLOWED_STATUSES.includes(status) ? status : 'active';
+        const result = await q(
             `UPDATE projects SET name = $1, customer = $2, description = $3, status = $4, updated_at = NOW() 
              WHERE id = $5 
              RETURNING id, name, customer, description, status, created_at, updated_at`,
-            [name, customer || null, description || null, status, req.params.id]
+            [name, customer || null, description || null, finalStatus, req.params.id]
         );
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Project not found' });
@@ -140,7 +150,7 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
         // Check if project has associated sets or employees
-        const check = await query(
+        const check = await q(
             `SELECT COUNT(*) as count FROM project_sets WHERE project_id = $1`,
             [req.params.id]
         );
@@ -151,7 +161,7 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
             });
         }
         
-        const result = await query(
+        const result = await q(
             `DELETE FROM projects WHERE id = $1 RETURNING id, name`,
             [req.params.id]
         );
@@ -167,7 +177,7 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
  */
 router.get('/:projectId/employees', verifyToken, isAdmin, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone, 
               e.role, e.status, e.department_id, d.name as department_name
              FROM project_employees pe
@@ -195,7 +205,7 @@ router.post('/:projectId/employees', verifyToken, isAdmin, async (req, res) => {
         }
     
         // Check if project exists
-        const projectCheck = await query(
+        const projectCheck = await q(
             `SELECT id FROM projects WHERE id = $1`,
             [req.params.projectId]
         );
@@ -206,7 +216,7 @@ router.post('/:projectId/employees', verifyToken, isAdmin, async (req, res) => {
         // Assign employees (idempotent - uses ON CONFLICT pattern)
         const results = [];
         for (const empId of employeeIds) {
-            const result = await query(
+            const result = await q(
                 `INSERT INTO project_employees (project_id, employee_id) 
                  VALUES ($1, $2) 
                  ON CONFLICT (project_id, employee_id) DO NOTHING 
@@ -217,7 +227,7 @@ router.post('/:projectId/employees', verifyToken, isAdmin, async (req, res) => {
         }
     
         // Get the full updated employee list
-        const employeeResult = await query(
+        const employeeResult = await q(
             `SELECT e.id, e.employee_id, e.first_name, e.last_name, e.email, e.phone, 
               e.role, e.status, e.department_id, d.name as department_name
              FROM project_employees pe
@@ -246,7 +256,7 @@ router.post('/:projectId/employees', verifyToken, isAdmin, async (req, res) => {
 router.delete('/:projectId/employees/:employeeId', verifyToken, isAdmin, async (req, res) => {
     try {
         // Do NOT delete historical daily work count data
-        const result = await query(
+        const result = await q(
             `DELETE FROM project_employees WHERE project_id = $1 AND employee_id = $2 RETURNING employee_id`,
             [req.params.projectId, req.params.employeeId]
         );

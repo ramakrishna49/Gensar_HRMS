@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Projects - Gensar HRMS</title>
     <link rel="icon" type="image/png" href="../../assets/images/fav-icon.png">
     <link rel="manifest" href="/manifest.json">
@@ -22,16 +22,22 @@
         <nav class="sidebar-nav">
             <div class="nav-section-title">Main</div>
             <a href="/employee/dashboard" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a>
-            <a href="/employee/my-projects" class="nav-item active"><i class="fas fa-folder"></i><span class="nav-text">My Projects</span></a>
-            <a href="/employee/attendance" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
-            <a href="/employee/leave" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
-            <a href="/employee/wfh" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
-            <a href="/employee/payslips" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
+            <a href="/manager/my-team" id="myTeamLink" style="display:none;" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">My Team</span></a>
             <div class="nav-section-title">My Info</div>
             <a href="/employee/profile" class="nav-item"><i class="fas fa-user"></i><span class="nav-text">My Profile</span></a>
             <a href="/employee/onboarding" class="nav-item"><i class="fas fa-user-plus"></i><span class="nav-text">My Onboarding</span></a>
+            <a href="/employee/my-projects" class="nav-item active"><i class="fas fa-project-diagram"></i><span class="nav-text">My Projects</span></a>
+            <a href="/employee/attendance" class="nav-item"><i class="fas fa-clock"></i><span class="nav-text">Attendance</span></a>
+            <a href="/employee/regularization" class="nav-item"><i class="fas fa-clock-rotate-left"></i><span class="nav-text">Regularization</span></a>
+            <a href="/employee/leave" class="nav-item"><i class="fas fa-calendar-times"></i><span class="nav-text">Leave</span></a>
+            <a href="/employee/wfh" class="nav-item"><i class="fas fa-home"></i><span class="nav-text">WFH</span></a>
+            <a href="/employee/payslips" class="nav-item"><i class="fas fa-indian-rupee-sign"></i><span class="nav-text">Payslips</span></a>
+            <div class="nav-section-title">Company</div>
+            <a href="/employee/documents" class="nav-item"><i class="fas fa-file-alt"></i><span class="nav-text">Documents</span></a>
+            <a href="/employee/announcements" class="nav-item"><i class="fas fa-bullhorn"></i><span class="nav-text">Announcements</span></a>
             <div class="nav-section-title">Support</div>
             <a href="/employee/holidays" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Holidays</span></a>
+            <div class="nav-section-title">Resources</div>
             <a href="/employee/directory" class="nav-item"><i class="fas fa-address-book"></i><span class="nav-text">Directory</span></a>
             <a href="/employee/tickets" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-text">My Queries</span></a>
         </nav>
@@ -163,37 +169,9 @@
     </main>
 
     <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script src="../../js/tickets.js"></script>
     <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            if (window.innerWidth <= 1024) {
-                sidebar.classList.toggle('active');
-            } else {
-                sidebar.classList.toggle('collapsed');
-                mainContent.classList.toggle('expanded');
-            }
-        }
-
-        function toggleProfileMenu() {
-            const menu = document.getElementById('profileMenu');
-            if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-            const icon = document.getElementById('themeIcon');
-            if (document.body.classList.contains('dark-mode')) {
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
-                localStorage.setItem('theme', 'light');
-            }
-        }
-
         let allProjects = [];
 
         async function loadMyProjectsData() {
@@ -327,68 +305,6 @@
             document.getElementById('formTodayCount').value = '';
         }
 
-        document.getElementById('formTodayCount').addEventListener('input', function() {
-            const count = parseInt(this.value) || 0;
-            const dailyTarget = parseFloat(this.getAttribute('data-daily-target')) || 1;
-            const totalTarget = parseFloat(this.getAttribute('data-total-target')) || 1;
-
-            if (count > 0) {
-                const remaining = Math.max(dailyTarget - count, 0);
-                const achievement = Math.min((count / dailyTarget * 100), 100);
-
-                document.getElementById('previewTarget').textContent = Math.ceil(dailyTarget);
-                document.getElementById('previewEntered').textContent = count;
-                document.getElementById('previewRemaining').textContent = Math.ceil(remaining);
-                document.getElementById('previewProgress').textContent = achievement.toFixed(1) + '%';
-                document.getElementById('formPreview').style.display = 'block';
-            } else {
-                document.getElementById('formPreview').style.display = 'none';
-            }
-        });
-
-        document.getElementById('dailyWorkFormInner').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const user = getCurrentUser();
-            const projectId = document.getElementById('formProjectId').value;
-            const setId = document.getElementById('formSetId').value;
-            const count = parseInt(document.getElementById('formTodayCount').value);
-            const today = getTodayIST();
-
-            if (!projectId || !setId) {
-                showToast('Invalid project or set', 'error');
-                return;
-            }
-
-            if (isNaN(count) || count < 0) {
-                showToast('Please enter a valid count', 'error');
-                return;
-            }
-
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalContent = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-            submitBtn.disabled = true;
-
-            const result = await apiCall('/daily-work-counts', 'POST', {
-                projectId: parseInt(projectId),
-                setId: parseInt(setId),
-                workDate: today,
-                dailyCount: count
-            });
-
-            submitBtn.innerHTML = originalContent;
-            submitBtn.disabled = false;
-
-            if (result && result.success) {
-                showToast(result.created ? 'Work count submitted!' : 'Work count updated!', 'success');
-                closeDailyWorkForm();
-                loadRecentSubmissions();
-            } else {
-                showToast(result?.message || 'Failed to submit work count', 'error');
-            }
-        });
-
         async function loadRecentSubmissions() {
             const user = getCurrentUser();
             if (!user) return;
@@ -424,28 +340,72 @@
                 return;
             }
 
-            const user = getCurrentUser();
-            if (user) {
-                const nameEl = document.getElementById('profileName');
-                if (nameEl) nameEl.textContent = (user.first_name || '') + ' ' + (user.last_name || '');
-                const photoEl = document.getElementById('profilePhoto');
-                if (photoEl) {
-                    const initial = (user.first_name || user.last_name || 'U')[0].toUpperCase();
-                    photoEl.innerHTML = '<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:white;font-size:0.8rem;font-weight:600;flex-shrink:0;">' + initial + '</div>';
+            document.getElementById('formTodayCount').addEventListener('input', function() {
+                const count = parseInt(this.value) || 0;
+                const dailyTarget = parseFloat(this.getAttribute('data-daily-target')) || 1;
+
+                if (count > 0) {
+                    const remaining = Math.max(dailyTarget - count, 0);
+                    const achievement = Math.min((count / dailyTarget * 100), 100);
+
+                    document.getElementById('previewTarget').textContent = Math.ceil(dailyTarget);
+                    document.getElementById('previewEntered').textContent = count;
+                    document.getElementById('previewRemaining').textContent = Math.ceil(remaining);
+                    document.getElementById('previewProgress').textContent = achievement.toFixed(1) + '%';
+                    document.getElementById('formPreview').style.display = 'block';
+                } else {
+                    document.getElementById('formPreview').style.display = 'none';
                 }
-            }
+            });
+
+            document.getElementById('dailyWorkFormInner').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const user = getCurrentUser();
+                const projectId = document.getElementById('formProjectId').value;
+                const setId = document.getElementById('formSetId').value;
+                const count = parseInt(document.getElementById('formTodayCount').value);
+                const today = getTodayIST();
+
+                if (!projectId || !setId) {
+                    showToast('Invalid project or set', 'error');
+                    return;
+                }
+
+                if (isNaN(count) || count < 0) {
+                    showToast('Please enter a valid count', 'error');
+                    return;
+                }
+
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalContent = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+                submitBtn.disabled = true;
+
+                const result = await apiCall('/daily-work-counts', 'POST', {
+                    projectId: parseInt(projectId),
+                    setId: parseInt(setId),
+                    workDate: today,
+                    dailyCount: count
+                });
+
+                submitBtn.innerHTML = originalContent;
+                submitBtn.disabled = false;
+
+                if (result && result.success) {
+                    showToast(result.created ? 'Work count submitted!' : 'Work count updated!', 'success');
+                    closeDailyWorkForm();
+                    loadRecentSubmissions();
+                } else {
+                    showToast(result?.message || 'Failed to submit work count', 'error');
+                }
+            });
 
             loadMyProjectsData();
             loadRecentSubmissions();
         });
 
         document.addEventListener('click', function(e) {
-            const profileBtn = document.querySelector('.profile-btn');
-            const profileMenu = document.getElementById('profileMenu');
-            if (profileBtn && profileMenu && !profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
-                profileMenu.style.display = 'none';
-            }
-
             const submitBtn = e.target.closest('.submit-set-btn');
             if (submitBtn) {
                 openDailyWorkForm(

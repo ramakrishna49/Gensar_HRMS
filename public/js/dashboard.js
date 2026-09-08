@@ -629,17 +629,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (getCurrentUser()) loadNotifBadge();
     }, 30000);
     
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-        const icon = document.getElementById('themeIcon');
-        if (icon) {
-            icon.classList.remove('fa-moon');
-            icon.classList.add('fa-sun');
-        }
-    }
-    
     // Handle responsive sidebar
     const handleResize = () => {
         const sidebar = document.getElementById('sidebar');

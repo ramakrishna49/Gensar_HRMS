@@ -186,8 +186,10 @@
 
             if (!startVal || !endVal) { infoBox.style.display = 'none'; return; }
 
-            const start = new Date(startVal);
-            const end = new Date(endVal);
+            const [sY, sM, sD] = startVal.split('-').map(Number);
+            const [eY, eM, eD] = endVal.split('-').map(Number);
+            const start = new Date(sY, sM - 1, sD);
+            const end = new Date(eY, eM - 1, eD);
 
             if (end < start) {
                 infoBox.style.display = 'flex';
@@ -254,7 +256,9 @@
                 return;
             }
 
-            if (new Date(endDate) < new Date(startDate)) {
+            const [stY, stM, stD] = startDate.split('-').map(Number);
+            const [enY, enM, enD] = endDate.split('-').map(Number);
+            if (new Date(enY, enM - 1, enD) < new Date(stY, stM - 1, stD)) {
                 showToast('End date must be after start date', 'error');
                 return;
             }

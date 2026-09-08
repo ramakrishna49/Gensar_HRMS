@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
+
+// Self-healing query wrapper: heals missing projects-module tables per request.
+const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
 
 /**
  * GET /api/project-sets/single/:id
@@ -10,7 +14,7 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
  */
 router.get('/single/:id', verifyToken, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `SELECT ps.*, p.name as project_name, p.customer as project_customer,
              (
                  SELECT COUNT(*) FROM employees e
@@ -41,7 +45,7 @@ router.get('/single/:id', verifyToken, async (req, res) => {
  */
 router.get('/:projectId', verifyToken, isAdmin, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `SELECT ps.id, ps.name, ps.start_date, ps.end_date, ps.total_target, ps.status, ps.working_days,
              pe.count as assigned_employees,
              (
@@ -75,14 +79,14 @@ router.post('/:projectId', verifyToken, isAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Set name, start_date, end_date, and total_target are required' });
         }
     
-        const projectCheck = await query(`SELECT id FROM projects WHERE id = $1`, [req.params.projectId]);
+        const projectCheck = await q(`SELECT id FROM projects WHERE id = $1`, [req.params.projectId]);
         if (projectCheck.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Project not found' });
         }
     
         const workingDays = calculateWorkingDays(start_date, end_date);
     
-        const result = await query(
+        const result = await q(
             `INSERT INTO project_sets (project_id, name, start_date, end_date, total_target, working_days, status) 
              VALUES ($1, $2, $3, $4, $5, $6, 'active') 
              RETURNING id, project_id, name, start_date, end_date, total_target, working_days, status`,
@@ -90,6 +94,25 @@ router.post('/:projectId', verifyToken, isAdmin, async (req, res) => {
         );
     
         res.json({ success: true, set: result.rows[0], workingDays });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+/**
+ * DELETE /api/project-sets/:id
+ * Delete a set (daily_work_counts cascade). The admin UI calls this to remove a set.
+ */
+router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const result = await q(
+            `DELETE FROM project_sets WHERE id = $1 RETURNING id, name`,
+            [req.params.id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Set not found' });
+        }
+        res.json({ success: true, message: 'Set deleted successfully', set: result.rows[0] });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }

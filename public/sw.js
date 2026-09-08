@@ -1,8 +1,8 @@
 const CACHE_NAME = 'gensar-hrms-v1';
 const SHELL_URLS = [
   '/',
-  '/pages/login.html',
-  '/pages/admin-login.html',
+  '/login',
+  '/admin',
   '/css/main.css',
   '/css/payroll.css',
   '/js/auth.js',
@@ -55,7 +55,7 @@ self.addEventListener('push', (event) => {
     body: data.body || '',
     icon: '/assets/images/icon-192.png',
     badge: '/assets/images/icon-192.png',
-    data: { url: data.url || '/pages/employee/announcements.html' }
+    data: { url: data.url || '/employee/announcements' }
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

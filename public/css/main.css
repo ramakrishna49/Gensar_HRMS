@@ -481,6 +481,12 @@ body {
 .dark-mode .notification-panel {
     background: var(--bg-card);
 }
+.dark-mode .notification-panel-header {
+    background: var(--bg-card);
+}
+.dark-mode .notification-panel-footer {
+    background: var(--bg-card);
+}
 
 .dark-mode .notification-item:hover {
     background: var(--bg-dark);

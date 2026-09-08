@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { verifyToken, isAdmin, isEmployee } = require('../middleware/auth');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
+
+// Self-healing query wrapper: heals missing projects-module tables per request.
+const q = (sql, params) => runWithSchemaRepair(() => query(sql, params));
 
 /**
  * GET /api/daily-work-counts
@@ -37,7 +41,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
     
         condition = condition.substring(5); // Remove leading " AND "
     
-        const result = await query(
+        const result = await q(
             `SELECT pc.id, pc.project_id, pc.set_id, pc.employee_id, pc.work_date, pc.daily_count,
              p.name as project_name, s.name as set_name,
              e.first_name, e.last_name, e.employee_id as emp_id
@@ -61,7 +65,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
  */
 router.get('/employee/:employeeId', verifyToken, isEmployee, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `SELECT pc.id, pc.project_id, pc.set_id, pc.work_date, pc.daily_count,
              p.name as project_name, s.name as set_name
              FROM daily_work_counts pc
@@ -91,7 +95,7 @@ router.post('/', verifyToken, isEmployee, async (req, res) => {
         }
     
         // Check if record already exists for this employee+project+set+date
-        const existing = await query(
+        const existing = await q(
             `SELECT id, daily_count FROM daily_work_counts 
              WHERE project_id = $1 AND set_id = $2 AND employee_id = $3 AND work_date = $4`,
             [projectId, setId, req.user.employeeId || req.user.id, workDate]
@@ -99,7 +103,7 @@ router.post('/', verifyToken, isEmployee, async (req, res) => {
     
         if (existing.rows.length > 0) {
             // Update existing record
-            const result = await query(
+            const result = await q(
                 `UPDATE daily_work_counts SET daily_count = $1, updated_at = NOW() 
                  WHERE id = $2 
                  RETURNING id, project_id, set_id, employee_id, work_date, daily_count`,
@@ -114,7 +118,7 @@ router.post('/', verifyToken, isEmployee, async (req, res) => {
         } else {
             // Create new record
             // First verify employee is assigned to project
-            const empCheck = await query(
+            const empCheck = await q(
                 `SELECT id FROM project_employees WHERE project_id = $1 AND employee_id = $2`,
                 [projectId, req.user.employeeId || req.user.id]
             );
@@ -126,7 +130,7 @@ router.post('/', verifyToken, isEmployee, async (req, res) => {
             }
     
             // Verify set belongs to project
-            const setCheck = await query(
+            const setCheck = await q(
                 `SELECT id FROM project_sets WHERE project_id = $1 AND id = $2 AND status = 'active'`,
                 [projectId, setId]
             );
@@ -138,7 +142,7 @@ router.post('/', verifyToken, isEmployee, async (req, res) => {
             }
     
             // Verify date is within set range
-            const dateCheck = await query(
+            const dateCheck = await q(
                 `SELECT start_date, end_date FROM project_sets WHERE id = $1`,
                 [setId]
             );
@@ -155,7 +159,7 @@ router.post('/', verifyToken, isEmployee, async (req, res) => {
                 }
             }
     
-            const result = await query(
+            const result = await q(
                 `INSERT INTO daily_work_counts (project_id, set_id, employee_id, work_date, daily_count) 
                  VALUES ($1, $2, $3, $4, $5) 
                  RETURNING id, project_id, set_id, employee_id, work_date, daily_count`,
@@ -185,7 +189,7 @@ router.put('/:id', verifyToken, isEmployee, async (req, res) => {
         }
     
         // Check ownership - employee can only update their own records
-        const check = await query(
+        const check = await q(
             `SELECT id, employee_id FROM daily_work_counts WHERE id = $1`,
             [req.params.id]
         );
@@ -201,7 +205,7 @@ router.put('/:id', verifyToken, isEmployee, async (req, res) => {
             });
         }
     
-        const result = await query(
+        const result = await q(
             `UPDATE daily_work_counts SET daily_count = $1, updated_at = NOW() 
              WHERE id = $2 
              RETURNING id, project_id, set_id, employee_id, work_date, daily_count`,
@@ -223,7 +227,7 @@ router.put('/:id', verifyToken, isEmployee, async (req, res) => {
  */
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        const result = await query(
+        const result = await q(
             `DELETE FROM daily_work_counts WHERE id = $1 RETURNING id`,
             [req.params.id]
         );
@@ -246,7 +250,7 @@ router.get('/summary/:projectId/:setId', verifyToken, isAdmin, async (req, res) 
         const setId = req.params.setId;
     
         // Get set details
-        const setResult = await query(
+        const setResult = await q(
             `SELECT ps.*, p.name as project_name, p.customer as project_customer,
              pe.count as project_employee_count
              FROM project_sets ps
@@ -267,7 +271,7 @@ router.get('/summary/:projectId/:setId', verifyToken, isAdmin, async (req, res) 
         const setData = setResult.rows[0];
     
         // Get actual work counts for this set
-        const countsResult = await query(
+        const countsResult = await q(
             `SELECT pc.employee_id, e.first_name, e.last_name, e.employee_id as emp_id,
              COALESCE(SUM(pc.daily_count), 0) as total_completed,
              COUNT(pc.id) as submission_days,
@@ -281,7 +285,7 @@ router.get('/summary/:projectId/:setId', verifyToken, isAdmin, async (req, res) 
     
         // Get today's counts
         const today = new Date().toISOString().split('T')[0];
-        const todayResult = await query(
+        const todayResult = await q(
             `SELECT pc.employee_id, e.first_name, e.last_name, e.employee_id as emp_id,
              pc.daily_count as today_count
              FROM daily_work_counts pc

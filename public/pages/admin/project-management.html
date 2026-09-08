@@ -186,17 +186,17 @@
                     </div>
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
-                            <label>Start Date</label>
-                            <input type="date" class="form-control" name="start_date">
+                            <label>Start Date *</label>
+                            <input type="date" class="form-control" name="start_date" required>
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label>End Date</label>
-                            <input type="date" class="form-control" name="end_date">
+                            <label>End Date *</label>
+                            <input type="date" class="form-control" name="end_date" required>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Total Target</label>
-                        <input type="number" class="form-control" name="total_target" min="0" placeholder="0">
+                        <label>Total Target *</label>
+                        <input type="number" class="form-control" name="total_target" min="0" placeholder="0" required>
                     </div>
                     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal('createSetModal')">Cancel</button>
@@ -616,14 +616,22 @@
             e.preventDefault();
             const form = e.target;
             const projectId = form.projectId.value;
+            const name = form.name.value.trim();
+            const startDate = form.start_date.value;
+            const endDate = form.end_date.value;
+            const targetValue = form.total_target.value;
+            if (!name) { showToast('Set name is required', 'warning'); return; }
+            if (!startDate || !endDate) { showToast('Start date and end date are required', 'warning'); return; }
+            if (endDate < startDate) { showToast('End date must be on or after the start date', 'warning'); return; }
+            if (targetValue === '' || Number(targetValue) < 0) { showToast('Total target is required (0 or more)', 'warning'); return; }
             const btn = document.getElementById('createSetBtn');
             btn.disabled = true;
             btn.textContent = 'Creating...';
             const body = {
-                name: form.name.value.trim(),
-                start_date: form.start_date.value || null,
-                end_date: form.end_date.value || null,
-                total_target: form.total_target.value ? Number(form.total_target.value) : null
+                name,
+                start_date: startDate,
+                end_date: endDate,
+                total_target: Number(targetValue)
             };
             const data = await apiCall(`/project-sets/${projectId}`, 'POST', body);
             btn.disabled = false;

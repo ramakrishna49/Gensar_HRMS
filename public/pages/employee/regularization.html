@@ -270,9 +270,12 @@
         }
         // Only the past ~60 days can be regularized.
         function selAllowed(key) {
-            const ms = new Date(key + 'T00:00:00').getTime();
-            const min = Date.now() - 60 * 86400000;
-            return ms >= new Date(min).setHours(0, 0, 0, 0);
+            const parts = key.split('-');
+            const ms = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)).getTime();
+            const now = istNow();
+            const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const minMs = todayMs - 60 * 86400000;
+            return ms >= minMs && ms <= todayMs;
         }
         function calNav(dir) {
             calM += dir;

@@ -117,6 +117,68 @@ const ENSURE_TABLE_DDL = {
             created_at TIMESTAMP DEFAULT NOW()
         )`,
         `CREATE INDEX IF NOT EXISTS idx_process_tasks_process ON process_tasks(process_id)`
+    ],
+    // Projects module release (projects, sets, daily counts). A live database
+    // that predates it fails with 42P01 ("relation does not exist") on every
+    // project operation - including project creation - unless the DDL below
+    // runs first. Fully idempotent and additive; existing rows are untouched.
+    projects: [
+        `CREATE TABLE IF NOT EXISTS projects (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            customer VARCHAR(255),
+            description TEXT,
+            status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'paused', 'terminated', 'on_hold', 'completed', 'cancelled')),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)`
+    ],
+    project_employees: [
+        `CREATE TABLE IF NOT EXISTS project_employees (
+            id SERIAL PRIMARY KEY,
+            project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+            employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+            assigned_at TIMESTAMP DEFAULT NOW(),
+            status VARCHAR(20) DEFAULT 'active',
+            UNIQUE(project_id, employee_id)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_project_employees_project ON project_employees(project_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_project_employees_employee ON project_employees(employee_id)`
+    ],
+    project_sets: [
+        `CREATE TABLE IF NOT EXISTS project_sets (
+            id SERIAL PRIMARY KEY,
+            project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            total_target INT NOT NULL DEFAULT 0,
+            working_days INT DEFAULT 0,
+            status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_project_sets_project ON project_sets(project_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_project_sets_status ON project_sets(status)`
+    ],
+    daily_work_counts: [
+        `CREATE TABLE IF NOT EXISTS daily_work_counts (
+            id SERIAL PRIMARY KEY,
+            project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+            set_id INT REFERENCES project_sets(id) ON DELETE CASCADE,
+            employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+            work_date DATE NOT NULL,
+            daily_count INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(project_id, set_id, employee_id, work_date)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_work_counts_project ON daily_work_counts(project_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_work_counts_set ON daily_work_counts(set_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_work_counts_employee ON daily_work_counts(employee_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_work_counts_date ON daily_work_counts(work_date)`,
+        `CREATE INDEX IF NOT EXISTS idx_daily_work_counts_unique ON daily_work_counts(project_id, set_id, employee_id, work_date)`
     ]
 };
 
