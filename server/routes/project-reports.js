@@ -20,6 +20,14 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'View must be daily, weekly, or monthly' });
         }
 
+        const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
+
+        // Ensure client column exists (safe migration on first use)
+        try {
+            await q(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
+            await q(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
+        } catch (e) { /* column may already exist */ }
+
         let dateFilter = '';
         let dateParams = [];
         let paramOffset = 0;
@@ -234,6 +242,12 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
  */
 router.get('/projects', verifyToken, isAdmin, async (req, res) => {
     try {
+        // Ensure client column exists
+        try {
+            await q(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
+            await q(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
+        } catch (e) { /* column may already exist */ }
+
         const result = await q(
             `SELECT id, name, COALESCE(client, customer) as client, status FROM projects WHERE status = 'active' ORDER BY name`
         );
@@ -338,6 +352,13 @@ router.get('/export', verifyToken, isAdmin, async (req, res) => {
 
         // Get projects
         const hasDeletedAt = await hasColumn('project_sets', 'deleted_at');
+
+        // Ensure client column exists
+        try {
+            await q(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS client VARCHAR(255)`);
+            await q(`UPDATE projects SET client = customer WHERE client IS NULL AND customer IS NOT NULL`);
+        } catch (e) { /* column may already exist */ }
+
         const projectsQuery = `
             SELECT DISTINCT p.id, p.name, COALESCE(p.client, p.customer) as client
             FROM projects p
