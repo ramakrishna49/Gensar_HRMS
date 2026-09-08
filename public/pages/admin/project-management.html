@@ -187,16 +187,39 @@
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
                             <label>Start Date *</label>
-                            <input type="date" class="form-control" name="start_date" required>
+                            <input type="date" class="form-control" name="start_date" required oninput="updateCreateSetPreview()">
                         </div>
                         <div class="form-group" style="flex:1;">
                             <label>End Date *</label>
-                            <input type="date" class="form-control" name="end_date" required>
+                            <input type="date" class="form-control" name="end_date" required oninput="updateCreateSetPreview()">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Total Target *</label>
-                        <input type="number" class="form-control" name="total_target" min="0" placeholder="0" required>
+                    <div style="display:flex;gap:12px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Total Target *</label>
+                            <input type="number" class="form-control" name="total_target" min="0" placeholder="0" required oninput="updateCreateSetPreview()">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Assigned Employees</label>
+                            <div style="padding:10px 12px;background:var(--bg-light);border:1px solid var(--border);border-radius:var(--radius);font-weight:600;font-size:0.85rem;" id="createSetTeamSize">-</div>
+                        </div>
+                    </div>
+                    <div id="createSetPreview" style="display:none;background:var(--primary-50);border:1px solid var(--primary-200, transparent);border-radius:var(--radius);padding:12px;margin-top:8px;">
+                        <div style="font-size:0.72rem;color:var(--text-tertiary);margin-bottom:8px;font-weight:600;">TARGET SPLIT</div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+                            <div>
+                                <div style="font-size:0.72rem;color:var(--text-tertiary);">Working Days</div>
+                                <div style="font-size:1rem;font-weight:700;" id="createSetWorkingDays">0</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.72rem;color:var(--text-tertiary);">Per Employee</div>
+                                <div style="font-size:1rem;font-weight:700;" id="createSetPerHead">0</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.72rem;color:var(--text-tertiary);">Per Day Per Employee</div>
+                                <div style="font-size:1rem;font-weight:700;" id="createSetPerDay">0</div>
+                            </div>
+                        </div>
                     </div>
                     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal('createSetModal')">Cancel</button>
@@ -725,9 +748,39 @@
 
         // ===================== CREATE SET =====================
         function openCreateSetModal(projectId) {
+            const project = allProjects.find(p => String(p.id) === String(projectId));
+            const teamSize = parseInt((project && project.employees_count), 10) || 0;
+            document.getElementById('createSetTeamSize').textContent = teamSize + ' employees';
             document.getElementById('createSetForm').reset();
             document.getElementById('setProjectId').value = projectId;
+            updateCreateSetPreview();
             openModal('createSetModal');
+        }
+
+        function workingDaysBetween(startDate, endDate) {
+            if (!startDate || !endDate || endDate < startDate) return 0;
+            const start = new Date(startDate + 'T00:00:00');
+            const end = new Date(endDate + 'T00:00:00');
+            let count = 0;
+            for (let cur = new Date(start); cur <= end; cur.setDate(cur.getDate() + 1)) {
+                if (cur.getDay() !== 0) count++;
+            }
+            return count;
+        }
+
+        function updateCreateSetPreview() {
+            const form = document.getElementById('createSetForm');
+            const projectId = document.getElementById('setProjectId').value;
+            const project = allProjects.find(p => String(p.id) === String(projectId));
+            const teamSize = parseInt((project && project.employees_count), 10) || 0;
+            const target = parseFloat(form.total_target.value) || 0;
+            const wd = workingDaysBetween(form.start_date.value, form.end_date.value);
+            document.getElementById('createSetWorkingDays').textContent = wd;
+            const perHead = teamSize > 0 ? target / teamSize : target;
+            const perDay = (teamSize > 0 && wd > 0) ? perHead / wd : (wd > 0 ? target / wd : target);
+            document.getElementById('createSetPerHead').textContent = fmt(perHead);
+            document.getElementById('createSetPerDay').textContent = fmt(perDay);
+            document.getElementById('createSetPreview').style.display = 'block';
         }
 
         async function createSet(e) {
