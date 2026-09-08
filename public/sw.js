@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gensar-hrms-v2';
+const CACHE_NAME = 'gensar-hrms-v3';
 const SHELL_URLS = [
   '/',
   '/login',

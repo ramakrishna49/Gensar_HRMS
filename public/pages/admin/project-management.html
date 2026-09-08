@@ -453,7 +453,25 @@
                 return;
             }
             try {
-                grid.innerHTML = projects.map(p => `
+                grid.innerHTML = projects.map(p => {
+                    try {
+                        return projectCard(p);
+                    } catch (cardErr) {
+                        console.error('render card failed for project', p && p.id, cardErr);
+                        return '';
+                    }
+                }).join('');
+                if (!grid.innerHTML.trim()) {
+                    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><p>No projects found</p></div>';
+                }
+            } catch (err) {
+                console.error('renderProjects failed:', err);
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><p>Failed to render projects.</p></div>';
+            }
+        }
+
+        function projectCard(p) {
+            return `
                 <div class="card" style="padding:0;overflow:hidden;" id="project-card-${p.id}">
                     <div style="padding:20px;">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
@@ -500,11 +518,7 @@
                         <div id="employees-content-${p.id}"></div>
                     </div>
                 </div>
-            `).join('');
-            } catch (err) {
-                console.error('renderProjects failed:', err);
-                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><p>Failed to render projects.</p></div>';
-            }
+            `;
         }
 
         function countOf(v) {
