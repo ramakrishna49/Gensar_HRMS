@@ -170,8 +170,6 @@
     <script src="../../js/auth.js"></script>
     <script>
         // API helper
-        const API_URL = '/api';
-
         async function apiCall(endpoint, method = 'GET', body = null) {
             const token = localStorage.getItem('token');
             const headers = { 'Content-Type': 'application/json' };
