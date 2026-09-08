@@ -433,14 +433,9 @@
                 let teamActualByDay = {};
 
                 employees.forEach(emp => {
-                    const pct = set.targetPerEmployee > 0 ? Math.min((emp.totalActual / set.targetPerEmployee * 100), 100) : 0;
-                    const barColor = pct >= 100 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
                     html += `<tr><td class="name-col">
                         <div style="font-weight:600;">${escapeHtml(emp.employee.first_name)} ${escapeHtml(emp.employee.last_name || '')}</div>
                         <div style="font-size:0.7rem;color:var(--text-secondary);">${emp.employee.emp_id || ''}</div>
-                        <div style="margin-top:4px;background:var(--border-light);border-radius:4px;height:6px;overflow:hidden;">
-                            <div style="width:${pct}%;height:100%;background:${barColor};border-radius:4px;transition:width 0.3s;"></div>
-                        </div>
                     </td>`;
                     html += `<td style="font-weight:600;">${set.targetPerEmployee}</td>`;
                     html += `<td style="font-weight:600;">${set.dailyTargetPerEmployee}</td>`;
