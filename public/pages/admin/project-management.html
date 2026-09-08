@@ -89,21 +89,6 @@
                 </div>
             </div>
 
-            <div class="grid grid-3 mb-3" style="gap:16px;margin-bottom:20px;">
-                <div class="card" style="display:flex;align-items:center;gap:12px;">
-                    <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-50);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-briefcase"></i></div>
-                    <div><div style="font-size:1.5rem;font-weight:700;line-height:1;" id="statProjects">0</div><div style="font-size:0.8rem;color:var(--text-secondary);">Projects</div></div>
-                </div>
-                <div class="card" style="display:flex;align-items:center;gap:12px;">
-                    <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-50);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-layer-group"></i></div>
-                    <div><div style="font-size:1.5rem;font-weight:700;line-height:1;" id="statSets">0</div><div style="font-size:0.8rem;color:var(--text-secondary);">Sets</div></div>
-                </div>
-                <div class="card" style="display:flex;align-items:center;gap:12px;">
-                    <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-50);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-users"></i></div>
-                    <div><div style="font-size:1.5rem;font-weight:700;line-height:1;" id="statEmployees">0</div><div style="font-size:0.8rem;color:var(--text-secondary);">Employees Assigned</div></div>
-                </div>
-            </div>
-
             <div id="projectsGrid" class="grid grid-2 mb-3" style="gap:16px;"></div>
             <div id="modalsContainer"></div>
         </div>
@@ -435,16 +420,6 @@
             } else {
                 grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:8px;display:block;"></i><p>No projects found</p></div>';
             }
-            loadStats();
-        }
-
-        async function loadStats() {
-            const data = await apiCall('/projects/stats');
-            const stats = (data && data.success && data.stats) || {};
-            const setN = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || 0; };
-            setN('statProjects', stats.projects);
-            setN('statSets', stats.sets);
-            setN('statEmployees', stats.assigned_employees);
         }
 
         function renderProjects(projects) {
@@ -468,12 +443,22 @@
                         </div>
                         <div style="margin-bottom:12px;">${statusBadge(p.status)}</div>
                         ${p.description ? `<p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:12px;line-height:1.5;">${esc(p.description)}</p>` : ''}
+                        <div style="display:flex;gap:18px;margin-bottom:14px;flex-wrap:wrap;">
+                            <span style="display:inline-flex;align-items:center;gap:7px;font-size:0.9rem;color:var(--text-secondary);">
+                                <i class="fas fa-users" style="color:var(--primary);width:16px;text-align:center;"></i>
+                                <strong style="color:var(--text-primary);font-size:1.05rem;">${p.employees_count || 0}</strong> Employees Assigned
+                            </span>
+                            <span style="display:inline-flex;align-items:center;gap:7px;font-size:0.9rem;color:var(--text-secondary);">
+                                <i class="fas fa-layer-group" style="color:var(--primary);width:16px;text-align:center;"></i>
+                                <strong style="color:var(--text-primary);font-size:1.05rem;">${p.sets_count || 0}</strong> Sets
+                            </span>
+                        </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
                             <button class="btn btn-secondary btn-sm" onclick="toggleExpand(${p.id}, 'sets')">
-                                <i class="fas fa-layer-group"></i> Sets${p.sets_count > 0 ? ` (${p.sets_count})` : ''}
+                                <i class="fas fa-layer-group"></i> Sets
                             </button>
                             <button class="btn btn-secondary btn-sm" onclick="toggleExpand(${p.id}, 'employees')">
-                                <i class="fas fa-users"></i> Employees${p.employees_count > 0 ? ` (${p.employees_count})` : ''}
+                                <i class="fas fa-users"></i> Employees
                             </button>
                             <button class="btn btn-primary btn-sm" onclick="openCreateSetModal(${p.id})">
                                 <i class="fas fa-plus"></i> Add Set
