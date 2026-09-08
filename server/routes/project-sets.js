@@ -27,7 +27,7 @@ router.get('/single/:id', verifyToken, async (req, res) => {
              ) as submission_count
              FROM project_sets ps
              JOIN projects p ON ps.project_id = p.id
-             WHERE ps.id = $1`,
+             WHERE ps.id = $1 AND ps.deleted_at IS NULL`,
             [req.params.id]
         );
         if (result.rows.length === 0) {
@@ -52,7 +52,7 @@ router.get('/:projectId', verifyToken, isAdmin, async (req, res) => {
              (SELECT COUNT(DISTINCT pe.employee_id) FROM project_employees pe WHERE pe.project_id = $1 AND (pe.status = 'active' OR pe.status IS NULL)) as team_size,
              (SELECT COUNT(*) FROM daily_work_counts dc WHERE dc.set_id = ps.id) as submission_count
              FROM project_sets ps
-             WHERE ps.project_id = $1
+             WHERE ps.project_id = $1 AND ps.deleted_at IS NULL
              ORDER BY ps.name`,
             [req.params.projectId]
         );
@@ -99,12 +99,15 @@ router.post('/:projectId', verifyToken, isAdmin, async (req, res) => {
 
 /**
  * DELETE /api/project-sets/:id
- * Delete a set (daily_work_counts cascade). The admin UI calls this to remove a set.
+ * Soft-delete a set (marks deleted_at so it can be undone/restored).
+ * Daily work counts are kept; the set is hidden from lists.
  */
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
         const result = await q(
-            `DELETE FROM project_sets WHERE id = $1 RETURNING id, name`,
+            `UPDATE project_sets SET deleted_at = NOW(), updated_at = NOW()
+             WHERE id = $1 AND deleted_at IS NULL
+             RETURNING id, name, project_id`,
             [req.params.id]
         );
         if (result.rows.length === 0) {
@@ -113,6 +116,29 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
         res.json({ success: true, message: 'Set deleted successfully', set: result.rows[0] });
     } catch (error) {
         console.error(`Error deleting set ${req.params.id}:`, error);
+        const r = pgErrorResponse(error);
+        res.status(r.status).json({ success: false, message: r.message });
+    }
+});
+
+/**
+ * POST /api/project-sets/:id/restore
+ * Undo a soft-deleted set (clears deleted_at).
+ */
+router.post('/:id/restore', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const result = await q(
+            `UPDATE project_sets SET deleted_at = NULL, updated_at = NOW()
+             WHERE id = $1
+             RETURNING id, name, project_id`,
+            [req.params.id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Set not found' });
+        }
+        res.json({ success: true, message: 'Set restored successfully', set: result.rows[0] });
+    } catch (error) {
+        console.error(`Error restoring set ${req.params.id}:`, error);
         const r = pgErrorResponse(error);
         res.status(r.status).json({ success: false, message: r.message });
     }

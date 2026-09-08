@@ -54,7 +54,8 @@ const PROJECT_SETS_ALTER_COLUMNS = {
     working_days: 'INT DEFAULT 0',
     total_target: 'INT NOT NULL DEFAULT 0',
     created_at: 'TIMESTAMP DEFAULT NOW()',
-    updated_at: 'TIMESTAMP DEFAULT NOW()'
+    updated_at: 'TIMESTAMP DEFAULT NOW()',
+    deleted_at: 'TIMESTAMP'
 };
 
 // Tables added in later releases. A live database that predates them fails with
@@ -178,7 +179,8 @@ const ENSURE_TABLE_DDL = {
             working_days INT DEFAULT 0,
             status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
             created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
+            updated_at TIMESTAMP DEFAULT NOW(),
+            deleted_at TIMESTAMP
         )`,
         `CREATE INDEX IF NOT EXISTS idx_project_sets_project ON project_sets(project_id)`,
         `CREATE INDEX IF NOT EXISTS idx_project_sets_status ON project_sets(status)`
