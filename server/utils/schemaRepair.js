@@ -245,6 +245,24 @@ async function ensureProjectSetColumn(column) {
     return true;
 }
 
+// Columns the project-sets listing / employee views depend on beyond the three
+// main tables. If a live DB predates the projects module these can be missing.
+const PROJECT_MODULE_ALTER_COLUMNS = {
+    'daily_work_counts': {
+        set_id: 'INT REFERENCES project_sets(id) ON DELETE CASCADE',
+    },
+    'project_employees': {
+        status: 'VARCHAR(20) DEFAULT \'active\'',
+    }
+};
+
+async function ensureProjectModuleColumn(table, column) {
+    const ddl = (PROJECT_MODULE_ALTER_COLUMNS[table] || {})[column];
+    if (!ddl) return false;
+    await query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS "${column}" ${ddl}`);
+    return true;
+}
+
 async function ensureTable(table) {
     const statements = ENSURE_TABLE_DDL[table];
     if (!statements) return false;
@@ -275,7 +293,9 @@ async function runWithSchemaRepair(fn) {
                         healed = miss.column && await ensureProjectColumn(miss.column);
                     } else if (table === 'project_sets') {
                         healed = miss.column && await ensureProjectSetColumn(miss.column);
-                    } else {
+                    } else if (table === 'daily_work_counts' || table === 'project_employees') {
+                        healed = miss.column && await ensureProjectModuleColumn(table, miss.column);
+                    } else if (table === 'employees') {
                         healed = miss.column && await ensureEmployeeColumn(miss.column);
                     }
                     if (healed) {
@@ -323,4 +343,4 @@ function pgErrorResponse(error) {
     return { status: 500, message: 'Server error' };
 }
 
-module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureProjectColumn, ensureProjectSetColumn, ensureTable, pgErrorResponse, missingColumnInfo };
+module.exports = { runWithSchemaRepair, ensureEmployeeColumn, ensureProjectColumn, ensureProjectSetColumn, ensureProjectModuleColumn, ensureTable, pgErrorResponse, missingColumnInfo };

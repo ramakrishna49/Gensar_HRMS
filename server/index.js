@@ -258,6 +258,11 @@ async function runMigrations() {
             updated_at TIMESTAMP DEFAULT NOW(),
             UNIQUE(project_id, set_id, employee_id, work_date)
         )`);
+        // Pre-existing tables created before the projects module added these
+        // columns won't get them from CREATE TABLE IF NOT EXISTS, so add them
+        // explicitly (idempotent) to avoid 42703 on the sets/count queries.
+        await query(`ALTER TABLE daily_work_counts ADD COLUMN IF NOT EXISTS set_id INT REFERENCES project_sets(id) ON DELETE CASCADE`);
+        await query(`ALTER TABLE project_sets ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
         console.log('[Migration] Projects module tables ensured.');
     } catch (e) { console.warn('[Migration] Projects module tables skipped:', e.message); }
 

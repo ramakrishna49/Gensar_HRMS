@@ -198,6 +198,9 @@
 
             for (const project of data.projects) {
                 const setsData = await apiCall('/projects/my/' + project.id + '/sets');
+                if (setsData && !setsData.success) {
+                    console.warn(`GET /projects/my/${project.id}/sets failed:`, setsData.message || setsData);
+                }
                 const sets = (setsData && setsData.success) ? setsData.sets : [];
 
                 const card = document.createElement('div');

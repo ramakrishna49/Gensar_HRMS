@@ -63,7 +63,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
  * GET /api/daily-work-counts/employee/:employeeId
  * Get daily work counts for a specific employee
  */
-router.get('/employee/:employeeId', verifyToken, isEmployee, async (req, res) => {
+router.get('/employee/:employeeId', verifyToken, async (req, res) => {
     try {
         const result = await q(
             `SELECT pc.id, pc.project_id, pc.set_id, pc.work_date, pc.daily_count,
@@ -87,7 +87,7 @@ router.get('/employee/:employeeId', verifyToken, isEmployee, async (req, res) =>
  * - Creates new record if none exists for employee+project+set+date
  * - Updates existing record if one already exists (no duplicates)
  */
-router.post('/', verifyToken, isEmployee, async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
     try {
         const { projectId, setId, workDate, dailyCount } = req.body;
         if (!projectId || !setId || !workDate || dailyCount === undefined) {
@@ -198,7 +198,7 @@ router.put('/:id', verifyToken, isEmployee, async (req, res) => {
         }
     
         // Verify the employee owns this record
-        if (check.rows[0].employee_id !== req.user.employeeId || check.rows[0].employee_id !== req.user.id) {
+        if (check.rows[0].employee_id !== (req.user.employeeId || req.user.id)) {
             return res.status(403).json({ 
                 success: false, 
                 message: 'Unauthorized: You can only update your own daily work counts' 
