@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gensar-hrms-v1';
+const CACHE_NAME = 'gensar-hrms-v2';
 const SHELL_URLS = [
   '/',
   '/login',
@@ -30,6 +30,25 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   // Never cache API
   if (url.pathname.startsWith('/api/')) return;
+  const isNavigation = req.mode === 'navigate' ||
+    req.destination === 'document' ||
+    (req.headers.get('accept') || '').includes('text/html');
+  if (isNavigation) {
+    // Network-first for pages: a fresh deployment must never be hidden behind a
+    // stale service-worker cache (the old cache-first handler froze pages like
+    // /admin/project-management so UI fixes never reached users).
+    event.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+        }
+        return res;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
+  // Cache-first for static assets (css/js/images/manifest).
   event.respondWith(
     caches.match(req).then((cached) => {
       const fetchPromise = fetch(req).then((res) => {
