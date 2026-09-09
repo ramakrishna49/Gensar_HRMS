@@ -48,12 +48,12 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
 
         // Simple query: get projects that have active sets and assigned employees
         // Use COALESCE for client/customer backward compat
-        // Avoid deleted_at references - let self-heal handle if needed
+        // Exclude soft-deleted sets (where deleted_at IS NULL is NOT set)
         const projectsResult = await q(`
             SELECT DISTINCT p.id, p.name, COALESCE(p.client, p.customer) as client, p.status
             FROM projects p
             INNER JOIN project_employees pe ON p.id = pe.project_id
-            INNER JOIN project_sets ps ON ps.project_id = p.id AND ps.status = 'active'
+            INNER JOIN project_sets ps ON ps.project_id = p.id AND ps.status = 'active' AND ps.deleted_at IS NULL
             WHERE p.status = 'active'
             ORDER BY p.name
         `, []);
@@ -65,7 +65,7 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
             const setsResult = await q(`
                 SELECT ps.id, ps.name, ps.total_target, ps.working_days, ps.start_date, ps.end_date
                 FROM project_sets ps
-                WHERE ps.project_id = $1 AND ps.status = 'active'
+                WHERE ps.project_id = $1 AND ps.status = 'active' AND ps.deleted_at IS NULL
                 ORDER BY ps.name
             `, [project.id]);
 
@@ -260,7 +260,7 @@ router.get('/all-sets', verifyToken, isAdmin, async (req, res) => {
             `SELECT ps.id, ps.name, ps.project_id, p.name as project_name
              FROM project_sets ps
              INNER JOIN projects p ON p.id = ps.project_id
-             WHERE ps.status = 'active' AND p.status = 'active'
+             WHERE ps.status = 'active' AND ps.deleted_at IS NULL AND p.status = 'active'
              ORDER BY p.name, ps.name`
         );
         res.json({ success: true, sets: result.rows });
@@ -363,7 +363,7 @@ router.get('/export', verifyToken, isAdmin, async (req, res) => {
 
         for (const project of projectsResult.rows) {
             if (filterProjectId && project.id !== filterProjectId) continue;
-            const setsResult = await q(`SELECT ps.id, ps.name, ps.total_target, ps.working_days FROM project_sets ps WHERE ps.project_id = $1 AND ps.status = 'active' ORDER BY ps.name`, [project.id]);
+            const setsResult = await q(`SELECT ps.id, ps.name, ps.total_target, ps.working_days FROM project_sets ps WHERE ps.project_id = $1 AND ps.status = 'active' AND ps.deleted_at IS NULL ORDER BY ps.name`, [project.id]);
             for (const set of setsResult.rows) {
                 if (filterSetId && set.id !== filterSetId) continue;
                 const empResult = await q(`SELECT e.id, e.first_name, e.last_name FROM project_employees pe INNER JOIN employees e ON pe.employee_id = e.id WHERE pe.project_id = $1 AND e.role != 'admin' ORDER BY e.first_name`, [project.id]);
