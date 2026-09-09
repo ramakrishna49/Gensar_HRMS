@@ -106,15 +106,14 @@ router.post('/:projectId', verifyToken, isAdmin, async (req, res) => {
 
 /**
  * DELETE /api/project-sets/:id
- * Soft-delete a set (marks deleted_at so it can be undone/restored).
- * Daily work counts are kept; the set is hidden from lists.
+ * Hard-delete a set (permanently removes it and cascades to daily_work_counts).
+ * Since daily_work_counts has ON DELETE CASCADE on set_id, all daily counts
+ * for this set will be automatically removed.
  */
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
         const result = await q(
-            `UPDATE project_sets SET deleted_at = NOW(), updated_at = NOW()
-             WHERE id = $1 AND deleted_at IS NULL
-             RETURNING id, name, project_id`,
+            `DELETE FROM project_sets WHERE id = $1 RETURNING id, name, project_id`,
             [req.params.id]
         );
         if (result.rows.length === 0) {
@@ -123,29 +122,6 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
         res.json({ success: true, message: 'Set deleted successfully', set: result.rows[0] });
     } catch (error) {
         console.error(`Error deleting set ${req.params.id}:`, error);
-        const r = pgErrorResponse(error);
-        res.status(r.status).json({ success: false, message: (error && error.message) || r.message });
-    }
-});
-
-/**
- * POST /api/project-sets/:id/restore
- * Undo a soft-deleted set (clears deleted_at).
- */
-router.post('/:id/restore', verifyToken, isAdmin, async (req, res) => {
-    try {
-        const result = await q(
-            `UPDATE project_sets SET deleted_at = NULL, updated_at = NOW()
-             WHERE id = $1
-             RETURNING id, name, project_id`,
-            [req.params.id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Set not found' });
-        }
-        res.json({ success: true, message: 'Set restored successfully', set: result.rows[0] });
-    } catch (error) {
-        console.error(`Error restoring set ${req.params.id}:`, error);
         const r = pgErrorResponse(error);
         res.status(r.status).json({ success: false, message: (error && error.message) || r.message });
     }
