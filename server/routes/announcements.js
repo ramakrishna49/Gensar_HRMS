@@ -29,45 +29,53 @@ router.get('/', verifyToken, async (req, res) => {
 
 router.get('/unread-count', verifyToken, async (req, res) => {
     try {
-        const result = await query(
-            `SELECT COUNT(*) as count FROM announcements a
-            WHERE a.is_active = 1 AND (a.expires_at IS NULL OR a.expires_at > NOW())
-            AND a.target_audience = ANY($2::text[])
-            AND a.id NOT IN (
-                SELECT announcement_id FROM announcement_reads WHERE employee_id = $1
-            )`,
-            [req.user.id, audienceForRole(req.user.role)]
+        const result = await runWithSchemaRepair(() =>
+            query(
+                `SELECT COUNT(*) as count FROM announcements a
+                WHERE a.is_active = 1 AND (a.expires_at IS NULL OR a.expires_at > NOW())
+                AND a.target_audience = ANY($2::text[])
+                AND a.id NOT IN (
+                    SELECT announcement_id FROM announcement_reads WHERE employee_id = $1
+                )`,
+                [req.user.id, audienceForRole(req.user.role)]
+            )
         );
         res.json({ success: true, count: parseInt(result.rows[0].count) });
     } catch (error) {
+        console.error('Unread count error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
 router.post('/read-all', verifyToken, async (req, res) => {
     try {
-        await query(
-            `INSERT INTO announcement_reads (employee_id, announcement_id)
-            SELECT $1, a.id FROM announcements a
-            WHERE a.is_active = 1
-            AND a.target_audience = ANY($2::text[])
-            AND a.id NOT IN (
-                SELECT announcement_id FROM announcement_reads WHERE employee_id = $1
-            )`,
-            [req.user.id, audienceForRole(req.user.role)]
+        await runWithSchemaRepair(() =>
+            query(
+                `INSERT INTO announcement_reads (employee_id, announcement_id)
+                SELECT $1, a.id FROM announcements a
+                WHERE a.is_active = 1
+                AND a.target_audience = ANY($2::text[])
+                AND a.id NOT IN (
+                    SELECT announcement_id FROM announcement_reads WHERE employee_id = $1
+                )`,
+                [req.user.id, audienceForRole(req.user.role)]
+            )
         );
         res.json({ success: true });
     } catch (error) {
+        console.error('Read-all error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
 router.post('/:id/read', verifyToken, async (req, res) => {
     try {
-        const visible = await query(
-            `SELECT id FROM announcements
-            WHERE id = $1 AND is_active = 1 AND target_audience = ANY($2::text[])`,
-            [req.params.id, audienceForRole(req.user.role)]
+        const visible = await runWithSchemaRepair(() =>
+            query(
+                `SELECT id FROM announcements
+                WHERE id = $1 AND is_active = 1 AND target_audience = ANY($2::text[])`,
+                [req.params.id, audienceForRole(req.user.role)]
+            )
         );
         if (visible.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Announcement not found' });
@@ -84,6 +92,7 @@ router.post('/:id/read', verifyToken, async (req, res) => {
         }
         res.json({ success: true });
     } catch (error) {
+        console.error('Read announcement error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
@@ -163,13 +172,16 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
 
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        const result = await query(
-            'UPDATE announcements SET is_active = 0 WHERE id = $1 RETURNING id',
-            [req.params.id]
+        const result = await runWithSchemaRepair(() =>
+            query(
+                'UPDATE announcements SET is_active = 0 WHERE id = $1 RETURNING id',
+                [req.params.id]
+            )
         );
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
         res.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
+        console.error('Delete announcement error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

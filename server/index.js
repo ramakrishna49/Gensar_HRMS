@@ -214,6 +214,13 @@ async function runMigrations() {
         console.log('[Migration] project_sets.working_days/deleted_at columns ensured.');
     } catch (e) { console.warn('[Migration] working_days column skipped:', e.message); }
 
+    // Announcements auto-expiry column – added after the original schema.
+    // Without this, every GET /api/announcements 500s with 42703.
+    try {
+        await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP`);
+        console.log('[Migration] announcements.expires_at column ensured.');
+    } catch (e) { console.warn('[Migration] announcements.expires_at skipped:', e.message); }
+
     // Projects module tables. Databases initialized before the projects module
     // exists fail every /api/projects create/set/assign call with 42P01 unless
     // the tables are ensured here (idempotent) or lazily healed per-request.
