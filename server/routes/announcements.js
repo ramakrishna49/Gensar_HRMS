@@ -107,14 +107,15 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
             )
         );
 
-        try {
-            const sent = await sendToAudience(target_audience || 'all', {
-                title: priority === 'urgent' ? 'Urgent Announcement' : 'New Announcement',
-                body: title,
-                url: '/employee/announcements'
-            });
+        // Send push notifications in background (fire-and-forget) so the
+        // response is returned immediately instead of blocking on every device.
+        sendToAudience(target_audience || 'all', {
+            title: priority === 'urgent' ? 'Urgent Announcement' : 'New Announcement',
+            body: title,
+            url: '/employee/announcements'
+        }).then(sent => {
             if (sent.sent > 0) console.log(`[Push] Announcement "${title}" sent to ${sent.sent} device(s)`);
-        } catch (e) { console.error('Push notify error:', e.message); }
+        }).catch(e => console.error('Push notify error:', e.message));
 
         res.status(201).json({ success: true, announcement: result.rows[0] });
     } catch (error) {
