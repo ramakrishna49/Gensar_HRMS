@@ -142,7 +142,7 @@
         let allAnnouncements = [];
         let currentFilter = 'all';
 
-        document.addEventListener('DOMContentLoaded', () => { loadAnnouncements(); });
+        document.addEventListener('DOMContentLoaded', () => { loadAnnouncements(); setInterval(loadAnnouncements, 15000); });
 
         function setActivePriorityFilter(filter) {
             currentFilter = filter;

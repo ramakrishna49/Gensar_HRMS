@@ -108,6 +108,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (!checkAuth()) throw new Error('Not authenticated');
             loadAnnouncements();
+            setInterval(loadAnnouncements, 15000);
         });
 
         async function loadAnnouncements() {
