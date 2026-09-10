@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const { runAutoMark } = require('../services/attendanceAutoMark');
+const { runWithSchemaRepair } = require('../utils/schemaRepair');
 
 // Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` if configured, and also
 // an `x-vercel-cron` header. Require the secret so the endpoints can't be hit
@@ -37,7 +38,9 @@ router.get('/purge-photos', async (req, res) => {
 router.get('/expire-announcements', async (req, res) => {
     if (!isCronAuthorized(req)) return res.status(401).json({ success: false, message: 'Unauthorized' });
     try {
-        const result = await query("UPDATE announcements SET is_active = 0 WHERE is_active = 1 AND expires_at IS NOT NULL AND expires_at <= NOW()");
+        const result = await runWithSchemaRepair(() =>
+            query("UPDATE announcements SET is_active = 0 WHERE is_active = 1 AND expires_at IS NOT NULL AND expires_at <= NOW()")
+        );
         res.json({ success: true, expired: result.changes || 0 });
     } catch (error) {
         console.error('Expire announcements cron error:', error);

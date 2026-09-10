@@ -25,12 +25,12 @@ router.get('/counts', verifyToken, isManager, async (req, res) => {
             safe(query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'" + scopeClause, scopeParams)),
             safe(query("SELECT COUNT(*) as count FROM wfh_requests WHERE status = 'pending'" + scopeClause, scopeParams)),
             safe(query("SELECT COUNT(*) as count FROM support_tickets WHERE status IN ('open', 'in_progress')" + scopeClause, scopeParams)),
-            safe(query(
+            safe(runWithSchemaRepair(() => query(
                 `SELECT COUNT(*) as count FROM announcements a
                 WHERE a.is_active = 1
                 AND a.id NOT IN (SELECT announcement_id FROM announcement_reads WHERE employee_id = $1)`,
                 [req.user.id]
-            )),
+            ))),
             isAdminRole
                 ? safe(query("SELECT COUNT(*) as count FROM profile_update_requests WHERE status = 'pending'"))
                 : Promise.resolve({ rows: [{ count: '0' }] }),
