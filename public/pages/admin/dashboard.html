@@ -148,7 +148,7 @@
                         <a href="/admin/employees" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Review</a>
                     </div>
                     <div id="pendingProfileInfo">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:75%;"></div></div>
                     </div>
                 </div>
 
@@ -158,7 +158,7 @@
                         <a href="/admin/holidays" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
                     <div id="holidaysList">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:75%;"></div></div>
                     </div>
                 </div>
             </div>
@@ -170,7 +170,7 @@
                         <a href="/admin/reports" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Full Report</a>
                     </div>
                     <div id="deptDistribution">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:70%;"></div></div>
                     </div>
                 </div>
 
@@ -180,7 +180,7 @@
                         <a href="/admin/leave" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Manage</a>
                     </div>
                     <div id="pendingLeaveInfo">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:75%;"></div></div>
                     </div>
                 </div>
             </div>
@@ -191,8 +191,11 @@
                         <h2 style="font-size:1.1rem;font-weight:600;"><i class="fas fa-user-check" style="color:var(--success);"></i> Today's Attendance</h2>
                         <a href="/admin/attendance" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Full Report</a>
                     </div>
+                    <div id="attendanceDonutWrap" style="display:none;max-width:220px;margin:0 auto 12px;height:150px;">
+                        <canvas id="attendanceChart" aria-label="Today's attendance chart"></canvas>
+                    </div>
                     <div id="todayAttendanceList">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:60%;"></div></div>
                     </div>
                 </div>
 
@@ -202,7 +205,7 @@
                         <a href="/admin/announcements" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
                     <div id="activityFeed">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:75%;"></div></div>
                     </div>
                 </div>
             </div>
@@ -212,6 +215,8 @@
     <script src="../../js/auth.js"></script>
     <script src="../../js/layout.js"></script>
     <script src="../../js/dashboard.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="../../js/charts.js"></script>
     <script>
         if (!requireAdmin()) throw new Error('Not authenticated');
 
@@ -233,8 +238,25 @@
                 document.getElementById('absentToday').textContent = s.absentToday || 0;
                 document.getElementById('pendingLeaves').textContent = s.pendingLeaves || 0;
                 document.getElementById('totalDepartments').textContent = s.totalDepartments || 0;
+                renderAttendanceDonut(s.presentToday || 0, s.absentToday || 0);
                 renderTodayAttendance(data.todayAttendance || []);
             }
+        }
+
+        function renderAttendanceDonut(present, absent) {
+            var wrap = document.getElementById('attendanceDonutWrap');
+            // Charts lib absent (CDN blocked) -> hide canvas, table below still renders
+            if (!window.GensarCharts || !wrap) return;
+            var total = (parseInt(present) || 0) + (parseInt(absent) || 0);
+            if (total <= 0) { wrap.style.display = 'none'; return; }
+            wrap.style.display = 'block';
+            var ok = window.GensarCharts.doughnut(
+                'attendanceChart',
+                ['Present', 'Absent'],
+                [parseInt(present) || 0, parseInt(absent) || 0],
+                { text: String(total), sub: 'marked today' }
+            );
+            if (!ok) wrap.style.display = 'none';
         }
 
         function renderTodayAttendance(records) {
@@ -393,13 +415,28 @@
             const data = await apiCall('/reports/employees');
             const container = document.getElementById('deptDistribution');
             if (data && data.success && data.report.length > 0) {
-                const total = data.report.reduce((s, r) => s + parseInt(r.count), 0);
-                container.innerHTML = `
+                // Chart.js bar first; falls back to the plain table below
+                if (window.GensarCharts) {
+                    const labels = data.report.map(r => r.department);
+                    const values = data.report.map(r => parseInt(r.count) || 0);
+                    container.innerHTML = '<div style="height:240px;"><canvas id="deptChart" aria-label="Department distribution chart"></canvas></div>';
+                    if (window.GensarCharts.bar('deptChart', labels, values)) return;
+                }
+                renderDeptTable(container, data.report);
+            } else {
+                showEmptyState(container, 'fa-chart-pie', 'No Data', 'No department data available');
+            }
+        }
+
+        // Plain-HTML fallback when Chart.js CDN is unreachable
+        function renderDeptTable(container, report) {
+            const total = report.reduce((s, r) => s + parseInt(r.count), 0);
+            container.innerHTML = `
                     <div class="table-container">
                         <table>
                             <thead><tr><th>Department</th><th>Count</th><th style="min-width:120px;">Distribution</th></tr></thead>
                             <tbody>
-                                ${data.report.map(r => {
+                                ${report.map(r => {
                                     const pct = total > 0 ? ((parseInt(r.count)/total)*100).toFixed(0) : 0;
                                     return `<tr>
                                         <td style="font-weight:500;">${escapeHtml(r.department)}</td>
@@ -418,9 +455,6 @@
                         </table>
                     </div>
                 `;
-            } else {
-                showEmptyState(container, 'fa-chart-pie', 'No Data', 'No department data available');
-            }
         }
 
         async function loadPendingLeaves() {

@@ -206,7 +206,7 @@
                         <a href="/employee/attendance" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
                     <div id="recentAttendance">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:75%;"></div></div>
                     </div>
                 </div>
                 <div class="card slide-up stagger-2">
@@ -214,8 +214,11 @@
                         <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-calendar-check" style="color:var(--secondary);margin-right:8px;"></i>Leave Balance</h3>
                         <a href="/employee/leave" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
+                    <div id="leaveDonutWrap" style="display:none;max-width:200px;margin:0 auto 16px;height:140px;">
+                        <canvas id="leaveChart" aria-label="Overall leave balance chart"></canvas>
+                    </div>
                     <div id="leaveBalance">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:75%;"></div></div>
                     </div>
                 </div>
             </div>
@@ -227,7 +230,7 @@
                         <a href="/employee/holidays" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
                     <div id="upcomingHolidays">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:75%;"></div></div>
                     </div>
                 </div>
                 <div class="card slide-up stagger-4">
@@ -236,7 +239,7 @@
                         <a href="/employee/announcements" style="font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">View All</a>
                     </div>
                     <div id="latestAnnouncements">
-                        <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
+                        <div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:75%;"></div></div>
                     </div>
                 </div>
             </div>
@@ -268,6 +271,8 @@
     <script src="../../js/auth.js"></script>
     <script src="../../js/layout.js"></script>
     <script src="../../js/dashboard.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="../../js/charts.js"></script>
     <script src="../../js/tickets.js"></script>
     <script>
         let todayAttendance = null;
@@ -691,6 +696,7 @@
             const data = await apiCall('/leave/balance');
             const container = document.getElementById('leaveBalance');
             if (data && data.success && data.balances && data.balances.length > 0) {
+                renderLeaveDonut(data.balances);
                 const top3 = data.balances.slice(0, 3);
                 let html = '';
                 top3.forEach(b => {
@@ -706,6 +712,26 @@
             } else {
                 showEmptyState(container, 'fa-calendar-times', 'No Leave Types', 'No leave types configured');
             }
+        }
+
+        // Overall used-vs-remaining doughnut; hidden if Chart.js CDN failed
+        function renderLeaveDonut(balances) {
+            var wrap = document.getElementById('leaveDonutWrap');
+            if (!window.GensarCharts || !wrap) return;
+            var total = 0, remaining = 0;
+            balances.forEach(function (b) {
+                total += parseFloat(b.days_per_year) || 0;
+                remaining += parseFloat(b.remaining_days) || 0;
+            });
+            if (total <= 0) { wrap.style.display = 'none'; return; }
+            wrap.style.display = 'block';
+            var ok = window.GensarCharts.doughnut(
+                'leaveChart',
+                ['Remaining', 'Used'],
+                [remaining, Math.max(total - remaining, 0)],
+                { text: String(remaining), sub: 'days left' }
+            );
+            if (!ok) wrap.style.display = 'none';
         }
 
         async function loadUpcomingHolidays() {
