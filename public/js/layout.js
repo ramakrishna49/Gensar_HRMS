@@ -130,10 +130,38 @@
         return true;
     }
 
+    // Keka-style bottom nav for the employee PWA (mobile only via CSS).
+    // Purely additive: hidden on desktop, never touches sidebar/header.
+    var BOTTOM_NAV = [
+        { href: '/employee/dashboard', icon: 'fa-home', text: 'Home' },
+        { href: '/employee/attendance', icon: 'fa-clock', text: 'Check-in' },
+        { href: '/employee/leave', icon: 'fa-calendar-times', text: 'Leave' },
+        { href: '/employee/payslips', icon: 'fa-indian-rupee-sign', text: 'Pay' }
+    ];
+
+    function renderBottomNav() {
+        if (!document.body.classList.contains('employee-app')) return;
+        if (document.querySelector('.bottom-nav')) return;
+        var activePath = currentActivePath('');
+        var html = BOTTOM_NAV.map(function (item) {
+            var active = activePath === item.href ? ' active' : '';
+            return '<a href="' + esc(item.href) + '" class="bottom-nav-item' + active + '">' +
+                '<i class="fas ' + esc(item.icon) + '"></i><span>' + esc(item.text) + '</span></a>';
+        }).join('');
+        html += '<button type="button" class="bottom-nav-item" onclick="toggleSidebar()" aria-label="More menu">' +
+            '<i class="fas fa-bars"></i><span>More</span></button>';
+        var nav = document.createElement('nav');
+        nav.className = 'bottom-nav';
+        nav.setAttribute('aria-label', 'Primary');
+        nav.innerHTML = html;
+        document.body.appendChild(nav);
+    }
+
     function renderShell() {
         var mount = document.getElementById('app-shell');
         if (!mount) {
             hydrateLegacyNav();
+            renderBottomNav();
             return;
         } // not opted-in: only sync nav list, leave everything else untouched
         if (mount.getAttribute('data-rendered') === '1') return;
@@ -174,6 +202,7 @@
             '<div class="profile-menu-divider"></div>' +
             '<a href="#" class="profile-menu-item danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>' +
             '</div></div></div></header>';
+        renderBottomNav();
     }
 
     // Expose for tests / future phases; auto-render on DOM ready.
