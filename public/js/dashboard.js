@@ -649,7 +649,28 @@ document.addEventListener('DOMContentLoaded', () => {
     handleResize();
 
     initAdminMobile();
+    initA11y();
 });
+
+// Global a11y helpers: ESC closes dialogs, icon-only close buttons get labels.
+function initA11y() {
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        document.querySelectorAll('.modal.active').forEach(m => {
+            if (m.id === 'cameraModal' && typeof closeCameraModal === 'function') closeCameraModal();
+            else m.classList.remove('active');
+        });
+    });
+    labelDialogCloseButtons();
+}
+
+function labelDialogCloseButtons() {
+    document.querySelectorAll('.modal-header button:not([aria-label]), .modal button:not([aria-label])').forEach(btn => {
+        if ((btn.textContent || '').trim() === '×' || btn.innerHTML.includes('&times;')) {
+            btn.setAttribute('aria-label', 'Close dialog');
+        }
+    });
+}
 
 // --- App shell mobile helpers (gated on admin/employee app body class) ---
 
@@ -665,6 +686,7 @@ function adminStampTableLabels() {
         const theadRow = table.querySelector('thead tr');
         const tbody = table.querySelector('tbody');
         if (!theadRow || !tbody) return;
+        theadRow.querySelectorAll('th').forEach(th => { if (!th.scope) th.scope = 'col'; });
         const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent.trim());
         tbody.querySelectorAll('tr').forEach(row => {
             Array.from(row.children).forEach((td, i) => {
@@ -681,7 +703,7 @@ function adminStampTableLabels() {
 
 function adminTableRescan() {
     if (adminTableTimer) clearTimeout(adminTableTimer);
-    adminTableTimer = setTimeout(adminStampTableLabels, 60);
+    adminTableTimer = setTimeout(() => { adminStampTableLabels(); labelDialogCloseButtons(); }, 60);
 }
 
 function initAdminMobile() {

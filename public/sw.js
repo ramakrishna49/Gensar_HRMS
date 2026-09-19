@@ -1,12 +1,18 @@
-const CACHE_NAME = 'gensar-hrms-v3';
+const CACHE_NAME = 'gensar-hrms-v4';
 const SHELL_URLS = [
   '/',
   '/login',
   '/admin',
+  '/admin/dashboard',
+  '/admin/employees',
+  '/employee/dashboard',
   '/css/main.css',
   '/css/payroll.css',
   '/js/auth.js',
   '/js/dashboard.js',
+  '/js/layout.js',
+  '/js/charts.js',
+  '/js/employees.js',
   '/manifest.json'
 ];
 

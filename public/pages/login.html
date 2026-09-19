@@ -20,7 +20,7 @@
     <div class="login-container">
         <div class="login-split">
             <div class="login-brand">
-                <img src="../assets/images/gensar_logo.png" alt="Gensar HRMS Logo" width="200" height="64" onerror="this.style.display='none'">
+                <img src="../assets/images/gensar_logo.png" alt="Gensar HRMS Logo" width="200" height="64" fetchpriority="high" decoding="async" onerror="this.style.display='none'">
                 <h2>One workspace for your entire team</h2>
                 <p>Attendance, leave, payroll, projects and documents — in a single portal.</p>
                 <ul>
@@ -54,6 +54,7 @@
                                 <i class="fas fa-eye" id="eyeIcon"></i>
                             </button>
                         </div>
+                        <div id="capsWarn" style="display:none;font-size:0.78rem;color:var(--warning);font-weight:600;margin-top:6px;"><i class="fas fa-exclamation-triangle"></i> Caps Lock is on</div>
                     </div>
 
                     <div style="text-align:right;margin-top:-6px;margin-bottom:12px;">
@@ -74,5 +75,14 @@
 
     <script src="../js/auth.js"></script>
     <script src="../js/forgot-password.js"></script>
+    <script>
+        // Caps Lock hint (auth logic untouched)
+        document.getElementById('password').addEventListener('keyup', function (e) {
+            var warn = document.getElementById('capsWarn');
+            var on = false;
+            try { on = e.getModifierState && e.getModifierState('CapsLock'); } catch (_) { on = false; }
+            warn.style.display = on ? 'block' : 'none';
+        });
+    </script>
 </body>
 </html>
