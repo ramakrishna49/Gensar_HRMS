@@ -353,6 +353,14 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         
     } catch (error) {
         console.error('Login error:', error);
+        // Misconfigured deployment (e.g. Vercel Preview without DATABASE_URL):
+        // return 503 so it is never confused with a real auth failure.
+        if (error && /database not configured/i.test(error.message || '')) {
+            return res.status(503).json({
+                success: false,
+                message: 'Service temporarily unavailable. Administrator: set DATABASE_URL for this environment.'
+            });
+        }
         res.status(500).json({ 
             success: false, 
             message: 'Server error during login' 
