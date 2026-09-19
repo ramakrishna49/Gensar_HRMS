@@ -180,7 +180,7 @@
             const t = document.getElementById('deptTable');
             if (d && d.success && d.report.length > 0) {
                 const total = d.report.reduce((s, r) => s + parseInt(r.count), 0);
-                const colors = ['#4F46E5','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16','#F97316','#6366F1'];
+                const colors = ['#4F46E5','#10B981','#E8833A','#EF4444','#8B5CF6','#D09AF8','#06B6D4','#84CC16','#F97316','#6366F1'];
                 const chartColors = getChartColors();
 
                 t.innerHTML = d.report.map((r, i) => {

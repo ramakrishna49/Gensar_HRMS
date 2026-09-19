@@ -4,11 +4,11 @@
    ============================================================ */
 .payroll-module {
     --pp-primary: #4F46E5;
-    --pp-secondary: #818CF8;
+    --pp-secondary: #A2BAFA;
     --pp-light: #EEF2FF;
     --pp-blue: #3B82F6;
     --pp-green: #10B981;
-    --pp-orange: #F59E0B;
+    --pp-orange: #E8833A;
     --pp-danger: #EF4444;
     --pp-text: #1F2937;
     --pp-muted: #6B7280;
@@ -143,7 +143,7 @@ body:not(.admin-app) .pp-page {
 
 .pp-stat .pp-stat-icon.green { background: linear-gradient(135deg, #10B981, #34D399); }
 .pp-stat .pp-stat-icon.blue { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
-.pp-stat .pp-stat-icon.orange { background: linear-gradient(135deg, #F59E0B, #FBBF24); }
+.pp-stat .pp-stat-icon.orange { background: linear-gradient(135deg, var(--pp-orange), #FBBF24); }
 
 .pp-stat h3 { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--pp-text); }
 .pp-stat p { margin: 2px 0 0; font-size: 0.75rem; color: var(--pp-muted); }
@@ -273,8 +273,8 @@ body:not(.admin-app) .pp-page {
 }
 .pp-sum-box .pp-sum-label { font-size: 0.68rem; letter-spacing: 0.6px; opacity: 0.92; text-transform: uppercase; }
 .pp-sum-box .pp-sum-value { font-size: 1.12rem; font-weight: 700; margin-top: 3px; }
-.pp-sum-box.gross { background: linear-gradient(135deg, #4F46E5, #818CF8); }
-.pp-sum-box.deductions { background: linear-gradient(135deg, #F59E0B, #FBBF24); }
+.pp-sum-box.gross { background: linear-gradient(135deg, var(--pp-primary), var(--pp-secondary)); }
+.pp-sum-box.deductions { background: linear-gradient(135deg, var(--pp-orange), #FBBF24); }
 .pp-sum-box.net { background: linear-gradient(135deg, #10B981, #34D399); }
 .pp-sum-box.employer { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
 .pp-sum-box.bonus { background: linear-gradient(135deg, #7C6CA8, #A996D8); }
@@ -326,7 +326,7 @@ body:not(.admin-app) .pp-page {
 }
 .pp-table .pp-emp-avatar {
     width: 34px; height: 34px; border-radius: 50%;
-    background: linear-gradient(135deg, #4F46E5, #818CF8);
+    background: linear-gradient(135deg, var(--pp-primary), var(--pp-secondary));
     color: #FFFFFF; display: flex; align-items: center; justify-content: center;
     font-size: 0.7rem; font-weight: 700; flex-shrink: 0;
 }
