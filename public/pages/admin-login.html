@@ -16,53 +16,62 @@
 </head>
 <body>
     <div id="toastContainer" class="toast-container"></div>
-    
+
     <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <div class="logo-icon">
-                    <img src="../assets/images/gensar_logo.png" alt="Gensar HRMS Logo" style="width:auto;max-width:220px;height:110px;object-fit:contain;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                    <i class="fas fa-shield-halved" style="display:none;font-size:4rem;"></i>
-                </div>
-                <p>Administrator Portal</p>
-                <p style="margin-top:6px;font-size:0.72rem;color:var(--danger);font-weight:600;letter-spacing:0.5px;"><i class="fas fa-shield-halved" style="margin-right:5px;"></i>RESTRICTED — AUTHORIZED ADMINS ONLY</p>
+        <div class="login-split">
+            <div class="login-brand login-brand-admin">
+                <img src="../assets/images/gensar_logo.png" alt="Gensar HRMS Logo" width="200" height="64" onerror="this.style.display='none'">
+                <h2>Admin control center</h2>
+                <p>Manage people, attendance, payroll and compliance from one dashboard.</p>
+                <ul>
+                    <li><i class="fas fa-check-circle"></i> Approve leave, WFH &amp; profile updates</li>
+                    <li><i class="fas fa-check-circle"></i> Generate payroll &amp; audit every action</li>
+                    <li><i class="fas fa-check-circle"></i> Company-wide reports &amp; announcements</li>
+                </ul>
+                <div class="login-brand-foot"><i class="fas fa-shield-halved"></i> RESTRICTED — AUTHORIZED ADMINS ONLY</div>
             </div>
+            <div class="login-card">
+                <div class="login-header">
+                    <p>Administrator Portal</p>
+                    <span class="login-sub">Sign in with your Admin ID to continue</span>
+                </div>
 
-            <form class="login-form" onsubmit="handleLogin(event, 'admin')">
-                <div class="form-group">
-                    <label>Admin ID</label>
-                    <div class="input-icon">
-                        <i class="fas fa-user-shield"></i>
-                        <input type="text" class="form-control" id="employeeId" placeholder="Enter Admin ID" required autocomplete="username">
+                <form class="login-form" onsubmit="handleLogin(event, 'admin')">
+                    <div class="form-group">
+                        <label for="employeeId">Admin ID</label>
+                        <div class="input-icon">
+                            <i class="fas fa-user-shield"></i>
+                            <input type="text" class="form-control" id="employeeId" placeholder="Enter Admin ID" required autocomplete="username">
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Admin Password</label>
-                    <div class="input-icon">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" class="form-control" id="password" placeholder="Enter your admin password" required autocomplete="current-password">
-                        <button type="button" class="password-toggle" onclick="togglePassword()">
-                            <i class="fas fa-eye" id="eyeIcon"></i>
-                        </button>
+                    <div class="form-group">
+                        <label for="password">Admin Password</label>
+                        <div class="input-icon">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" class="form-control" id="password" placeholder="Enter your admin password" required autocomplete="current-password">
+                            <button type="button" class="password-toggle" onclick="togglePassword()" aria-label="Show password">
+                                <i class="fas fa-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <div style="text-align:right;margin-top:-6px;margin-bottom:12px;">
-                    <a href="#" onclick="openForgotPassword();return false;" style="font-size:0.85rem;color:var(--primary);text-decoration:none;display:inline-block;"><i class="fas fa-key" style="margin-right:6px;"></i>Forgot password?</a>
-                </div>
+                    <div style="text-align:right;margin-top:-6px;margin-bottom:12px;">
+                        <a href="#" onclick="openForgotPassword();return false;" style="font-size:0.85rem;color:var(--primary);text-decoration:none;display:inline-block;"><i class="fas fa-key" style="margin-right:6px;"></i>Forgot password?</a>
+                    </div>
 
-                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
-                    <i class="fas fa-sign-in-alt"></i> Sign In to Admin
-                </button>
+                    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+                        <i class="fas fa-sign-in-alt"></i> Sign In to Admin
+                    </button>
 
-                <div style="text-align:center;margin-top:18px;">
-                    <a href="/" style="font-size:0.85rem;color:var(--text-secondary);text-decoration:none;display:inline-block;"><i class="fas fa-user" style="margin-right:6px;"></i>Employee Login</a>
-                </div>
-            </form>
+                    <div style="text-align:center;margin-top:18px;">
+                        <a href="/" style="font-size:0.85rem;color:var(--text-secondary);text-decoration:none;display:inline-block;"><i class="fas fa-user" style="margin-right:6px;"></i>Employee Login</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-    
+
     <script src="../js/auth.js"></script>
     <script src="../js/forgot-password.js"></script>
 </body>

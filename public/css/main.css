@@ -2161,6 +2161,118 @@ body:is(.admin-app,.employee-app).dark-mode .table-container tbody tr {
 }
 
 /* ============================================
+   LOGIN SPLIT-SCREEN (Phase 5)
+   Brand panel + form card. Auth logic untouched.
+   ============================================ */
+.login-split {
+    display: flex;
+    width: 100%;
+    max-width: 940px;
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    position: relative;
+    z-index: 1;
+    animation: loginCardIn 0.5s ease;
+}
+
+.login-split .login-card {
+    box-shadow: none;
+    border-radius: 0;
+    max-width: none;
+    flex: 1 1 420px;
+    animation: none;
+}
+
+.login-brand {
+    flex: 1 1 460px;
+    background: linear-gradient(135deg, var(--primary) 0%, #7C5CFC 60%, #8B5CF6 100%);
+    color: white;
+    padding: 44px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+}
+
+.login-brand-admin {
+    background: linear-gradient(135deg, #1E1B4B 0%, var(--primary-dark) 60%, var(--primary) 100%);
+}
+
+.login-brand img {
+    width: 200px;
+    height: 64px;
+    object-fit: contain;
+    background: white;
+    border-radius: 12px;
+    padding: 6px 12px;
+    align-self: flex-start;
+}
+
+.login-brand h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-top: 8px;
+}
+
+.login-brand p {
+    font-size: 0.92rem;
+    opacity: 0.9;
+    line-height: 1.6;
+}
+
+.login-brand ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.login-brand ul li {
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0.95;
+}
+
+.login-brand-foot {
+    margin-top: 14px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    opacity: 0.85;
+}
+
+.login-sub {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.dark-mode .login-split {
+    background: var(--bg-card);
+}
+
+@media (max-width: 860px) {
+    .login-brand {
+        display: none;
+    }
+
+    .login-split {
+        max-width: 420px;
+    }
+
+    .login-split .login-card {
+        border-radius: var(--radius-lg);
+    }
+}
+
+/* ============================================
    BOTTOM NAV (Phase 4 - employee PWA, mobile only)
    Rendered by layout.js; hidden on desktop.
    ============================================ */
