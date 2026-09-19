@@ -2346,3 +2346,65 @@ body:is(.admin-app,.employee-app).dark-mode .table-container tbody tr {
         padding: 9px 11px;
     }
 }
+
+/* ============================================
+   WIZARD STEPS (Phase 6 - Add Employee modal)
+   ============================================ */
+.wiz-steps {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.wiz-step-dot {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 6px;
+    border-radius: var(--radius);
+    background: var(--bg-light);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border-light);
+}
+
+.wiz-step-dot span {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.wiz-step-dot.active {
+    background: var(--primary-50);
+    border-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.wiz-step-dot.active span {
+    background: var(--primary);
+    color: white;
+}
+
+.wiz-step-dot.done span {
+    background: var(--success);
+    color: white;
+}
+
+.dark-mode .wiz-step-dot {
+    background: var(--bg-dark);
+}
+
+.dark-mode .wiz-step-dot.active {
+    color: var(--primary-light);
+}

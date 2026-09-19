@@ -78,17 +78,32 @@
 
         function getIncompleteCount(emp) { return getIncompleteFields(emp).length; }
 
-        function renderEmployees(employees) {
+        // Client-side pagination over the loaded cache: the /employees fetch
+        // stays exactly as before (same limit, same filters server-side);
+        // only rendering is windowed so 1000+ rows no longer freeze the DOM.
+        const EMP_PAGE_SIZE = 50;
+        let empFiltered = [];
+        let empPage = 1;
+        let empFilterTimer = null;
+
+        function renderEmployees(employees, keepPage) {
             const tbody = document.getElementById('employeesTable');
             if (employees.length === 0) {
+                empFiltered = [];
                 tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-users"></i><h3>No Employees Found</h3><p>Try adjusting your filters or add a new employee.</p></div></td></tr>';
+                renderEmpPager();
                 return;
             }
             const sorted = [...employees].sort((a, b) => {
                 const order = { active: 0, inactive: 1, paused: 1, on_hold: 1, absconded: 2, terminated: 3 };
                 return (order[a.status] ?? 1) - (order[b.status] ?? 1);
             });
-            tbody.innerHTML = sorted.map(emp => {
+            empFiltered = sorted;
+            if (!keepPage) empPage = 1;
+            const pages = Math.max(Math.ceil(sorted.length / EMP_PAGE_SIZE), 1);
+            if (empPage > pages) empPage = pages;
+            const slice = sorted.slice((empPage - 1) * EMP_PAGE_SIZE, empPage * EMP_PAGE_SIZE);
+            tbody.innerHTML = slice.map(emp => {
                 const isActive = emp.status === 'active';
                 const isTerminated = emp.status === 'terminated';
                 const isPaused = emp.status === 'paused';
@@ -151,7 +166,38 @@
                         </div>
                     </td>
                 </tr>`;
-            }).join('');
+                }).join('');
+            renderEmpPager();
+        }
+
+        function renderEmpPager() {
+            const pager = document.getElementById('empPager');
+            if (!pager) return;
+            const pages = Math.ceil(empFiltered.length / EMP_PAGE_SIZE);
+            if (pages <= 1 || empFiltered.length === 0) { pager.style.display = 'none'; pager.innerHTML = ''; return; }
+            pager.style.display = 'flex';
+            const start = (empPage - 1) * EMP_PAGE_SIZE + 1;
+            const end = Math.min(empPage * EMP_PAGE_SIZE, empFiltered.length);
+            let nums = [];
+            for (let p = 1; p <= pages; p++) {
+                if (p === 1 || p === pages || Math.abs(p - empPage) <= 1) nums.push(p);
+                else if (nums[nums.length - 1] !== '…') nums.push('…');
+            }
+            pager.innerHTML =
+                '<span style="font-size:0.8rem;color:var(--text-secondary);margin-right:4px;">' + start + '–' + end + ' of ' + empFiltered.length + '</span>' +
+                '<button class="pagination-btn" onclick="empGoPage(' + (empPage - 1) + ')" ' + (empPage <= 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left"></i></button>' +
+                nums.map(p => p === '…'
+                    ? '<span style="padding:0 4px;color:var(--text-tertiary);">…</span>'
+                    : '<button class="pagination-btn' + (p === empPage ? ' active' : '') + '" onclick="empGoPage(' + p + ')">' + p + '</button>'
+                ).join('') +
+                '<button class="pagination-btn" onclick="empGoPage(' + (empPage + 1) + ')" ' + (empPage >= pages ? 'disabled' : '') + '><i class="fas fa-chevron-right"></i></button>';
+        }
+
+        function empGoPage(n) {
+            const pages = Math.max(Math.ceil(empFiltered.length / EMP_PAGE_SIZE), 1);
+            empPage = Math.min(Math.max(parseInt(n, 10) || 1, 1), pages);
+            renderEmployees(empFiltered, true);
+            document.querySelector('#employeesTable').scrollIntoView({ block: 'nearest' });
         }
 
         // Branded Excel export is generated server-side (ExcelJS) so every
@@ -163,6 +209,12 @@
         }
 
         function filterEmployees() {
+            // Debounced: typing re-renders at most ~4x/sec instead of per keystroke
+            if (empFilterTimer) clearTimeout(empFilterTimer);
+            empFilterTimer = setTimeout(applyEmpFilters, 250);
+        }
+
+        function applyEmpFilters() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const dept = document.getElementById('filterDept').value;
             const status = document.getElementById('filterStatus').value;
@@ -263,7 +315,79 @@
             }
         });
 
-        function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); }
+        function openAddEmployeeModal() { addWizShow(1); document.getElementById('addEmployeeModal').classList.add('active'); }
+
+        // Add-Employee wizard (Company -> Salary -> Review). Field names and
+        // the POST body built by addEmployee() are unchanged - this only
+        // changes which section is visible.
+        function addWizShow(n) {
+            document.querySelectorAll('#addEmployeeForm .wiz-step').forEach(function (el) {
+                el.style.display = el.getAttribute('data-wiz') === String(n) ? '' : 'none';
+            });
+            document.querySelectorAll('#addWizSteps .wiz-step-dot').forEach(function (el) {
+                const i = parseInt(el.getAttribute('data-wiz-dot'), 10);
+                el.classList.toggle('active', i === n);
+                el.classList.toggle('done', i < n);
+            });
+            document.getElementById('addWizBack').style.display = n === 1 ? 'none' : '';
+            document.getElementById('addWizNext').style.display = n === 3 ? 'none' : '';
+            document.getElementById('addWizSubmit').style.display = n === 3 ? '' : 'none';
+            if (n === 3) fillAddReview();
+        }
+
+        function addWizGo(n) {
+            if (n > 1) {
+                // Step-1 gate: same required fields the server enforces
+                const form = document.getElementById('addEmployeeForm');
+                const need = ['employee_id', 'first_name', 'last_name', 'email', 'joining_date'];
+                for (const name of need) {
+                    const el = form.elements[name];
+                    if (!el || String(el.value || '').trim() === '') {
+                        showToast('Please fill Employee ID, name, official email and joining date first', 'warning');
+                        if (el && el.focus) el.focus();
+                        return;
+                    }
+                }
+                const email = String(form.elements['email'].value || '').trim();
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    showToast('Official email looks invalid', 'warning');
+                    form.elements['email'].focus();
+                    return;
+                }
+                const uan = String((form.elements['uan_number'] && form.elements['uan_number'].value) || '').trim();
+                if (uan && !/^[0-9]{12}$/.test(uan)) {
+                    showToast('UAN must be exactly 12 digits', 'warning');
+                    form.elements['uan_number'].focus();
+                    return;
+                }
+            }
+            addWizShow(n);
+        }
+
+        function wizVal(name) {
+            const form = document.getElementById('addEmployeeForm');
+            const el = form.elements[name];
+            return el ? String(el.value || '').trim() : '';
+        }
+
+        function fillAddReview() {
+            const deptSel = document.getElementById('departmentSelect');
+            const roleSel = document.getElementById('addRole');
+            const rows = [
+                ['Employee ID', wizVal('employee_id')],
+                ['Name', (wizVal('first_name') + ' ' + wizVal('last_name')).trim() || '-'],
+                ['Official Email', wizVal('email')],
+                ['Phone', wizVal('phone') || '-'],
+                ['Department', deptSel && deptSel.selectedIndex > 0 ? deptSel.options[deptSel.selectedIndex].text : '-'],
+                ['Role', roleSel ? roleSel.options[roleSel.selectedIndex].text : '-'],
+                ['Joining Date', wizVal('joining_date') || '-'],
+                ['Total Compensation', wizVal('salary') || '-']
+            ];
+            document.getElementById('addReviewBox').innerHTML = rows.map(([l, v]) =>
+                '<div class="detail-row"><span class="detail-label">' + escapeHtml(l) + '</span>' +
+                '<span class="detail-value">' + escapeHtml(v || '-') + '</span></div>'
+            ).join('');
+        }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
         async function addEmployee(event) {
