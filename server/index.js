@@ -167,6 +167,17 @@ async function repairPayrollNetSalaries() {
 
 // Start server (only when run directly, not when imported by the Vercel function)
 if (require.main === module) {
+    // Fail fast on missing config: without these every login dies with a
+    // cryptic "Server error during login" 500. Production (Vercel) is
+    // unaffected - this block never runs there.
+    const missingConfig = [];
+    if (!process.env.DATABASE_URL) missingConfig.push('DATABASE_URL');
+    if (!process.env.JWT_SECRET) missingConfig.push('JWT_SECRET');
+    if (missingConfig.length > 0) {
+        console.error(`\n[FATAL] Missing required env vars: ${missingConfig.join(', ')}`);
+        console.error('Copy .env.example to .env, fill in the real values, then restart.\n');
+        process.exit(1);
+    }
     app.listen(PORT, () => {
         repairPayrollNetSalaries();
         purgeExpiredPhotos();
