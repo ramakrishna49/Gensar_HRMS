@@ -492,7 +492,12 @@
                 updateStats(data.employees);
                 renderEmployees(data.employees);
             } else {
-                showEmptyState(document.getElementById('employeesTable'), 'fa-exclamation-triangle', 'Error', 'Failed to load employees');
+                // Surface exact backend reason instead of generic text so live
+                // issues (403 admin-only, 500 code, 401 expired) are visible.
+                const msg = (data && (data.detail || data.message || (Array.isArray(data.errors) && data.errors.join('; '))))
+                    || 'Failed to load employees';
+                console.error('Load employees failed:', data);
+                showEmptyState(document.getElementById('employeesTable'), 'fa-exclamation-triangle', 'Error', msg);
             }
         }
 
