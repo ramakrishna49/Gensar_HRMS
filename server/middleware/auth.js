@@ -60,7 +60,8 @@ const verifyToken = async (req, res, next) => {
             }
             req.user.role = current.role;
         } catch (dbError) {
-            return res.status(500).json({ success: false, message: 'Server error' });
+            console.error('verifyToken DB error:', dbError && dbError.code, dbError && dbError.message);
+            return res.status(500).json({ success: false, message: 'Server error', code: dbError && dbError.code });
         }
 
         next();

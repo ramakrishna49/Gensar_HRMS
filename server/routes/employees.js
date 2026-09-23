@@ -649,11 +649,12 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Create employee error:', error);
+        console.error('Create employee error:', error && error.code, error && error.message, error && error.constraint, error && error.table, error && error.column);
         const mapped = pgErrorResponse(error);
         const body = { success: false, message: mapped.message };
         if (req.user && req.user.role === 'admin') {
             body.detail = error && error.message;
+            body.code = error && error.code;
         }
         res.status(mapped.status).json(body);
     }
