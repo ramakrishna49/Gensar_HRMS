@@ -596,7 +596,7 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
     try {
         const created = await createEmployeeRecord(req.body, req);
         if (!created.ok) {
-            return res.status(400).json({ success: false, errors: created.errors });
+            return res.status(400).json({ success: false, errors: created.errors, message: created.errors.join('; ') });
         }
 
         logAudit({
@@ -722,7 +722,7 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
         const fieldErrors = collectFieldErrors(req.body);
         if (fieldErrors.length > 0) {
-            return res.status(400).json({ success: false, errors: fieldErrors });
+            return res.status(400).json({ success: false, errors: fieldErrors, message: fieldErrors.join('; ') });
         }
         const { 
             first_name, last_name, email, phone, department_id, 
