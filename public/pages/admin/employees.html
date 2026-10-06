@@ -105,6 +105,9 @@
                     <select id="filterDept" class="form-control" style="width:auto;min-width:160px;" onchange="filterEmployees()">
                         <option value="">All Departments</option>
                     </select>
+                    <select id="filterDesig" class="form-control" style="width:auto;min-width:170px;" onchange="filterEmployees()">
+                        <option value="">All Designations</option>
+                    </select>
                     <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="filterEmployees()">
                         <option value="">All Status</option>
                         <option value="active">Active</option>
@@ -611,6 +614,8 @@
         function filterEmployees() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const dept = document.getElementById('filterDept').value;
+            const desigEl = document.getElementById('filterDesig');
+            const desig = desigEl ? desigEl.value : '';
             const status = document.getElementById('filterStatus').value;
             let filtered = allEmployees;
             if (search) {
@@ -622,6 +627,7 @@
                 );
             }
             if (dept) filtered = filtered.filter(e => String(e.department_id) === dept);
+            if (desig) filtered = filtered.filter(e => String(e.designation_id) === desig);
             if (status) filtered = filtered.filter(e => e.status === status);
             renderEmployees(filtered);
         }
@@ -644,6 +650,15 @@
                 const html = '<option value="">Select Designation</option>' + data.designations.map(d => `<option value="${d.id}">${escapeHtml(d.name)}${d.level ? ' (Level ' + escapeHtml(String(d.level)) + ')' : ''}</option>`).join('');
                 document.getElementById('designationSelect').innerHTML = html;
                 document.getElementById('editDesignation').innerHTML = html;
+                const filterDesig = document.getElementById('filterDesig');
+                if (filterDesig) {
+                    const prev = filterDesig.value || new URLSearchParams(window.location.search).get('designation') || '';
+                    filterDesig.innerHTML = '<option value="">All Designations</option>' + data.designations.map(d => `<option value="${d.id}">${escapeHtml(d.name)}${d.level ? ' (L' + escapeHtml(String(d.level)) + ')' : ''}</option>`).join('');
+                    if (prev) {
+                        filterDesig.value = prev;
+                        if (filterDesig.value === prev) filterEmployees();
+                    }
+                }
             }
         }
 

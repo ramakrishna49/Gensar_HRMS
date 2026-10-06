@@ -159,11 +159,14 @@
 
             <div class="card slide-up stagger-3" style="margin-top:24px;">
                 <div class="card-header">
-                    <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-history" style="color:var(--info);margin-right:8px;"></i>Recent Logs</h3>
-                    <div style="display:flex;gap:10px;align-items:center;">
+                    <h3 style="font-weight:600;font-size:1.05rem;"><i class="fas fa-history" style="color:var(--info);margin-right:8px;"></i>Today's Logins <span id="recentLogsCount" class="badge badge-info" style="margin-left:8px;">--</span></h3>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <input type="date" id="recentLogsDate" class="form-control" style="width:auto;" onchange="loadRecentLogs()" title="Select date to view logins">
+                        <button class="btn btn-sm btn-primary" onclick="setRecentLogsToday()"><i class="fas fa-calendar-day"></i> Today</button>
                         <button class="btn btn-sm btn-secondary" onclick="loadRecentLogs()"><i class="fas fa-sync"></i> Refresh</button>
                     </div>
                 </div>
+                <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 8px;padding:0 4px;"><i class="fas fa-info-circle"></i> <span id="recentLogsSubtext">Showing everyone who logged in today — no hiding, full list.</span></p>
                 <div id="recentLogsContainer">
                     <div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>
                 </div>
@@ -273,6 +276,11 @@
             }
             loadDesignationFilter();
             loadMatrix();
+            try {
+                const todayStr = (typeof getTodayIST === 'function') ? getTodayIST() : (new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') + '-' + String(new Date().getDate()).padStart(2,'0'));
+                const dateInp = document.getElementById('recentLogsDate');
+                if (dateInp && !dateInp.value) dateInp.value = todayStr;
+            } catch (_) {}
             loadRecentLogs();
             loadLateWarning();
         });
@@ -542,12 +550,38 @@
         }
 
         let photoTokenMap = [];
+        let recentLogsDate = null;
+
+        function getTodayISTStr() {
+            try {
+                if (typeof getTodayIST === 'function') return getTodayIST();
+            } catch (_) {}
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function setRecentLogsToday() {
+            const inp = document.getElementById('recentLogsDate');
+            if (inp) inp.value = getTodayISTStr();
+            loadRecentLogs();
+        }
 
         async function loadRecentLogs() {
             const container = document.getElementById('recentLogsContainer');
-            const data = await apiCall('/attendance/all?limit=20');
+            const dateInp = document.getElementById('recentLogsDate');
+            const countEl = document.getElementById('recentLogsCount');
+            const subtextEl = document.getElementById('recentLogsSubtext');
+            let dateStr = (dateInp && dateInp.value) || recentLogsDate || getTodayISTStr();
+            if (dateInp && !dateInp.value) dateInp.value = dateStr;
+            recentLogsDate = dateStr;
+            if (countEl) countEl.textContent = 'Loading...';
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);"><div class="spinner" style="margin:0 auto;"></div></div>';
+            // Fetch ALL logins for the selected date — no 20-record cap.
+            const data = await apiCall('/attendance/all?date=' + encodeURIComponent(dateStr) + '&limit=1000');
             if (data && data.success && data.attendance.length > 0) {
-                const records = data.attendance.slice(0, 20);
+                const records = data.attendance;
+                if (countEl) countEl.textContent = records.length + (records.length === 1 ? ' login' : ' logins');
+                if (subtextEl) subtextEl.textContent = 'Showing all ' + records.length + ' login(s) on ' + dateStr + ' — no hiding, full list.';
                 photoTokenMap = [];
                 let html = '<div class="table-container"><table><thead><tr><th>Employee</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Check In Location</th><th>Check Out Location</th><th>Photo</th><th>Status</th></tr></thead><tbody>';
                 records.forEach(a => {
@@ -596,9 +630,12 @@
                     html += '</tr>';
                 });
                 html += '</tbody></table></div>';
+                html += '<p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">Total: <strong>' + records.length + '</strong> login(s) — full list, nothing hidden.</p>';
                 container.innerHTML = html;
             } else {
-                showEmptyState(container, 'fa-clock', 'No Records', 'No recent attendance logs');
+                if (countEl) countEl.textContent = '0 logins';
+                if (subtextEl) subtextEl.textContent = 'No logins found on ' + dateStr + '.';
+                showEmptyState(container, 'fa-clock', 'No Records', 'No logins on ' + dateStr);
             }
         }
 
