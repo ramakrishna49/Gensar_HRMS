@@ -54,7 +54,15 @@ async function adminTargetGuard(targetId, requesterId) {
 // @access  Private (Admin/HR)
 router.get('/', verifyToken, isAdmin, async (req, res) => {
     try {
-        const { search, department, designation, status, page = 1, limit = 10 } = req.query;
+        const { search, department, designation, status } = req.query;
+        // Query params arrive as strings; LIMIT/OFFSET must be integers or
+        // Postgres rejects them. Parse + clamp so ?limit=1000 never 500s.
+        // Live-safe: read-only, no schema change, existing rows untouched.
+        let page = parseInt(req.query.page, 10);
+        let limit = parseInt(req.query.limit, 10);
+        if (!Number.isInteger(page) || page < 1) page = 1;
+        if (!Number.isInteger(limit) || limit < 1) limit = 10;
+        if (limit > 1000) limit = 1000;
         let sqlQuery = `
             SELECT e.*, d.name as department_name, des.name as designation_name, des.level as designation_level,
             rm.first_name || ' ' || rm.last_name as reporting_manager_name, rm.employee_id as reporting_manager_employee_id
@@ -120,15 +128,21 @@ router.get('/', verifyToken, isAdmin, async (req, res) => {
             employees,
             pagination: {
                 total,
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page,
+                limit,
                 pages: Math.ceil(total / limit)
             }
         });
         
     } catch (error) {
-        console.error('Get employees error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Get employees error:', error && error.code, error && error.message);
+        const mapped = pgErrorResponse(error);
+        const body = { success: false, message: mapped.message };
+        if (req.user && req.user.role === 'admin') {
+            body.detail = error && error.message;
+            body.code = error && error.code;
+        }
+        res.status(mapped.status).json(body);
     }
 });
 
@@ -596,7 +610,7 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
     try {
         const created = await createEmployeeRecord(req.body, req);
         if (!created.ok) {
-            return res.status(400).json({ success: false, errors: created.errors });
+            return res.status(400).json({ success: false, errors: created.errors, message: created.errors.join('; ') });
         }
 
         logAudit({
@@ -649,11 +663,12 @@ router.post('/', verifyToken, isAdmin, validateEmployee, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Create employee error:', error);
+        console.error('Create employee error:', error && error.code, error && error.message, error && error.constraint, error && error.table, error && error.column);
         const mapped = pgErrorResponse(error);
         const body = { success: false, message: mapped.message };
         if (req.user && req.user.role === 'admin') {
             body.detail = error && error.message;
+            body.code = error && error.code;
         }
         res.status(mapped.status).json(body);
     }
@@ -722,7 +737,7 @@ router.put('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
         const fieldErrors = collectFieldErrors(req.body);
         if (fieldErrors.length > 0) {
-            return res.status(400).json({ success: false, errors: fieldErrors });
+            return res.status(400).json({ success: false, errors: fieldErrors, message: fieldErrors.join('; ') });
         }
         const { 
             first_name, last_name, email, phone, department_id, 

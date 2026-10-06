@@ -173,7 +173,8 @@
                             <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" name="basic_salary"></div>
                             <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" name="hra"></div>
                             <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" name="conveyance"></div>
-                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" name="other_allowance"></div>
+                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" name="medical"></div>
+                            <div class="form-group"><label>Other Allowance</label><input type="number" step="0.01" class="form-control" name="other_allowance"></div>
                             <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" name="special_allowance"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
@@ -281,7 +282,8 @@
                             <div class="form-group"><label>Basic Salary</label><input type="number" step="0.01" class="form-control" id="editBasicSalary"></div>
                             <div class="form-group"><label>HRA</label><input type="number" step="0.01" class="form-control" id="editHRA"></div>
                             <div class="form-group"><label>Conveyance</label><input type="number" step="0.01" class="form-control" id="editConveyance"></div>
-                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
+                            <div class="form-group"><label>Medical Allowance</label><input type="number" step="0.01" class="form-control" id="editMedical"></div>
+                            <div class="form-group"><label>Other Allowance</label><input type="number" step="0.01" class="form-control" id="editOtherAllowance"></div>
                             <div class="form-group"><label>Special Allowance</label><input type="number" step="0.01" class="form-control" id="editSpecialAllowance"></div>
                         </div>
                         <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;">Deductions (per month)</div>
@@ -493,7 +495,12 @@
                 updateStats(data.employees);
                 renderEmployees(data.employees);
             } else {
-                showEmptyState(document.getElementById('employeesTable'), 'fa-exclamation-triangle', 'Error', 'Failed to load employees');
+                // Surface exact backend reason instead of generic text so live
+                // issues (403 admin-only, 500 code, 401 expired) are visible.
+                const msg = (data && (data.detail || data.message || (Array.isArray(data.errors) && data.errors.join('; '))))
+                    || 'Failed to load employees';
+                console.error('Load employees failed:', data);
+                showEmptyState(document.getElementById('employeesTable'), 'fa-exclamation-triangle', 'Error', msg);
             }
         }
 
@@ -735,6 +742,16 @@
             // Checkbox has no name on purpose: unchecked boxes never appear in
             // FormData, and the backend only skips the mail on an explicit false.
             data.send_welcome_email = document.getElementById('sendWelcomeEmail').checked;
+            // Normalize empty optional FK / email fields to null so the backend
+            // stores NULL (not "") and FK checks don't fail on live data.
+            // Live-safe: only touches the outgoing payload, never existing rows.
+            ['department_id', 'designation_id', 'reporting_manager_id', 'personal_email'].forEach(k => {
+                if (data[k] !== undefined && String(data[k]).trim() === '') data[k] = null;
+            });
+            // Trim key identifiers to avoid duplicate-miss due to spaces.
+            ['employee_id', 'email', 'first_name', 'last_name'].forEach(k => {
+                if (typeof data[k] === 'string') data[k] = data[k].trim();
+            });
             const result = await apiCall('/employees', 'POST', data);
             if (result && result.success) {
                 let msg = 'Employee added! Temp password: ' + (result.temp_password || 'welcome123');
@@ -750,7 +767,13 @@
                 renderRMOptions(document.getElementById('addRole').value, document.getElementById('reportingManagerSelect'));
                 loadEmployees();
             } else {
-                showToast(result?.detail || result?.message || 'Failed to add employee', 'error');
+                // Backend validation returns {errors:[...]} without message,
+                // so surface it explicitly instead of generic "Failed to add".
+                const msg = (result && Array.isArray(result.errors) && result.errors.length
+                    ? result.errors.join('; ')
+                    : (result?.detail || result?.message)) || 'Failed to add employee';
+                console.error('Add employee failed:', result);
+                showToast(msg, 'error');
             }
         }
 
@@ -795,7 +818,7 @@
                 const setNum = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val === null || val === undefined) ? '' : val; };
                 setNum('editBasicSalary', emp.basic_salary); setNum('editHRA', emp.hra);
                 setNum('editConveyance', emp.conveyance);
-                setNum('editSpecialAllowance', emp.special_allowance); setNum('editOtherAllowance', emp.other_allowance);
+                setNum('editMedical', emp.medical); setNum('editSpecialAllowance', emp.special_allowance); setNum('editOtherAllowance', emp.other_allowance);
                 setNum('editEmployeePF', emp.pf); setNum('editEmployeeESI', emp.esi);
                 setNum('editProfessionalTax', emp.professional_tax); setNum('editIncomeTax', emp.income_tax);
                 setNum('editOtherDeduction', emp.other_deduction);
@@ -843,6 +866,7 @@
                 basic_salary: document.getElementById('editBasicSalary').value || undefined,
                 hra: document.getElementById('editHRA').value || undefined,
                 conveyance: document.getElementById('editConveyance').value || undefined,
+                medical: document.getElementById('editMedical').value || undefined,
                 special_allowance: document.getElementById('editSpecialAllowance').value || undefined,
                 other_allowance: document.getElementById('editOtherAllowance').value || undefined,
                 pf: document.getElementById('editEmployeePF').value || undefined,
@@ -860,7 +884,11 @@
                 closeModal('editEmployeeModal');
                 loadEmployees();
             } else {
-                showToast(result?.detail || result?.message || 'Failed to update employee', 'error');
+                const msg = (result && Array.isArray(result.errors) && result.errors.length
+                    ? result.errors.join('; ')
+                    : (result?.detail || result?.message)) || 'Failed to update employee';
+                console.error('Update employee failed:', result);
+                showToast(msg, 'error');
             }
         }
 

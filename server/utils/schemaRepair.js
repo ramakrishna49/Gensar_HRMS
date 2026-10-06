@@ -410,6 +410,19 @@ function pgErrorResponse(error) {
     if (error && error.code === '23502') {
         return { status: 400, message: 'A required field is missing.' };
     }
+    if (error && error.code === '42703') {
+        const info = missingColumnInfo(error);
+        return { status: 500, message: 'Server error: database column missing' + (info.column ? ' (' + info.column + ')' : '') + '. Please run db:migrate and retry.' };
+    }
+    if (error && error.code === '42P01') {
+        return { status: 500, message: 'Server error: database table missing. Please run db:migrate and retry.' };
+    }
+    if (error && error.code === '42501') {
+        return { status: 500, message: 'Server error: database permission denied. Check DB user grants.' };
+    }
+    if (error && error.code && String(error.code).startsWith('08')) {
+        return { status: 500, message: 'Server error: cannot reach database. Check DATABASE_URL / Supabase status.' };
+    }
     return { status: 500, message: 'Server error' };
 }
 
