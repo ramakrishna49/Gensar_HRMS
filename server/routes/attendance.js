@@ -55,7 +55,8 @@ router.post('/check-in', verifyToken, async (req, res) => {
         if (nowMins <= lateCutoff) {
             status = 'present';
         } else if (nowMins <= halfDayCutoff) {
-            // Check if this would be the 3rd late this month (auto half-day rule)
+            // Late-login policy: first 3 lates in the month are excused;
+            // the 4th late onwards is auto-marked as half-day.
             const monthStart = today.substring(0, 7) + '-01';
             const lateCount = await query(
                 `SELECT COUNT(*) as count FROM attendance 
@@ -63,7 +64,7 @@ router.post('/check-in', verifyToken, async (req, res) => {
                 [req.user.id, monthStart, today]
             );
             const currentLateCount = parseInt(lateCount.rows[0].count);
-            if (currentLateCount >= 2) {
+            if (currentLateCount >= 3) {
                 status = 'half-day';
             } else {
                 status = 'late';
@@ -321,6 +322,77 @@ router.post('/mark-present', verifyToken, isManager, async (req, res) => {
             );
             res.json({ success: true, attendance: result.rows[0], message: 'Marked as present' });
         }
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+router.post('/mark-late', verifyToken, isManager, async (req, res) => {
+    try {
+        const { employee_id, date, check_in_time, remarks } = req.body;
+        if (!employee_id || !date) {
+            return res.status(400).json({ success: false, message: 'Employee ID and date are required' });
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+            return res.status(400).json({ success: false, message: 'Date must be YYYY-MM-DD' });
+        }
+        const todayStr = istDateString();
+        if (String(date) > todayStr) {
+            return res.status(400).json({ success: false, message: 'Cannot mark late for a future date' });
+        }
+
+        // Custom check-in time (HH:MM or HH:MM:SS); defaults to office start time.
+        let checkInTime = null;
+        if (check_in_time) {
+            const m = String(check_in_time).match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+            if (!m) {
+                return res.status(400).json({ success: false, message: 'check_in_time must be HH:MM or HH:MM:SS' });
+            }
+            const hh = String(m[1]).padStart(2, '0');
+            const mm = m[2];
+            const ss = m[3] || '00';
+            if (parseInt(hh) > 23 || parseInt(mm) > 59) {
+                return res.status(400).json({ success: false, message: 'Invalid check_in_time' });
+            }
+            checkInTime = `${hh}:${mm}:${ss}`;
+        } else {
+            const settings = await query(
+                `SELECT setting_key, setting_value FROM company_settings WHERE setting_key IN ('office_start_time')`
+            );
+            const officeStart = settings.rows.length > 0 ? settings.rows[0].setting_value : '09:30';
+            checkInTime = String(officeStart).length === 5 ? `${officeStart}:00` : String(officeStart);
+        }
+
+        const existing = await query(
+            'SELECT id FROM attendance WHERE employee_id = $1 AND date = $2',
+            [employee_id, date]
+        );
+
+        let result;
+        if (existing.rows.length > 0) {
+            result = await query(
+                `UPDATE attendance SET status = 'late', check_in = $1, check_out = NULL,
+                break_start = NULL, break_end = NULL, break_log = NULL, overtime_hours = 0,
+                remarks = COALESCE($2, remarks), check_in_location = NULL
+                WHERE employee_id = $3 AND date = $4 RETURNING *`,
+                [checkInTime, remarks || null, employee_id, date]
+            );
+        } else {
+            result = await query(
+                `INSERT INTO attendance (employee_id, date, check_in, status, remarks)
+                VALUES ($1, $2, $3, 'late', $4) RETURNING *`,
+                [employee_id, date, checkInTime, remarks || null]
+            );
+        }
+        logAudit({
+            actorId: req.user.id,
+            action: 'attendance.mark_late',
+            entityType: 'attendance',
+            entityId: result.rows[0].id,
+            details: { employee_id, date, check_in_time: checkInTime },
+            ip: req.ip
+        });
+        res.json({ success: true, attendance: result.rows[0], message: 'Marked as late login' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }

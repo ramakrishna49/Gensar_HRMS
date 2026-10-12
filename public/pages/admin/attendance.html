@@ -118,6 +118,7 @@
                         <select id="filterYear" class="form-control" style="width:110px;" onchange="loadMatrix()"></select>
                         <select id="filterDesignation" class="form-control" style="width:170px;" onchange="renderMatrix(matrixData)"><option value="">All Designations</option></select>
                         <button class="btn btn-success" onclick="openMarkPresentModal()"><i class="fas fa-user-check"></i> Mark Present</button>
+                        <button class="btn btn-warning" onclick="openMarkLateModal()"><i class="fas fa-clock"></i> Mark Late</button>
                         <button class="btn btn-danger" onclick="openMarkAbsentModal()"><i class="fas fa-user-times"></i> Mark Absent</button>
                     </div>
                     <button class="btn btn-success" onclick="downloadExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
@@ -199,6 +200,41 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeMarkPresentModal()">Cancel</button>
                 <button class="btn btn-success" id="markPresentBtn" onclick="handleMarkPresent()"><i class="fas fa-check"></i> Mark Present</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mark Late Modal -->
+    <div class="modal" id="markLateModal" onclick="if(event.target===this)closeMarkLateModal()">
+        <div class="modal-content" style="max-width:450px;">
+            <div class="modal-header">
+                <h2>Mark Late Login</h2>
+                <button class="modal-close" onclick="closeMarkLateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Employee</label>
+                    <select id="lateEmployee" class="form-control">
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="lateDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Check-in Time</label>
+                    <input type="time" id="lateTime" class="form-control" value="10:00">
+                </div>
+                <div class="form-group">
+                    <label>Remarks (optional)</label>
+                    <textarea id="lateRemarks" class="form-control" rows="2"></textarea>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;"><i class="fas fa-info-circle"></i> Counts toward the monthly late tally (4th late auto half-day).</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeMarkLateModal()">Cancel</button>
+                <button class="btn btn-warning" id="markLateBtn" onclick="handleMarkLate()"><i class="fas fa-clock"></i> Mark Late</button>
             </div>
         </div>
     </div>
@@ -512,14 +548,20 @@
                 return;
             }
             if (status === 'absent') {
-                showConfirmDialog('Mark Present', 'Remove absent mark for ' + dateStr + '?', 'Mark Present', 'btn-success', function() {
-                    apiCall('/attendance/mark-present', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
+                showConfirmDialog('Mark Present', 'Remove absent mark for ' + dateStr + '? (Mark Late is also available in the toolbar)', 'Mark Present', 'btn-success', function() {
+                    apiCall('/attendance/mark-present', 'POST', { employee_id: empId, date: dateStr }).then(() => { loadMatrix(); loadLateWarning(); });
                 });
                 return;
             }
-            if (status === 'present' || status === 'late' || status === 'half-day') {
+            if (status === 'present') {
+                showConfirmDialog('Mark Late / Absent', 'Mark ' + dateStr + ' as late login instead of present?', 'Mark Late', 'btn-warning', function() {
+                    apiCall('/attendance/mark-late', 'POST', { employee_id: empId, date: dateStr }).then(() => { loadMatrix(); loadLateWarning(); });
+                });
+                return;
+            }
+            if (status === 'late' || status === 'half-day') {
                 showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' as absent?', 'Mark Absent', 'btn-danger', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
+                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => { loadMatrix(); loadLateWarning(); });
                 });
                 return;
             }
@@ -535,12 +577,12 @@
             const card = document.getElementById('lateWarningCard');
             const text = document.getElementById('lateWarningText');
             if (data && data.success && data.employees) {
-                const flagged = data.employees.filter(e => parseInt(e.late_count) >= 3);
+                const flagged = data.employees.filter(e => parseInt(e.late_count) >= 4);
                 if (flagged.length > 0) {
                     card.style.display = 'block';
-                    text.innerHTML = '<strong>' + flagged.length + ' employee(s)</strong> with 3+ late logins this month: ' +
+                    text.innerHTML = '<strong>' + flagged.length + ' employee(s)</strong> with 4+ late logins this month: ' +
                         flagged.map(e => '<strong>' + escapeHtml(e.first_name + ' ' + (e.last_name || '')) + '</strong> (' + e.late_count + 'x)').join(', ') +
-                        '. Further lates will be auto-marked as Half Day.';
+                        '. 4th late onwards is auto-marked as Half Day.';
                 } else {
                     card.style.display = 'none';
                 }
@@ -686,9 +728,11 @@
             const d = await apiCall('/employees?limit=1000');
             const absentSel = document.getElementById('absentEmployee');
             const presentSel = document.getElementById('presentEmployee');
+            const lateSel = document.getElementById('lateEmployee');
             const opts = '<option value="">Select Employee</option>' + (d && d.success ? d.employees.map(x => `<option value="${x.id}">${escapeHtml(x.first_name+' '+x.last_name)} (${escapeHtml(x.employee_id)})</option>`).join('') : '');
             if (absentSel) absentSel.innerHTML = opts;
             if (presentSel) presentSel.innerHTML = opts;
+            if (lateSel) lateSel.innerHTML = opts;
         }
 
         function openMarkPresentModal() {
@@ -717,10 +761,48 @@
                 showToast(data.message || 'Marked as present', 'success');
                 closeMarkPresentModal();
                 loadMatrix();
+                loadLateWarning();
             } else {
                 showToast(data?.message || 'Failed to mark present', 'error');
             }
             btn.innerHTML = '<i class="fas fa-check"></i> Mark Present';
+            btn.disabled = false;
+        }
+
+        function openMarkLateModal() {
+            const today = getTodayIST();
+            document.getElementById('lateDate').value = today;
+            loadAllEmployees();
+            document.getElementById('markLateModal').classList.add('active');
+        }
+
+        function closeMarkLateModal() {
+            document.getElementById('markLateModal').classList.remove('active');
+        }
+
+        async function handleMarkLate() {
+            const employee_id = document.getElementById('lateEmployee').value;
+            const date = document.getElementById('lateDate').value;
+            const check_in_time = document.getElementById('lateTime').value;
+            const remarks = document.getElementById('lateRemarks').value;
+            if (!employee_id || !date) {
+                showToast('Please select employee and date', 'error');
+                return;
+            }
+            const btn = document.getElementById('markLateBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+            const data = await apiCall('/attendance/mark-late', 'POST', { employee_id: parseInt(employee_id), date, check_in_time, remarks });
+            if (data && data.success) {
+                showToast(data.message || 'Marked as late login', 'success');
+                closeMarkLateModal();
+                document.getElementById('lateRemarks').value = '';
+                loadMatrix();
+                loadLateWarning();
+            } else {
+                showToast(data?.message || 'Failed to mark late', 'error');
+            }
+            btn.innerHTML = '<i class="fas fa-clock"></i> Mark Late';
             btn.disabled = false;
         }
 
@@ -752,6 +834,7 @@
                 closeMarkAbsentModal();
                 document.getElementById('absentRemarks').value = '';
                 loadMatrix();
+                loadLateWarning();
             } else {
                 showToast(data?.message || 'Failed to mark absent', 'error');
             }

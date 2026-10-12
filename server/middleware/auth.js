@@ -124,6 +124,25 @@ const generateToken = (user) => {
     );
 };
 
+// Mobile: long-lived refresh token (separate secret so web sessions are unaffected).
+// Payload carries only id + token_version so password resets still revoke it.
+const generateRefreshToken = (user) => {
+    if (!process.env.JWT_REFRESH_SECRET) return null;
+    return jwt.sign(
+        {
+            id: user.id,
+            token_version: Number(user.token_version || 0),
+            type: 'refresh'
+        },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+    );
+};
+
+const verifyRefreshToken = (token) => {
+    return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+};
+
 // Which announcement target_audience values a given role may see.
 // team_lead counts as manager-level; hr/manager/team_lead are also employees.
 const audienceForRole = (role) => {
@@ -142,5 +161,7 @@ module.exports = {
     isManager, 
     isEmployee,
     generateToken,
+    generateRefreshToken,
+    verifyRefreshToken,
     audienceForRole
 };

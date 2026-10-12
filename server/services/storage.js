@@ -1,4 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
 
 let supabase = null;
 
@@ -29,9 +31,24 @@ async function ensureBucket(bucket, opts = {}) {
     }
 }
 
+function localDir() {
+    return process.env.LOCAL_STORAGE_DIR || path.join(__dirname, '..', '..', 'uploads');
+}
+
+function isSupabaseConfigured() {
+    return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY);
+}
+
 async function uploadBuffer(bucket, fileName, buffer, contentType, opts = {}) {
+    if (!isSupabaseConfigured()) {
+        // Own-server fallback: store on local disk under ./uploads/<bucket>/<fileName>.
+        const dir = path.join(localDir(), bucket);
+        fs.mkdirSync(dir, { recursive: true });
+        const safeName = String(fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
+        fs.writeFileSync(path.join(dir, safeName), buffer);
+        return `/uploads/${bucket}/${safeName}`;
+    }
     const sb = getStorageClient();
-    if (!sb) throw new Error('File storage not configured');
     await ensureBucket(bucket, opts);
     const { error } = await sb.storage.from(bucket).upload(fileName, buffer, {
         contentType,
@@ -54,8 +71,14 @@ async function deleteFile(bucket, fileName) {
 }
 
 // Delete a file given its public URL (extracts bucket + object path).
+// Handles both Supabase URLs and local /uploads/<bucket>/<file> URLs.
 async function deleteFileByUrl(publicUrl) {
     if (!publicUrl) return;
+    const local = String(publicUrl).match(/^\/uploads\/([^/]+)\/(.+)$/);
+    if (local) {
+        try { fs.unlinkSync(path.join(localDir(), local[1], path.basename(local[2]))); } catch (e) { /* already gone */ }
+        return;
+    }
     const m = String(publicUrl).match(/\/object\/public\/([^/]+)\/(.+)$/);
     if (!m) return;
     await deleteFile(m[1], m[2]);

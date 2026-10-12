@@ -55,6 +55,7 @@ app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/manager', require('./routes/manager'));
 app.use('/api/push', require('./routes/push'));
+app.use('/api/mobile', require('./routes/mobile'));
 app.use('/api/cron', require('./routes/cron'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/project-sets', require('./routes/project-sets'));
@@ -63,6 +64,8 @@ app.use('/api/project-reports', require('./routes/project-reports'));
 
 // Static files (mounted after API routes so API paths always take precedence)
 app.use(express.static(path.join(__dirname, '../public')));
+// Own-server uploads (local disk fallback when Supabase is not configured)
+app.use('/uploads', express.static(process.env.LOCAL_STORAGE_DIR || path.join(__dirname, '../uploads')));
 
 // Serve pages
 app.get('/', (req, res) => {

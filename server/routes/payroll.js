@@ -279,8 +279,9 @@ async function computeAttendanceSummary(employeeId, month, year) {
     // a full-month basis. Every day lands in exactly one calendar bucket:
     // holiday, week off, or working day.
     let totalDays = 0, weekOffs = 0, workingDays = 0, paidRaw = 0.0, leaveDays = 0;
-    // First N late logins per payslip period are excused; beyond that each
-    // late login costs half a day.
+    // Late-login policy (kept in sync with attendance check-in rule):
+    // first 3 lates in the period are excused (full day); 4th late onwards
+    // each late login costs half a day.
     const LATE_LOGIN_GRACE = 3;
     const tally = { present: 0, late: 0, half_day: 0, absent: 0, wfh: 0 };
 
@@ -313,8 +314,8 @@ async function computeAttendanceSummary(employeeId, month, year) {
         if (st === 'present') { paidRaw++; tally.present++; }
         else if (st === 'wfh') { paidRaw++; tally.wfh++; }
         else if (st === 'late') {
-            // Late-login policy: first 3 lates in the period are excused
-            // (full day); every late from the 4th onward counts as half day.
+            // Late-login policy: first 3 lates excused (full day);
+            // 4th late onward counts as half day (same as check-in rule).
             tally.late++;
             paidRaw += tally.late <= LATE_LOGIN_GRACE ? 1 : 0.5;
         }

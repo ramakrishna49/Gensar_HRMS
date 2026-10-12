@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 const { query } = require('../config/database');
-const { verifyToken, generateToken } = require('../middleware/auth');
+const { verifyToken, generateToken, generateRefreshToken, verifyRefreshToken } = require('../middleware/auth');
 const { logAudit } = require('../utils/audit');
 const { validateLogin, collectFieldErrors } = require('../middleware/validation');
 const { sendOTPEmail } = require('../services/email');
@@ -330,6 +330,8 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         
         // Generate token
         const token = generateToken(user);
+        // Mobile apps: also issue a long-lived refresh token (null when not configured).
+        const refresh_token = generateRefreshToken(user);
         
         logAudit({
             actorId: user.id,
@@ -347,6 +349,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
             success: true,
             message: 'Login successful',
             token,
+            refresh_token: refresh_token || undefined,
             must_change_password: user.must_change_password === 1 || user.must_change_password === true,
             user: userWithoutPassword
         });
@@ -357,6 +360,45 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
             success: false, 
             message: 'Server error during login' 
         });
+    }
+});
+
+
+// @route   POST /api/auth/refresh
+// @desc    Exchange a refresh token for a fresh access token (mobile apps)
+// @access  Public (valid refresh token required)
+router.post('/refresh', async (req, res) => {
+    try {
+        const refresh_token = req.body && req.body.refresh_token;
+        if (!refresh_token) {
+            return res.status(400).json({ success: false, message: 'Refresh token required' });
+        }
+        if (!process.env.JWT_REFRESH_SECRET) {
+            return res.status(503).json({ success: false, message: 'Refresh tokens not configured' });
+        }
+        let decoded;
+        try {
+            decoded = verifyRefreshToken(refresh_token);
+        } catch (e) {
+            return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+        }
+        if (decoded.type !== 'refresh') {
+            return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+        }
+        const result = await query('SELECT * FROM employees WHERE id = $1', [decoded.id]);
+        if (result.rows.length === 0 || result.rows[0].status !== 'active') {
+            return res.status(401).json({ success: false, message: 'Account no longer active' });
+        }
+        const user = result.rows[0];
+        if (Number(decoded.token_version || 0) !== Number(user.token_version || 0)) {
+            return res.status(401).json({ success: false, message: 'Session revoked. Please sign in again.' });
+        }
+        const token = generateToken(user);
+        const { password_hash, ...userWithoutPassword } = user;
+        res.json({ success: true, token, user: userWithoutPassword });
+    } catch (error) {
+        console.error('Refresh token error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
