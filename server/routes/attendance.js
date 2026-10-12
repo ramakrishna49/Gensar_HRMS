@@ -51,7 +51,14 @@ router.post('/check-in', verifyToken, async (req, res) => {
         const lateCutoff = startParts[0] * 60 + startParts[1] + graceMins;
         const halfDayCutoff = 12 * 60;
         
+        const ordinal = (n) => {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        };
         let status;
+        let currentLateCount = 0;
+        let halfDayDueToLates = false;
         if (nowMins <= lateCutoff) {
             status = 'present';
         } else if (nowMins <= halfDayCutoff) {
@@ -59,38 +66,51 @@ router.post('/check-in', verifyToken, async (req, res) => {
             // the 4th late onwards is auto-marked as half-day.
             const monthStart = today.substring(0, 7) + '-01';
             const lateCount = await query(
-                `SELECT COUNT(*) as count FROM attendance 
+                `SELECT COUNT(*) as count FROM attendance
                 WHERE employee_id = $1 AND date >= $2 AND date < $3 AND status = 'late'`,
                 [req.user.id, monthStart, today]
             );
-            const currentLateCount = parseInt(lateCount.rows[0].count);
+            currentLateCount = parseInt(lateCount.rows[0].count);
             if (currentLateCount >= 3) {
                 status = 'half-day';
+                halfDayDueToLates = true;
             } else {
                 status = 'late';
             }
         } else {
             status = 'half-day';
         }
-        
+
+        // English-only message + late counter for the employee popup.
+        const lateNumber = (status === 'late' || halfDayDueToLates) ? currentLateCount + 1 : currentLateCount;
+        let checkInMessage = 'Checked in successfully.';
+        if (status === 'late') {
+            checkInMessage = `Late Login - This is your ${ordinal(lateNumber)} late login this month. 3 lates allowed, 4th late will be Half Day.`;
+        } else if (halfDayDueToLates) {
+            checkInMessage = `${ordinal(lateNumber)} Late Login - Half Day - This is your ${ordinal(lateNumber)} late login this month. Marked as Half Day.`;
+        } else if (status === 'half-day') {
+            checkInMessage = 'Checked in after 12:00 - marked as Half Day.';
+        }
+        const checkInRemarks = halfDayDueToLates ? `${ordinal(lateNumber)} late - auto half day` : null;
+
         let result;
         if (existing.rows.length > 0) {
             // Override a pre-marked absent / on-leave row with a real check-in
             // so approved-leave days do not block an actual check-in.
             result = await query(
                 `UPDATE attendance SET check_in = $1, status = $2, check_in_location = $3,
-                remarks = NULL WHERE id = $4 RETURNING *`,
-                [now, status, location, existing.rows[0].id]
+                remarks = $4 WHERE id = $5 RETURNING *`,
+                [now, status, location, checkInRemarks, existing.rows[0].id]
             );
         } else {
             result = await query(
-                `INSERT INTO attendance (employee_id, date, check_in, status, check_in_location) 
-                VALUES ($1, $2, $3, $4, $5)
+                `INSERT INTO attendance (employee_id, date, check_in, status, check_in_location, remarks)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 ON CONFLICT (employee_id, date) DO UPDATE
                 SET check_in = EXCLUDED.check_in, status = EXCLUDED.status,
-                    check_in_location = EXCLUDED.check_in_location, remarks = NULL
+                    check_in_location = EXCLUDED.check_in_location, remarks = EXCLUDED.remarks
                 RETURNING *`,
-                [req.user.id, today, now, status, location]
+                [req.user.id, today, now, status, location, checkInRemarks]
             );
         }
 
@@ -120,7 +140,17 @@ router.post('/check-in', verifyToken, async (req, res) => {
             }
         }
 
-        res.json({ success: true, attendance, has_photo });
+        res.json({
+            success: true,
+            attendance,
+            has_photo,
+            message: checkInMessage,
+            late_info: {
+                late_number: lateNumber,
+                month_late_total: lateNumber,
+                half_day_due_to_lates: halfDayDueToLates
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }
@@ -392,7 +422,24 @@ router.post('/mark-late', verifyToken, isManager, async (req, res) => {
             details: { employee_id, date, check_in_time: checkInTime },
             ip: req.ip
         });
-        res.json({ success: true, attendance: result.rows[0], message: 'Marked as late login' });
+        const monthStart = String(date).substring(0, 7) + '-01';
+        const lateCountRes = await query(
+            `SELECT COUNT(*) as count FROM attendance
+            WHERE employee_id = $1 AND date >= $2 AND date <= $3 AND status = 'late'`,
+            [employee_id, monthStart, date]
+        );
+        const monthLateTotal = parseInt(lateCountRes.rows[0].count);
+        const ordinalMark = (n) => {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        };
+        res.json({
+            success: true,
+            attendance: result.rows[0],
+            message: `Marked as late login - This is the ${ordinalMark(monthLateTotal)} late login this month.`,
+            late_info: { late_number: monthLateTotal, month_late_total: monthLateTotal, half_day_due_to_lates: false }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }
@@ -577,6 +624,41 @@ router.get('/monthly', verifyToken, isManager, async (req, res) => {
             const day = new Date(a.date).getDate();
             if (!attMap[a.employee_id]) attMap[a.employee_id] = {};
             attMap[a.employee_id][day] = { check_in: a.check_in, check_out: a.check_out, status: a.status, check_in_location: a.check_in_location, remarks: a.remarks || '' };
+        });
+
+        // Late sequence per employee (date order): late rows get
+        // late_number 1,2,3...; half-days caused by 4th+ late
+        // (remarks 'Nth late - auto half day') get hd4:true with
+        // continuing late_number 4,5,6...
+        const lateInfoMap = {};
+        {
+            const byEmp = {};
+            attendance.rows.forEach(a => {
+                (byEmp[a.employee_id] = byEmp[a.employee_id] || []).push(a);
+            });
+            Object.keys(byEmp).forEach(empId => {
+                const sorted = byEmp[empId].slice().sort((x, y) => new Date(x.date) - new Date(y.date));
+                let seq = 0;
+                sorted.forEach(a => {
+                    const day = new Date(a.date).getDate();
+                    if (a.status === 'late') {
+                        seq++;
+                        (lateInfoMap[empId] = lateInfoMap[empId] || {})[day] = { late_number: seq, hd4: false };
+                    } else if (a.status === 'half-day' && /late\s*-\s*auto half day/i.test(a.remarks || '')) {
+                        seq++;
+                        (lateInfoMap[empId] = lateInfoMap[empId] || {})[day] = { late_number: seq, hd4: true };
+                    }
+                });
+            });
+        }
+
+        Object.keys(lateInfoMap).forEach(empId => {
+            Object.keys(lateInfoMap[empId]).forEach(day => {
+                if (attMap[empId] && attMap[empId][day]) {
+                    attMap[empId][day].late_number = lateInfoMap[empId][day].late_number;
+                    attMap[empId][day].hd4 = lateInfoMap[empId][day].hd4;
+                }
+            });
         });
 
         // Declared holidays for the month.

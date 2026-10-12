@@ -24,6 +24,7 @@
         .cell-present { background: #D1FAE5; color: #065F46; cursor: pointer; }
         .cell-late { background: #FEF3C7; color: #92400E; cursor: pointer; }
         .cell-half-day { background: #FED7AA; color: #9A3412; cursor: pointer; }
+        .cell-hd4 { background: #FEE2E2; color: #991B1B; cursor: pointer; border: 2px solid #EF4444; font-weight: 700; }
         .cell-absent { background: #FEE2E2; color: #991B1B; cursor: pointer; }
         .cell-weekoff { background: #F3F4F6; color: #9CA3AF; cursor: pointer; }
         .cell-upcoming { background: transparent; color: var(--text-tertiary); }
@@ -32,6 +33,7 @@
         .dark-mode .cell-present { background: #064E3B; color: #34D399; }
         .dark-mode .cell-late { background: #78350F; color: #FBBF24; }
         .dark-mode .cell-half-day { background: #7C2D12; color: #FDBA74; }
+        .dark-mode .cell-hd4 { background: #7F1D1D; color: #FECACA; border: 2px solid #EF4444; font-weight: 700; }
         .dark-mode .cell-absent { background: #7F1D1D; color: #F87171; }
         .dark-mode .cell-weekoff { background: #374151; color: #6B7280; cursor: pointer; }
         .dark-mode .cell-upcoming { background: transparent; color: #4B5563; }
@@ -144,8 +146,9 @@
 
             <div class="legend" style="margin-bottom:12px;">
                 <span class="legend-item"><span class="legend-dot cell-present"></span> Present</span>
-                <span class="legend-item"><span class="legend-dot cell-late"></span> Late Login</span>
+                <span class="legend-item"><span class="legend-dot cell-late"></span> Late Login (L1-L3)</span>
                 <span class="legend-item"><span class="legend-dot cell-half-day"></span> Half Day</span>
+                <span class="legend-item"><span class="legend-dot cell-hd4"></span> 4th Late - Half Day (HD4)</span>
                 <span class="legend-item"><span class="legend-dot cell-onleave"></span> On Leave</span>
                 <span class="legend-item"><span class="legend-dot cell-holiday"></span> Holiday</span>
                 <span class="legend-item"><span class="legend-dot cell-absent"></span> Absent (LOP)</span>
@@ -353,7 +356,14 @@
             renderMatrix(data);
         }
 
-        function getStatusForDisplay(status) {
+        function ordinalShort(n) {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        }
+        function getStatusForDisplay(status, cell) {
+            if (status === 'late' && cell && cell.late_number) return 'L' + cell.late_number;
+            if (status === 'half-day' && cell && cell.hd4) return 'HD4';
             const map = { present: 'P', late: 'L', 'half-day': 'HD', absent: 'A', weekoff: '-', upcoming: '', onleave: 'Lv', holiday: 'H' };
             return map[status] || '?';
         }
@@ -365,12 +375,18 @@
             return String(t);
         }
 
-        function getCellClass(status) {
+        function getCellClass(status, cell) {
+            if (status === 'half-day' && cell && cell.hd4) return 'cell-hd4';
             return 'cell-' + status;
         }
 
-        function getCellTooltip(empName, day, status, checkIn, checkOut) {
+        function getCellTooltip(empName, day, status, checkIn, checkOut, cell) {
             let text = empName + ' - Day ' + day + '\nStatus: ' + (statusLabels[status] || status);
+            if (status === 'late' && cell && cell.late_number) {
+                text = empName + ' - Day ' + day + '\nStatus: Late Login - ' + ordinalShort(cell.late_number) + ' late this month';
+            } else if (status === 'half-day' && cell && cell.hd4) {
+                text = empName + ' - Day ' + day + '\nStatus: 4th Late Login - Half Day (' + ordinalShort(cell.late_number || 4) + ' late)';
+            }
             if (checkIn) text += '\nCheck In: ' + checkIn;
             if (checkOut) text += '\nCheck Out: ' + checkOut;
             return text;
@@ -430,7 +446,8 @@
                     // can be told apart from a genuine absence (both reduce pay,
                     // but only the first leave day is paid 'onleave').
                     const isLopLeave = cell.status === 'absent' && cell.leave === true;
-                    const cls = isLopLeave ? 'cell-absent' : getCellClass(cell.status);
+                    const isHd4 = cell.status === 'half-day' && cell.hd4 === true;
+                    const cls = isLopLeave ? 'cell-absent' : getCellClass(cell.status, cell);
                     if (cell.status === 'present') p++;
                     else if (cell.status === 'late') l++;
                     else if (cell.status === 'half-day') h++;
@@ -439,10 +456,26 @@
                     else if (cell.status === 'absent') a++;
                     else if (cell.status === 'weekoff') w++;
                     else if (cell.status === 'upcoming') u++;
-                    const label = cell.check_in
-                        ? escapeHtml(cell.check_in) + (cell.check_out ? '<span style="display:block;font-size:0.6rem;color:var(--text-secondary);margin-top:2px;">' + escapeHtml(cell.check_out) + '</span>' : '')
-                        : escapeHtml(getStatusForDisplay(isLopLeave ? 'absent' : cell.status));
-                    html += '<td class="' + cls + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml((isLopLeave ? 'absent' : cell.status) || '') + '" data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
+                    const dispStatus = isLopLeave ? 'absent' : cell.status;
+                    const code = getStatusForDisplay(dispStatus, cell);
+                    const isLateLike = cell.status === 'late' || isHd4;
+                    const subTxt = cell.status === 'late' ? 'Late Login' : (isHd4 ? '4th Late-Half Day' : '');
+                    let label;
+                    if (cell.check_in && isLateLike) {
+                        // Late cells: status code + message FIRST (always visible),
+                        // check-in time smaller below - so Late Login is readable
+                        // without hover.
+                        label = '<span style="display:block;font-size:0.78rem;font-weight:800;line-height:1.2;">' + escapeHtml(code) + '</span>'
+                            + '<span style="display:block;font-size:0.6rem;font-weight:600;line-height:1.2;">' + subTxt + '</span>'
+                            + '<span style="display:block;font-size:0.6rem;color:var(--text-secondary);">' + escapeHtml(cell.check_in) + '</span>'
+                            + (cell.check_out ? '<span style="display:block;font-size:0.6rem;color:var(--text-secondary);">' + escapeHtml(cell.check_out) + '</span>' : '');
+                    } else if (cell.check_in) {
+                        label = escapeHtml(cell.check_in) + '<span style="display:block;font-size:0.62rem;font-weight:700;">' + escapeHtml(code) + '</span>' + (cell.check_out ? '<span style="display:block;font-size:0.6rem;color:var(--text-secondary);margin-top:2px;">' + escapeHtml(cell.check_out) + '</span>' : '');
+                    } else {
+                        label = escapeHtml(code)
+                            + (subTxt ? '<span style="display:block;font-size:0.6rem;font-weight:600;">' + subTxt + '</span>' : '');
+                    }
+                    html += '<td class="' + cls + '" title="' + escapeHtml(getCellTooltip(emp.first_name + ' ' + (emp.last_name || ''), d, dispStatus, cell.check_in, cell.check_out, cell)) + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml(dispStatus || '') + '" data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-late="' + (cell.late_number || '') + '" data-hd4="' + (cell.hd4 ? '1' : '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
                 }
                 grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandLeave += lv; grandHoliday += hv;
                 // Weekends (week offs), paid leave and holidays are included in
@@ -475,7 +508,7 @@
         function matrixCellMouseOver(e) {
             const td = e.target && e.target.closest ? e.target.closest('td[data-emp]') : null;
             if (td) {
-                showTooltip(e, td.getAttribute('data-name'), td.getAttribute('data-day'), td.getAttribute('data-status'), td.getAttribute('data-in'), td.getAttribute('data-out'), td.getAttribute('data-loc'));
+                showTooltip(e, td.getAttribute('data-name'), td.getAttribute('data-day'), td.getAttribute('data-status'), td.getAttribute('data-in'), td.getAttribute('data-out'), td.getAttribute('data-loc'), td.getAttribute('data-late'), td.getAttribute('data-hd4'));
                 return;
             }
             const hdr = e.target && e.target.closest ? e.target.closest('td[data-members]') : null;
@@ -498,7 +531,7 @@
             handleCellClick(parseInt(td.getAttribute('data-emp'), 10), parseInt(td.getAttribute('data-day'), 10), td.getAttribute('data-status'));
         }
 
-        function showTooltip(e, name, day, status, checkIn, checkOut, location) {
+        function showTooltip(e, name, day, status, checkIn, checkOut, location, lateNum, hd4) {
             const tip = document.getElementById('cellTooltip');
             let locHtml = '';
             if (location && location.includes(',')) {
@@ -507,7 +540,15 @@
             } else if (location) {
                 locHtml = '<br>Location: ' + escapeHtml(location);
             }
-            tip.innerHTML = '<strong>' + escapeHtml(name) + '</strong> - Day ' + day + '<br>Status: <strong>' + (statusLabels[status] || status) + '</strong>' + (checkIn ? '<br>Check In: ' + escapeHtml(checkIn) : '') + (checkOut ? '<br>Check Out: ' + escapeHtml(checkOut) : '') + locHtml;
+            let statusHtml = statusLabels[status] || status;
+            if (status === 'late' && lateNum) {
+                statusHtml = 'Late Login - ' + ordinalShort(parseInt(lateNum, 10)) + ' late this month';
+            } else if (status === 'half-day' && hd4 === '1') {
+                statusHtml = '4th Late Login - Half Day' + (lateNum ? ' (' + ordinalShort(parseInt(lateNum, 10)) + ' late)' : '');
+            } else if (status === 'late') {
+                statusHtml = 'Late Login';
+            }
+            tip.innerHTML = '<strong>' + escapeHtml(name) + '</strong> - Day ' + day + '<br>Status: <strong>' + escapeHtml(statusHtml) + '</strong>' + (checkIn ? '<br>Check In: ' + escapeHtml(checkIn) : '') + (checkOut ? '<br>Check Out: ' + escapeHtml(checkOut) : '') + locHtml;
             tip.style.display = 'block';
             tip.style.left = (e.clientX + 12) + 'px';
             tip.style.top = (e.clientY + 12) + 'px';

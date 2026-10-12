@@ -558,7 +558,27 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking in...';
             const data = await apiCall('/attendance/check-in', 'POST', { location: location || '', photo });
             if (data && data.success) {
-                showToast('Checked in successfully!' + (data.has_photo ? ' Selfie verified.' : ''), 'success');
+                const st = data.attendance && data.attendance.status;
+                const msg = data.message || 'Checked in successfully.';
+                const lateInfo = data.late_info || {};
+                if (st === 'late') {
+                    showToast(msg + (data.has_photo ? ' Selfie verified.' : ''), 'warning');
+                    if (typeof showConfirmDialog === 'function') {
+                        showConfirmDialog('Late Login', msg, 'OK', 'btn-warning', function() {});
+                    }
+                } else if (st === 'half-day' && lateInfo.half_day_due_to_lates) {
+                    showToast(msg + (data.has_photo ? ' Selfie verified.' : ''), 'error');
+                    if (typeof showConfirmDialog === 'function') {
+                        showConfirmDialog('4th Late Login - Half Day', msg, 'OK', 'btn-danger', function() {});
+                    }
+                } else if (st === 'half-day') {
+                    showToast(msg + (data.has_photo ? ' Selfie verified.' : ''), 'warning');
+                    if (typeof showConfirmDialog === 'function') {
+                        showConfirmDialog('Half Day', msg, 'OK', 'btn-warning', function() {});
+                    }
+                } else {
+                    showToast(msg + (data.has_photo ? ' Selfie verified.' : ''), 'success');
+                }
                 todayAttendance = null;
                 await loadAttendanceStatus();
             } else {
