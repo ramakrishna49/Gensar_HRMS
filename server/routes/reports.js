@@ -31,7 +31,9 @@ router.get('/dashboard', verifyToken, isAdmin, async (req, res) => {
             ),
             query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'"),
             query("SELECT COUNT(*) as count FROM departments"),
-            query("SELECT COUNT(*) as count FROM attendance WHERE date = $1 AND status = 'late' AND employee_id IN (SELECT id FROM employees WHERE role != 'admin')", [today]),
+            // Late today: regular lates plus HD4 rows (4th late onwards is
+            // stored as half-day with a "Nth late - auto half day" remark).
+            query("SELECT COUNT(*) as count FROM attendance WHERE date = $1 AND (status = 'late' OR (status = 'half-day' AND remarks ~* 'late\\s*-\\s*auto half day')) AND employee_id IN (SELECT id FROM employees WHERE role != 'admin')", [today]),
             query(
                 `SELECT a.id, a.employee_id, a.check_in, a.check_out, a.status, a.check_in_location,
                  e.first_name, e.last_name, e.employee_id as emp_id, d.name as department_name

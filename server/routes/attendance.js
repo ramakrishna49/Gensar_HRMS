@@ -4,6 +4,16 @@ const crypto = require('crypto');
 const { query } = require('../config/database');
 const { verifyToken, isAdmin, isManager } = require('../middleware/auth');
 const { istDateString, istTimeString, istMonth, istYear } = require('../utils/date');
+const {
+    resolveCheckIn,
+    getPolicy,
+    normalizeTime,
+    timeToMinutes,
+    minutesToLabel,
+    stripAutoMarkers,
+    ordinal,
+    HD4_MARKER_SQL
+} = require('../utils/attendancePolicy');
 const { buildReportWorkbook, sendWorkbook } = require('../utils/excel');
 const { logAudit } = require('../utils/audit');
 
@@ -34,64 +44,24 @@ router.post('/check-in', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Already checked in today' });
         }
         
-        // Check if late based on company settings
-        const settings = await query(
-            `SELECT setting_key, setting_value FROM company_settings 
-             WHERE setting_key IN ('office_start_time', 'late_grace_period')`
-        );
-        const settingsMap = {};
-        settings.rows.forEach(s => { settingsMap[s.setting_key] = s.setting_value; });
-        
-        const officeStart = settingsMap['office_start_time'] || '09:30';
-        const graceMins = parseInt(settingsMap['late_grace_period']) || 15;
-        
-        const startParts = officeStart.split(':').map(Number);
-        const nowParts = now.split(':').map(Number);
-        const nowMins = nowParts[0] * 60 + nowParts[1];
-        const lateCutoff = startParts[0] * 60 + startParts[1] + graceMins;
-        const halfDayCutoff = 12 * 60;
-        
-        const ordinal = (n) => {
-            const s = ['th', 'st', 'nd', 'rd'];
-            const v = n % 100;
-            return n + (s[(v - 20) % 10] || s[v] || s[0]);
-        };
-        let status;
-        let currentLateCount = 0;
-        let halfDayDueToLates = false;
-        if (nowMins <= lateCutoff) {
-            status = 'present';
-        } else if (nowMins <= halfDayCutoff) {
-            // Late-login policy: first 3 lates in the month are excused;
-            // the 4th late onwards is auto-marked as half-day.
-            const monthStart = today.substring(0, 7) + '-01';
-            const lateCount = await query(
-                `SELECT COUNT(*) as count FROM attendance
-                WHERE employee_id = $1 AND date >= $2 AND date < $3 AND status = 'late'`,
-                [req.user.id, monthStart, today]
-            );
-            currentLateCount = parseInt(lateCount.rows[0].count);
-            if (currentLateCount >= 3) {
-                status = 'half-day';
-                halfDayDueToLates = true;
-            } else {
-                status = 'late';
-            }
-        } else {
-            status = 'half-day';
-        }
+        // Late-login policy (shared with the admin Mark Late flow):
+        // office start + grace => present, after that => late, after 12:00 =>
+        // half-day. The 4th late of the month onwards is auto half-day (HD4).
+        const resolved = await resolveCheckIn({ employeeId: req.user.id, date: today, time: now });
+        const status = resolved.status;
+        const lateNumber = resolved.lateNumber;
+        const halfDayDueToLates = resolved.halfDayDueToLates;
 
         // English-only message + late counter for the employee popup.
-        const lateNumber = (status === 'late' || halfDayDueToLates) ? currentLateCount + 1 : currentLateCount;
         let checkInMessage = 'Checked in successfully.';
-        if (status === 'late') {
-            checkInMessage = `Late Login - This is your ${ordinal(lateNumber)} late login this month. 3 lates allowed, 4th late will be Half Day.`;
-        } else if (halfDayDueToLates) {
+        if (halfDayDueToLates) {
             checkInMessage = `${ordinal(lateNumber)} Late Login - Half Day - This is your ${ordinal(lateNumber)} late login this month. Marked as Half Day.`;
+        } else if (status === 'late') {
+            checkInMessage = `Late Login - This is your ${ordinal(lateNumber)} late login this month. 3 lates allowed, 4th late will be Half Day.`;
         } else if (status === 'half-day') {
             checkInMessage = 'Checked in after 12:00 - marked as Half Day.';
         }
-        const checkInRemarks = halfDayDueToLates ? `${ordinal(lateNumber)} late - auto half day` : null;
+        const checkInRemarks = resolved.remarks;
 
         let result;
         if (existing.rows.length > 0) {
@@ -147,7 +117,7 @@ router.post('/check-in', verifyToken, async (req, res) => {
             message: checkInMessage,
             late_info: {
                 late_number: lateNumber,
-                month_late_total: lateNumber,
+                month_late_total: lateNumber || 0,
                 half_day_due_to_lates: halfDayDueToLates
             }
         });
@@ -371,47 +341,49 @@ router.post('/mark-late', verifyToken, isManager, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Cannot mark late for a future date' });
         }
 
-        // Custom check-in time (HH:MM or HH:MM:SS); defaults to office start time.
-        let checkInTime = null;
-        if (check_in_time) {
-            const m = String(check_in_time).match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-            if (!m) {
-                return res.status(400).json({ success: false, message: 'check_in_time must be HH:MM or HH:MM:SS' });
-            }
-            const hh = String(m[1]).padStart(2, '0');
-            const mm = m[2];
-            const ss = m[3] || '00';
-            if (parseInt(hh) > 23 || parseInt(mm) > 59) {
-                return res.status(400).json({ success: false, message: 'Invalid check_in_time' });
-            }
-            checkInTime = `${hh}:${mm}:${ss}`;
-        } else {
-            const settings = await query(
-                `SELECT setting_key, setting_value FROM company_settings WHERE setting_key IN ('office_start_time')`
-            );
-            const officeStart = settings.rows.length > 0 ? settings.rows[0].setting_value : '09:30';
-            checkInTime = String(officeStart).length === 5 ? `${officeStart}:00` : String(officeStart);
+        // The selected time is classified with the same policy as self
+        // check-in: inside grace => present, late => late, after 12:00 =>
+        // half-day, and the 4th late onwards => auto half-day (HD4).
+        const policy = await getPolicy();
+        const checkInTime = check_in_time
+            ? normalizeTime(check_in_time)
+            : policy.officeStart;
+        if (!checkInTime) {
+            return res.status(400).json({ success: false, message: 'check_in_time must be HH:MM or HH:MM:SS' });
         }
 
         const existing = await query(
-            'SELECT id FROM attendance WHERE employee_id = $1 AND date = $2',
+            'SELECT id, remarks FROM attendance WHERE employee_id = $1 AND date = $2',
             [employee_id, date]
         );
+
+        const resolved = await resolveCheckIn({ employeeId: employee_id, date, time: checkInTime });
+        const adminRemark = (remarks && String(remarks).trim()) ? String(remarks).trim() : null;
+        let finalRemarks;
+        if (resolved.remarks) {
+            // HD4 marker (or the after-12:00 note) must stay first so the
+            // attendance matrix keeps showing it as HD4 / let the marker be
+            // stripped again if the admin later changes the status.
+            finalRemarks = adminRemark ? `${resolved.remarks}; ${adminRemark}` : resolved.remarks;
+        } else {
+            const kept = existing.rows.length ? stripAutoMarkers(existing.rows[0].remarks) : null;
+            finalRemarks = adminRemark ? (kept ? `${adminRemark}; ${kept}` : adminRemark) : kept;
+        }
 
         let result;
         if (existing.rows.length > 0) {
             result = await query(
-                `UPDATE attendance SET status = 'late', check_in = $1, check_out = NULL,
+                `UPDATE attendance SET status = $1, check_in = $2,
                 break_start = NULL, break_end = NULL, break_log = NULL, overtime_hours = 0,
-                remarks = COALESCE($2, remarks), check_in_location = NULL
-                WHERE employee_id = $3 AND date = $4 RETURNING *`,
-                [checkInTime, remarks || null, employee_id, date]
+                remarks = $3
+                WHERE employee_id = $4 AND date = $5 RETURNING *`,
+                [resolved.status, checkInTime, finalRemarks, employee_id, date]
             );
         } else {
             result = await query(
                 `INSERT INTO attendance (employee_id, date, check_in, status, remarks)
-                VALUES ($1, $2, $3, 'late', $4) RETURNING *`,
-                [employee_id, date, checkInTime, remarks || null]
+                VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+                [employee_id, date, checkInTime, resolved.status, finalRemarks]
             );
         }
         logAudit({
@@ -419,26 +391,31 @@ router.post('/mark-late', verifyToken, isManager, async (req, res) => {
             action: 'attendance.mark_late',
             entityType: 'attendance',
             entityId: result.rows[0].id,
-            details: { employee_id, date, check_in_time: checkInTime },
+            details: { employee_id, date, check_in_time: checkInTime, status: resolved.status },
             ip: req.ip
         });
-        const monthStart = String(date).substring(0, 7) + '-01';
-        const lateCountRes = await query(
-            `SELECT COUNT(*) as count FROM attendance
-            WHERE employee_id = $1 AND date >= $2 AND date <= $3 AND status = 'late'`,
-            [employee_id, monthStart, date]
-        );
-        const monthLateTotal = parseInt(lateCountRes.rows[0].count);
-        const ordinalMark = (n) => {
-            const s = ['th', 'st', 'nd', 'rd'];
-            const v = n % 100;
-            return n + (s[(v - 20) % 10] || s[v] || s[0]);
-        };
+
+        const hhmm = checkInTime.slice(0, 5);
+        let message;
+        if (resolved.status === 'present') {
+            message = `Check-in time ${hhmm} is within the ${resolved.policy.graceMins} min grace period (till ${minutesToLabel(resolved.policy.lateCutoffMins)}) - marked Present, not late.`;
+        } else if (resolved.halfDayDueToLates) {
+            message = `${ordinal(resolved.lateNumber)} Late Login - Half Day. This is the ${ordinal(resolved.lateNumber)} late login this month (4th late onwards is Half Day).`;
+        } else if (resolved.status === 'late') {
+            message = `Marked as late login - This is the ${ordinal(resolved.lateNumber)} late login this month.`;
+        } else {
+            message = 'Check-in after 12:00 - marked as Half Day (not counted as a late login).';
+        }
+
         res.json({
             success: true,
             attendance: result.rows[0],
-            message: `Marked as late login - This is the ${ordinalMark(monthLateTotal)} late login this month.`,
-            late_info: { late_number: monthLateTotal, month_late_total: monthLateTotal, half_day_due_to_lates: false }
+            message,
+            late_info: {
+                late_number: resolved.lateNumber,
+                month_late_total: resolved.latesBefore + (resolved.lateNumber ? 1 : 0),
+                half_day_due_to_lates: resolved.halfDayDueToLates
+            }
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
@@ -564,14 +541,14 @@ router.get('/late-count', verifyToken, isAdmin, async (req, res) => {
             COUNT(a.id) as late_count
             FROM employees e
             LEFT JOIN attendance a ON a.employee_id = e.id 
-                AND a.status = 'late'
                 AND to_char(a.date, 'MM') = $1
                 AND to_char(a.date, 'YYYY') = $2
+                AND (a.status = 'late' OR (a.status = 'half-day' AND a.remarks ~* $3))
             WHERE e.status = 'active' AND e.role != 'admin'
             GROUP BY e.id
             HAVING late_count > 0
             ORDER BY late_count DESC`,
-            [month, year]
+            [month, year, HD4_MARKER_SQL]
         );
         res.json({ success: true, month: parseInt(month), year: parseInt(year), employees: result.rows });
     } catch (error) {

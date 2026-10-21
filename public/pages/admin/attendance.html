@@ -211,29 +211,30 @@
     <div class="modal" id="markLateModal" onclick="if(event.target===this)closeMarkLateModal()">
         <div class="modal-content" style="max-width:450px;">
             <div class="modal-header">
-                <h2>Mark Late Login</h2>
+                <h2>Mark Late Login / Present</h2>
                 <button class="modal-close" onclick="closeMarkLateModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label>Employee</label>
-                    <select id="lateEmployee" class="form-control">
+                    <select id="lateEmployee" class="form-control" onchange="updateLatePreview()">
                         <option value="">Select Employee</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Date</label>
-                    <input type="date" id="lateDate" class="form-control">
+                    <input type="date" id="lateDate" class="form-control" onchange="updateLatePreview()">
                 </div>
                 <div class="form-group">
                     <label>Check-in Time</label>
-                    <input type="time" id="lateTime" class="form-control" value="10:00">
+                    <input type="time" id="lateTime" class="form-control" value="10:00" oninput="updateLatePreview()" onchange="updateLatePreview()">
+                    <div id="lateTimePreview" style="margin-top:8px;font-size:0.82rem;line-height:1.4;"></div>
                 </div>
                 <div class="form-group">
                     <label>Remarks (optional)</label>
                     <textarea id="lateRemarks" class="form-control" rows="2"></textarea>
                 </div>
-                <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;"><i class="fas fa-info-circle"></i> Counts toward the monthly late tally (4th late auto half-day).</p>
+                <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;"><i class="fas fa-info-circle"></i> Time decides the status: within grace = Present, after grace = Late, after 12:00 = Half Day. 4th late onwards is auto Half Day (HD4).</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeMarkLateModal()">Cancel</button>
@@ -294,6 +295,8 @@
         if (!requireAdmin()) throw new Error('Not authenticated');
 
         let matrixData = null;
+        let attendancePolicy = { officeStart: '09:30', graceMins: 15 };
+        let lateCounts = {};
         const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         const statusLabels = { present:'Present', late:'Late Login', 'half-day':'Half Day', absent:'Absent (LOP)', weekoff:'Week Off', upcoming:'--', onleave:'On Leave', holiday:'Holiday' };
 
@@ -315,6 +318,7 @@
             }
             loadDesignationFilter();
             loadMatrix();
+            loadAttendancePolicy();
             try {
                 const todayStr = (typeof getTodayIST === 'function') ? getTodayIST() : (new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') + '-' + String(new Date().getDate()).padStart(2,'0'));
                 const dateInp = document.getElementById('recentLogsDate');
@@ -596,7 +600,9 @@
             }
             if (status === 'present') {
                 showConfirmDialog('Mark Late / Absent', 'Mark ' + dateStr + ' as late login instead of present?', 'Mark Late', 'btn-warning', function() {
-                    apiCall('/attendance/mark-late', 'POST', { employee_id: empId, date: dateStr }).then(() => { loadMatrix(); loadLateWarning(); });
+                    // Send a time past the grace window so the server records a
+                    // late login instead of classifying it back to present.
+                    apiCall('/attendance/mark-late', 'POST', { employee_id: empId, date: dateStr, check_in_time: defaultLateTime() }).then(() => { loadMatrix(); loadLateWarning(); });
                 });
                 return;
             }
@@ -611,13 +617,74 @@
             openMarkAbsentModal();
         }
 
+        // Office start + grace drive the late calculation on the server. We
+        // mirror it here only to preview the result before saving.
+        async function loadAttendancePolicy() {
+            try {
+                const data = await apiCall('/settings/company');
+                const s = (data && data.settings) ? data.settings : {};
+                const start = /^\d{1,2}:\d{2}/.test(s.office_start_time || '')
+                    ? s.office_start_time.slice(0, 5)
+                    : '09:30';
+                const grace = parseInt(s.late_grace_period, 10);
+                attendancePolicy = {
+                    officeStart: start,
+                    graceMins: Number.isFinite(grace) && grace >= 0 ? grace : 15
+                };
+            } catch (e) { /* keep defaults */ }
+            updateLatePreview();
+        }
+
+        function minutesToClock(mins) {
+            const h = Math.floor(mins / 60) % 24;
+            const m = mins % 60;
+            return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+        }
+
+        function policyCutoff() {
+            const parts = attendancePolicy.officeStart.split(':').map(Number);
+            const startMins = (parts[0] || 0) * 60 + (parts[1] || 0);
+            const cutoffMins = startMins + attendancePolicy.graceMins;
+            return { startMins: startMins, cutoffMins: cutoffMins, cutoffLabel: minutesToClock(cutoffMins) };
+        }
+
+        // Smallest clock time that still counts as late (grace belongs to present).
+        function defaultLateTime() {
+            return minutesToClock(policyCutoff().cutoffMins + 1);
+        }
+
+        function updateLatePreview() {
+            const el = document.getElementById('lateTimePreview');
+            const input = document.getElementById('lateTime');
+            if (!el || !input || !input.value) return;
+            const parts = input.value.split(':').map(Number);
+            const mins = (parts[0] || 0) * 60 + (parts[1] || 0);
+            const p = policyCutoff();
+
+            if (mins <= p.cutoffMins) {
+                el.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Within grace (till ' +
+                    p.cutoffLabel + ') &rarr; <strong>Present</strong>, not late.';
+            } else if (mins <= 12 * 60) {
+                const empId = document.getElementById('lateEmployee').value;
+                const next = (lateCounts[empId] || 0) + 1;
+                el.innerHTML = '<i class="fas fa-clock" style="color:var(--warning);"></i> Late login &rarr; <strong>' +
+                    ordinalShort(next) + ' late</strong> this month' +
+                    (next >= 4 ? ' &rarr; <strong style="color:var(--danger);">Half Day (HD4)</strong>' : '');
+            } else {
+                el.innerHTML = '<i class="fas fa-adjust" style="color:var(--accent);"></i> After 12:00 &rarr; <strong>Half Day</strong> (not counted as a late).';
+            }
+        }
+
         async function loadLateWarning() {
             const month = document.getElementById('filterMonth').value;
             const year = document.getElementById('filterYear').value;
             const data = await apiCall('/attendance/late-count?month=' + month + '&year=' + year);
             const card = document.getElementById('lateWarningCard');
             const text = document.getElementById('lateWarningText');
+            lateCounts = {};
             if (data && data.success && data.employees) {
+                data.employees.forEach(e => { lateCounts[e.id] = parseInt(e.late_count, 10) || 0; });
+                updateLatePreview();
                 const flagged = data.employees.filter(e => parseInt(e.late_count) >= 4);
                 if (flagged.length > 0) {
                     card.style.display = 'block';
@@ -813,7 +880,9 @@
         function openMarkLateModal() {
             const today = getTodayIST();
             document.getElementById('lateDate').value = today;
-            loadAllEmployees();
+            document.getElementById('lateTime').value = defaultLateTime();
+            loadAllEmployees().then(updateLatePreview);
+            updateLatePreview();
             document.getElementById('markLateModal').classList.add('active');
         }
 
@@ -835,7 +904,8 @@
             btn.disabled = true;
             const data = await apiCall('/attendance/mark-late', 'POST', { employee_id: parseInt(employee_id), date, check_in_time, remarks });
             if (data && data.success) {
-                showToast(data.message || 'Marked as late login', 'success');
+                const hd4 = !!(data.late_info && data.late_info.half_day_due_to_lates);
+                showToast(data.message || 'Marked as late login', hd4 ? 'warning' : 'success');
                 closeMarkLateModal();
                 document.getElementById('lateRemarks').value = '';
                 loadMatrix();

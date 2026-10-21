@@ -49,7 +49,8 @@ router.put('/timing', verifyToken, isAdmin, async (req, res) => {
             { key: 'timezone', value: timezone }
         ];
         for (const u of updates) {
-            if (u.value) {
+            // Allow 0 (e.g. grace_period = 0); only skip truly empty values.
+            if (u.value !== undefined && u.value !== null && u.value !== '') {
                 await query(
                     `INSERT INTO company_settings (setting_key, setting_value, updated_at) 
                     VALUES ($1, $2, NOW()) 
