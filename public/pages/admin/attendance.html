@@ -227,7 +227,7 @@
                 </div>
                 <div class="form-group">
                     <label>Check-in Time</label>
-                    <input type="time" id="lateTime" class="form-control" value="10:00" oninput="updateLatePreview()" onchange="updateLatePreview()">
+                    <input type="time" id="lateTime" class="form-control" step="1" value="10:00:00" oninput="updateLatePreview()" onchange="updateLatePreview()">
                     <div id="lateTimePreview" style="margin-top:8px;font-size:0.82rem;line-height:1.4;"></div>
                 </div>
                 <div class="form-group">
@@ -650,7 +650,7 @@
 
         // Smallest clock time that still counts as late (grace belongs to present).
         function defaultLateTime() {
-            return minutesToClock(policyCutoff().cutoffMins + 1);
+            return minutesToClock(policyCutoff().cutoffMins + 1) + ':00';
         }
 
         function updateLatePreview() {
@@ -659,19 +659,23 @@
             if (!el || !input || !input.value) return;
             const parts = input.value.split(':').map(Number);
             const mins = (parts[0] || 0) * 60 + (parts[1] || 0);
+            const secs = parts[2] || 0;
+            const shown = String(parts[0] || 0).padStart(2, '0') + ':' +
+                String(parts[1] || 0).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
             const p = policyCutoff();
+            const prefix = '<strong>' + shown + '</strong> &rarr; ';
 
             if (mins <= p.cutoffMins) {
-                el.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Within grace (till ' +
+                el.innerHTML = prefix + '<i class="fas fa-check-circle" style="color:var(--success);"></i> Within grace (till ' +
                     p.cutoffLabel + ') &rarr; <strong>Present</strong>, not late.';
             } else if (mins <= 12 * 60) {
                 const empId = document.getElementById('lateEmployee').value;
                 const next = (lateCounts[empId] || 0) + 1;
-                el.innerHTML = '<i class="fas fa-clock" style="color:var(--warning);"></i> Late login &rarr; <strong>' +
+                el.innerHTML = prefix + '<i class="fas fa-clock" style="color:var(--warning);"></i> Late login &rarr; <strong>' +
                     ordinalShort(next) + ' late</strong> this month' +
                     (next >= 4 ? ' &rarr; <strong style="color:var(--danger);">Half Day (HD4)</strong>' : '');
             } else {
-                el.innerHTML = '<i class="fas fa-adjust" style="color:var(--accent);"></i> After 12:00 &rarr; <strong>Half Day</strong> (not counted as a late).';
+                el.innerHTML = prefix + '<i class="fas fa-adjust" style="color:var(--accent);"></i> After 12:00 &rarr; <strong>Half Day</strong> (not counted as a late).';
             }
         }
 

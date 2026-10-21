@@ -395,10 +395,9 @@ router.post('/mark-late', verifyToken, isManager, async (req, res) => {
             ip: req.ip
         });
 
-        const hhmm = checkInTime.slice(0, 5);
         let message;
         if (resolved.status === 'present') {
-            message = `Check-in time ${hhmm} is within the ${resolved.policy.graceMins} min grace period (till ${minutesToLabel(resolved.policy.lateCutoffMins)}) - marked Present, not late.`;
+            message = `Check-in time ${checkInTime} is within the ${resolved.policy.graceMins} min grace period (till ${minutesToLabel(resolved.policy.lateCutoffMins)}) - marked Present, not late.`;
         } else if (resolved.halfDayDueToLates) {
             message = `${ordinal(resolved.lateNumber)} Late Login - Half Day. This is the ${ordinal(resolved.lateNumber)} late login this month (4th late onwards is Half Day).`;
         } else if (resolved.status === 'late') {
