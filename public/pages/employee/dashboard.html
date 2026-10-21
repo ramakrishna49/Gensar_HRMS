@@ -569,7 +569,9 @@
                 } else if (st === 'half-day' && lateInfo.half_day_due_to_lates) {
                     showToast(msg + (data.has_photo ? ' Selfie verified.' : ''), 'error');
                     if (typeof showConfirmDialog === 'function') {
-                        showConfirmDialog('4th Late Login - Half Day', msg, 'OK', 'btn-danger', function() {});
+                        const n = lateInfo.late_number || 4;
+                        const ord = (v) => { const s = ['th','st','nd','rd']; const m = v % 100; return v + (s[(m - 20) % 10] || s[m] || s[0]); };
+                        showConfirmDialog(ord(n) + ' Late Login - Half Day', msg, 'OK', 'btn-danger', function() {});
                     }
                 } else if (st === 'half-day') {
                     showToast(msg + (data.has_photo ? ' Selfie verified.' : ''), 'warning');

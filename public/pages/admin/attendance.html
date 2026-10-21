@@ -148,7 +148,7 @@
                 <span class="legend-item"><span class="legend-dot cell-present"></span> Present</span>
                 <span class="legend-item"><span class="legend-dot cell-late"></span> Late Login (L1-L3)</span>
                 <span class="legend-item"><span class="legend-dot cell-half-day"></span> Half Day</span>
-                <span class="legend-item"><span class="legend-dot cell-hd4"></span> 4th Late - Half Day (HD4)</span>
+                <span class="legend-item"><span class="legend-dot cell-hd4"></span> 4th Late onwards - Half Day</span>
                 <span class="legend-item"><span class="legend-dot cell-onleave"></span> On Leave</span>
                 <span class="legend-item"><span class="legend-dot cell-holiday"></span> Holiday</span>
                 <span class="legend-item"><span class="legend-dot cell-absent"></span> Absent (LOP)</span>
@@ -234,7 +234,7 @@
                     <label>Remarks (optional)</label>
                     <textarea id="lateRemarks" class="form-control" rows="2"></textarea>
                 </div>
-                <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;"><i class="fas fa-info-circle"></i> Time decides the status: within grace = Present, after grace = Late, after 12:00 = Half Day. 4th late onwards is auto Half Day (HD4).</p>
+                <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;"><i class="fas fa-info-circle"></i> Time decides the status: within grace = Present, after grace = Late, after 12:00 = Half Day. 4th late onwards is auto Half Day.</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeMarkLateModal()">Cancel</button>
@@ -367,7 +367,7 @@
         }
         function getStatusForDisplay(status, cell) {
             if (status === 'late' && cell && cell.late_number) return 'L' + cell.late_number;
-            if (status === 'half-day' && cell && cell.hd4) return 'HD4';
+            if (status === 'half-day' && cell && cell.hd4) return 'HD';
             const map = { present: 'P', late: 'L', 'half-day': 'HD', absent: 'A', weekoff: '-', upcoming: '', onleave: 'Lv', holiday: 'H' };
             return map[status] || '?';
         }
@@ -389,7 +389,8 @@
             if (status === 'late' && cell && cell.late_number) {
                 text = empName + ' - Day ' + day + '\nStatus: Late Login - ' + ordinalShort(cell.late_number) + ' late this month';
             } else if (status === 'half-day' && cell && cell.hd4) {
-                text = empName + ' - Day ' + day + '\nStatus: 4th Late Login - Half Day (' + ordinalShort(cell.late_number || 4) + ' late)';
+                const n = cell.late_number || 4;
+                text = empName + ' - Day ' + day + '\nStatus: ' + ordinalShort(n) + ' Late Login - Half Day (' + ordinalShort(n) + ' late this month)';
             }
             if (checkIn) text += '\nCheck In: ' + checkIn;
             if (checkOut) text += '\nCheck Out: ' + checkOut;
@@ -451,6 +452,7 @@
                     // but only the first leave day is paid 'onleave').
                     const isLopLeave = cell.status === 'absent' && cell.leave === true;
                     const isHd4 = cell.status === 'half-day' && cell.hd4 === true;
+                    const hdNo = isHd4 ? (cell.late_number || 4) : null;
                     const cls = isLopLeave ? 'cell-absent' : getCellClass(cell.status, cell);
                     if (cell.status === 'present') p++;
                     else if (cell.status === 'late') l++;
@@ -463,7 +465,7 @@
                     const dispStatus = isLopLeave ? 'absent' : cell.status;
                     const code = getStatusForDisplay(dispStatus, cell);
                     const isLateLike = cell.status === 'late' || isHd4;
-                    const subTxt = cell.status === 'late' ? 'Late Login' : (isHd4 ? '4th Late-Half Day' : '');
+                    const subTxt = cell.status === 'late' ? 'Late Login' : (isHd4 ? ordinalShort(hdNo) + ' Late - Half Day' : '');
                     let label;
                     if (cell.check_in && isLateLike) {
                         // Late cells: status code + message FIRST (always visible),
@@ -548,7 +550,8 @@
             if (status === 'late' && lateNum) {
                 statusHtml = 'Late Login - ' + ordinalShort(parseInt(lateNum, 10)) + ' late this month';
             } else if (status === 'half-day' && hd4 === '1') {
-                statusHtml = '4th Late Login - Half Day' + (lateNum ? ' (' + ordinalShort(parseInt(lateNum, 10)) + ' late)' : '');
+                const n = parseInt(lateNum, 10) || 4;
+                statusHtml = ordinalShort(n) + ' Late Login - Half Day';
             } else if (status === 'late') {
                 statusHtml = 'Late Login';
             }
@@ -673,7 +676,7 @@
                 const next = (lateCounts[empId] || 0) + 1;
                 el.innerHTML = prefix + '<i class="fas fa-clock" style="color:var(--warning);"></i> Late login &rarr; <strong>' +
                     ordinalShort(next) + ' late</strong> this month' +
-                    (next >= 4 ? ' &rarr; <strong style="color:var(--danger);">Half Day (HD4)</strong>' : '');
+                    (next >= 4 ? ' &rarr; <strong style="color:var(--danger);">Half Day</strong>' : '');
             } else {
                 el.innerHTML = prefix + '<i class="fas fa-adjust" style="color:var(--accent);"></i> After 12:00 &rarr; <strong>Half Day</strong> (not counted as a late).';
             }
