@@ -484,11 +484,16 @@
                     html += '<td class="' + cls + '" title="' + escapeHtml(getCellTooltip(emp.first_name + ' ' + (emp.last_name || ''), d, dispStatus, cell.check_in, cell.check_out, cell)) + '" data-emp="' + emp.id + '" data-day="' + d + '" data-status="' + escapeHtml(dispStatus || '') + '" data-in="' + escapeHtml(cell.check_in || '') + '" data-out="' + escapeHtml(cell.check_out || '') + '" data-loc="' + escapeHtml(cell.check_in_location || '') + '" data-late="' + (cell.late_number || '') + '" data-hd4="' + (cell.hd4 ? '1' : '') + '" data-name="' + escapeHtml(emp.first_name + ' ' + (emp.last_name || '')) + '">' + label + '</td>';
                 }
                 grandPresent += p; grandLate += l; grandHalf += h; grandAbsent += a; grandWeekoff += w; grandLeave += lv; grandHoliday += hv;
-                // Weekends (week offs), paid leave and holidays are included in
-                // Total Days.
-                const totalDays = p + l + (h * 0.5) + lv + w + hv;
+                // Total Days mirrors the employee/manager attendance views: all
+                // the days that count towards the month - present, late, half
+                // day, paid leave, week offs and holidays - shown against the
+                // real number of calendar days in the month, so weekends and
+                // holidays are always part of the total.
+                const totalDays = p + l + h + lv + w + hv;
+                const totalTitle = 'Present ' + p + ' + Late ' + l + ' + Half Day ' + h + ' + Paid Leave ' + lv +
+                    ' + Week Off ' + w + ' + Holiday ' + hv + ' = ' + formatHalfDays(totalDays) + ' out of ' + days + ' days in this month';
                 html += '<td style="font-weight:600;font-size:0.7rem;text-align:center;white-space:nowrap;">' + (p + l) + ' / ' + l + ' / ' + h + ' / ' + a + ' / ' + lv + '</td>';
-                html += '<td style="font-weight:700;font-size:0.75rem;text-align:center;white-space:nowrap;color:var(--primary);">' + formatHalfDays(totalDays) + '</td>';
+                html += '<td style="font-weight:700;font-size:0.75rem;text-align:center;white-space:nowrap;color:var(--primary);" title="' + escapeHtml(totalTitle) + '">' + formatHalfDays(totalDays) + ' <span style="font-weight:500;color:var(--text-secondary);">/ ' + days + '</span></td>';
                 html += '</tr>';
             }
 
@@ -578,7 +583,7 @@
                 // using a marker remark so the matrix can undo it later. Clicking
                 // the resulting Absent cell restores it back to H.
                 showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' (holiday) as absent?', 'Mark Absent', 'btn-danger', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr, remarks: 'Admin marked holiday absent' }).then(() => loadMatrix());
+                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr, remarks: 'Admin marked holiday absent' }).then(() => refreshAttendanceViews(dateStr));
                 });
                 return;
             }
@@ -591,13 +596,13 @@
                 // the weekend). Confirms before writing; clicking it again (when
                 // shown as Absent) undoes it / restores the week off.
                 showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' (week end) as absent?', 'Mark Absent', 'btn-danger', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => loadMatrix());
+                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => refreshAttendanceViews(dateStr));
                 });
                 return;
             }
             if (status === 'absent') {
                 showConfirmDialog('Mark Present', 'Remove absent mark for ' + dateStr + '? (Mark Late is also available in the toolbar)', 'Mark Present', 'btn-success', function() {
-                    apiCall('/attendance/mark-present', 'POST', { employee_id: empId, date: dateStr }).then(() => { loadMatrix(); loadLateWarning(); });
+                    apiCall('/attendance/mark-present', 'POST', { employee_id: empId, date: dateStr }).then(() => refreshAttendanceViews(dateStr));
                 });
                 return;
             }
@@ -605,13 +610,13 @@
                 showConfirmDialog('Mark Late / Absent', 'Mark ' + dateStr + ' as late login instead of present?', 'Mark Late', 'btn-warning', function() {
                     // Send a time past the grace window so the server records a
                     // late login instead of classifying it back to present.
-                    apiCall('/attendance/mark-late', 'POST', { employee_id: empId, date: dateStr, check_in_time: defaultLateTime() }).then(() => { loadMatrix(); loadLateWarning(); });
+                    apiCall('/attendance/mark-late', 'POST', { employee_id: empId, date: dateStr, check_in_time: defaultLateTime() }).then(() => refreshAttendanceViews(dateStr));
                 });
                 return;
             }
             if (status === 'late' || status === 'half-day') {
                 showConfirmDialog('Mark Absent', 'Mark ' + dateStr + ' as absent?', 'Mark Absent', 'btn-danger', function() {
-                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => { loadMatrix(); loadLateWarning(); });
+                    apiCall('/attendance/mark-absent', 'POST', { employee_id: empId, date: dateStr }).then(() => refreshAttendanceViews(dateStr));
                 });
                 return;
             }
@@ -796,6 +801,21 @@
             }
         }
 
+        // Every attendance edit (Mark Present / Mark Late with a custom time /
+        // Mark Absent) rewrites the day on the server, and Mark Late also
+        // rewrites check_in and status for an employee who had already logged
+        // in. Refresh the matrix, the late-warning card and - when the edited
+        // day is the day currently shown in "Today's Logins" - that login table
+        // too, so the new time and status appear immediately instead of only
+        // after a manual Refresh.
+        function refreshAttendanceViews(dateStr) {
+            loadMatrix();
+            loadLateWarning();
+            if (!dateStr || !recentLogsDate || String(dateStr) === String(recentLogsDate)) {
+                loadRecentLogs();
+            }
+        }
+
         function viewCheckInPhotoByIndex(i) {
             viewCheckInPhoto(photoTokenMap[i] || '');
         }
@@ -875,8 +895,7 @@
             if (data && data.success) {
                 showToast(data.message || 'Marked as present', 'success');
                 closeMarkPresentModal();
-                loadMatrix();
-                loadLateWarning();
+                refreshAttendanceViews(date);
             } else {
                 showToast(data?.message || 'Failed to mark present', 'error');
             }
@@ -915,8 +934,7 @@
                 showToast(data.message || 'Marked as late login', hd4 ? 'warning' : 'success');
                 closeMarkLateModal();
                 document.getElementById('lateRemarks').value = '';
-                loadMatrix();
-                loadLateWarning();
+                refreshAttendanceViews(date);
             } else {
                 showToast(data?.message || 'Failed to mark late', 'error');
             }
@@ -951,8 +969,7 @@
                 showToast(data.message || 'Marked as absent', 'success');
                 closeMarkAbsentModal();
                 document.getElementById('absentRemarks').value = '';
-                loadMatrix();
-                loadLateWarning();
+                refreshAttendanceViews(date);
             } else {
                 showToast(data?.message || 'Failed to mark absent', 'error');
             }
